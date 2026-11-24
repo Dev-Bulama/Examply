@@ -109,7 +109,7 @@ function mapRecord(rec) {
           n += 1;
           return `[[${n}]]`;
         }));
-        warnings.push(`Underscore blanks were converted to [[1]]…[[${n}]].`);
+        warnings.push(n === 1 ? 'The underscore blank was converted to [[1]].' : `Underscore blanks were converted to [[1]]…[[${n}]].`);
       }
       break;
     }

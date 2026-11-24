@@ -1,32 +1,227 @@
+<%
+  const features = [
+    ['academic', 'AI exam generator', 'Describe the exam you need — Claude or GPT writes original, certification-level questions mapped to your blueprint. You review every question before it goes live.'],
+    ['computer', 'Cyber security labs', 'Candidates work in a real-time Linux terminal: investigate logs, harden servers, find the attacker. Every task is checked automatically.'],
+    ['clock', 'Realistic mock exams', 'Timed, sectioned simulations with negative marking, scaled scores and per-domain breakdowns — just like Oracle, AWS, PMP or CompTIA.'],
+    ['chart', 'Diagnostics & learning gain', 'Place professionals in Beginner → Expert bands before training, recommend the right track, and measure the gain afterwards.'],
+    ['clipboard', 'Bring your question bank', 'Import thousands of questions from Excel, Word, GIFT, Aiken, CSV or JSON with a row-by-row dry run, then undo within 24 hours if needed.'],
+    ['shield', 'Exam integrity', 'Server-side timing, shuffled questions, full-screen and tab-switch detection, watermarks and an integrity score per attempt.'],
+    ['users', 'Built for teams', 'Cohorts, seat management, deadlines and pre-vs-post reports for training providers and corporate L&D.'],
+    ['check', 'Verified certificates', 'Every pass earns a certificate with a unique ID and QR code that employers can verify online.'],
+  ];
+%>
+<!-- Hero -->
 <section class="relative overflow-hidden border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-  <div class="absolute inset-0 -z-0 bg-[radial-gradient(60rem_30rem_at_70%_-10%,rgb(var(--c-primary-100)/0.9),transparent)] dark:bg-[radial-gradient(60rem_30rem_at_70%_-10%,rgb(var(--c-primary-900)/0.5),transparent)]" aria-hidden="true"></div>
-  <div class="container-page relative grid gap-12 py-16 sm:py-24 lg:grid-cols-2 lg:items-center">
+  <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(55rem_28rem_at_85%_-10%,rgb(var(--c-primary-100)),transparent)] dark:bg-[radial-gradient(55rem_28rem_at_85%_-10%,rgb(var(--c-primary-900)/0.55),transparent)]" aria-hidden="true"></div>
+  <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(148_163_184/0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgb(148_163_184/0.12)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_75%)]" aria-hidden="true"></div>
+  <div class="container-page relative grid gap-14 py-16 sm:py-20 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-24">
     <div>
-      <p class="badge-blue">Assess · Practise · Certify</p>
-      <h1 class="mt-5 text-4xl font-bold tracking-tight sm:text-5xl"><%= site.tagline || 'Professional assessment & certification practice' %></h1>
-      <p class="mt-5 max-w-xl text-lg muted">Find your starting level before training, practise under real exam conditions, and measure how much you have learned — with instant, detailed results.</p>
-      <div class="mt-8 flex flex-wrap gap-3">
+      <p class="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-800 dark:border-primary-900 dark:bg-primary-950 dark:text-primary-200"><span class="h-1.5 w-1.5 rounded-full bg-secondary-500" aria-hidden="true"></span> AI-built exams · Live cyber labs · Instant results</p>
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">Assess skills. <span class="text-primary-600 dark:text-primary-400">Prove them.</span> Certify with confidence.</h1>
+      <p class="mt-6 max-w-xl text-lg leading-relaxed muted"><%= site.name %> helps professionals and IT teams find their level, practise under real exam conditions — including hands-on security labs — and earn certificates that can be verified.</p>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row">
         <% if (user) { %>
-          <a href="/dashboard" class="btn-primary">Go to my dashboard <%- include('../partials/icon', { name: 'arrowRight', cls: 'h-4 w-4' }) %></a>
+          <a href="<%= user.isStaff ? '/admin' : '/dashboard' %>" class="btn-primary px-6 py-3 text-base">Open my dashboard <%- include('../partials/icon', { name: 'arrowRight', cls: 'h-4 w-4' }) %></a>
         <% } else { %>
-          <% if (site.registrationOpen) { %><a href="/register" class="btn-primary">Create a free account <%- include('../partials/icon', { name: 'arrowRight', cls: 'h-4 w-4' }) %></a><% } %>
-          <a href="/login" class="btn-secondary">Sign in</a>
+          <% if (site.registrationOpen) { %><a href="/register" class="btn-primary px-6 py-3 text-base">Start for free <%- include('../partials/icon', { name: 'arrowRight', cls: 'h-4 w-4' }) %></a><% } %>
+          <a href="#companies" class="btn-secondary px-6 py-3 text-base">For IT companies</a>
         <% } %>
       </div>
+      <dl class="mt-10 grid max-w-md grid-cols-3 gap-6 text-sm">
+        <div><dt class="muted">Question types</dt><dd class="mt-1 text-2xl font-bold">11</dd></div>
+        <div><dt class="muted">Import formats</dt><dd class="mt-1 text-2xl font-bold">7</dd></div>
+        <div><dt class="muted">Marking</dt><dd class="mt-1 text-2xl font-bold">Instant</dd></div>
+      </dl>
     </div>
-    <div class="grid gap-4 sm:grid-cols-2">
-      <% [
-        ['chart', 'Diagnostic placement', 'A pre-training test places you in a proficiency band and recommends a training track.'],
-        ['clock', 'Realistic mock exams', 'Timed simulations with sections, negative marking and scaled scores, like the real thing.'],
-        ['academic', 'Past-question packs', 'Study, practise with instant feedback, or sit a timed mock from each pack.'],
-        ['shield', 'Verified certificates', 'Every certificate has a unique ID and QR code that anyone can verify.'],
-      ].forEach(function (f) { %>
-        <div class="card card-body">
-          <span class="grid h-10 w-10 place-items-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"><%- include('../partials/icon', { name: f[0] }) %></span>
-          <h2 class="mt-4 h3"><%= f[1] %></h2>
-          <p class="mt-1.5 text-sm muted"><%= f[2] %></p>
+
+    <!-- Product illustration (pure HTML) -->
+    <div class="relative mx-auto w-full max-w-xl" aria-hidden="true">
+      <div class="rounded-2xl border border-slate-200 bg-white p-5 pb-10 shadow-pop dark:border-slate-700 dark:bg-slate-900">
+        <div class="flex items-center justify-between gap-3">
+          <div><p class="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">Mock exam · SY0-701</p><p class="text-sm font-semibold">Question 14 of 90</p></div>
+          <span class="rounded-lg bg-slate-900 px-2.5 py-1 font-mono text-sm text-white dark:bg-slate-700">58:12</span>
         </div>
+        <div class="mt-3 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-full w-[16%] rounded-full bg-primary-600"></div></div>
+        <p class="mt-5 text-[0.95rem] leading-relaxed">A SOC analyst sees 400 failed SSH logins from one IP in two minutes. Which control stops this <strong>first</strong>?</p>
+        <div class="mt-4 space-y-2 text-sm">
+          <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700"><span class="grid h-6 w-6 place-items-center rounded-full border text-xs font-bold">A</span> Enable full-disk encryption</div>
+          <div class="flex items-center gap-3 rounded-xl border-2 border-primary-600 bg-primary-50 p-3 dark:bg-primary-950/60"><span class="grid h-6 w-6 place-items-center rounded-full bg-primary-600 text-xs font-bold text-on-primary">B</span> Rate-limit and auto-ban with fail2ban</div>
+          <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700"><span class="grid h-6 w-6 place-items-center rounded-full border text-xs font-bold">C</span> Rotate the TLS certificate</div>
+        </div>
+      </div>
+      <div class="relative -mt-6 ml-4 w-[88%] rounded-xl border border-slate-700 bg-slate-950 p-4 font-mono text-[0.72rem] leading-relaxed text-slate-200 shadow-pop sm:-ml-10 sm:w-[80%]">
+        <div class="mb-2 flex gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-red-500"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span><span class="ml-2 text-slate-500">lab · incident-response</span></div>
+        <p><span class="text-emerald-400">analyst@web01</span>:<span class="text-sky-400">~</span>$ grep "Failed password" /var/log/auth.log | awk '{print $11}' | sort | uniq -c | sort -nr | head -1</p>
+        <p class="text-amber-300">&nbsp;&nbsp;&nbsp;412 203.0.113.77</p>
+        <p><span class="text-emerald-400">analyst@web01</span>:<span class="text-sky-400">~</span>$ sudo ufw deny from 203.0.113.77</p>
+        <p class="text-slate-400">Rule added</p>
+        <p class="mt-1 text-emerald-400">✔ Task 2 of 4 complete — attacker blocked</p>
+      </div>
+      <div class="absolute -right-3 -top-6 hidden rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-pop dark:border-slate-700 dark:bg-slate-900 sm:block">
+        <p class="text-xs muted">Result</p><p class="text-xl font-bold text-emerald-600">86% · PASS</p><p class="text-xs muted">Certificate issued</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section id="features" class="container-page scroll-mt-20 py-20">
+  <div class="mx-auto max-w-2xl text-center">
+    <p class="text-sm font-semibold uppercase tracking-wider text-primary-700 dark:text-primary-300">Everything in one platform</p>
+    <h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">From the first diagnostic to the final certificate</h2>
+    <p class="mt-4 text-lg muted">Build exams in minutes, deliver them securely on any device, and see exactly where every candidate stands.</p>
+  </div>
+  <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <% features.forEach(function (f) { %>
+    <article class="card card-body transition hover:-translate-y-0.5 hover:shadow-pop">
+      <span class="grid h-11 w-11 place-items-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"><%- include('../partials/icon', { name: f[0] }) %></span>
+      <h3 class="mt-4 font-semibold"><%= f[1] %></h3>
+      <p class="mt-2 text-sm leading-relaxed muted"><%= f[2] %></p>
+    </article>
+    <% }) %>
+  </div>
+</section>
+
+<!-- AI spotlight -->
+<section id="ai" class="scroll-mt-20 border-y border-slate-200 bg-white py-20 dark:border-slate-800 dark:bg-slate-900/40">
+  <div class="container-page grid gap-12 lg:grid-cols-2 lg:items-center">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wider text-primary-700 dark:text-primary-300">AI exam generator</p>
+      <h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Type a brief. Get a certification-ready exam.</h2>
+      <p class="mt-4 text-lg muted">Connect your Claude or OpenAI key, describe the role or certification, and the generator writes scenario-based questions across the official domains — with explanations, difficulty and Bloom’s level for every item.</p>
+      <ul class="mt-6 space-y-3">
+        <% ['Spread across the certification blueprint by domain weight', 'Grounded in your own syllabus or policy documents', 'Every question checked and previewed before it is published', 'One click to turn the set into a timed, certificate-issuing exam'].forEach(function (t) { %>
+          <li class="flex gap-3"><span class="mt-0.5 text-emerald-600"><%- include('../partials/icon', { name: 'check' }) %></span><span><%= t %></span></li>
+        <% }) %>
+      </ul>
+    </div>
+    <div class="card p-5" aria-hidden="true">
+      <p class="text-sm font-semibold">✨ Generate questions with AI</p>
+      <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-800/60">Write 40 scenario-based questions for a Linux security analyst role: log analysis, SSH hardening, firewall rules and incident response.</div>
+      <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
+        <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><p class="muted">Network security</p><p class="mt-1 text-lg font-bold">16</p></div>
+        <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><p class="muted">Incident response</p><p class="mt-1 text-lg font-bold">14</p></div>
+        <div class="rounded-lg border border-slate-200 p-3 dark:border-slate-700"><p class="muted">Hardening</p><p class="mt-1 text-lg font-bold">10</p></div>
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/40"><p class="text-emerald-800 dark:text-emerald-300">Ready to review</p><p class="mt-1 text-lg font-bold text-emerald-700 dark:text-emerald-300">40 ✓</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Labs spotlight -->
+<section id="labs" class="scroll-mt-20 bg-slate-950 py-20 text-slate-100">
+  <div class="container-page grid gap-12 lg:grid-cols-2 lg:items-center">
+    <div class="order-2 overflow-hidden rounded-2xl border border-slate-800 bg-black/60 font-mono text-[0.78rem] leading-relaxed shadow-pop lg:order-1" aria-hidden="true">
+      <div class="flex items-center gap-1.5 border-b border-slate-800 px-4 py-2.5"><span class="h-2.5 w-2.5 rounded-full bg-red-500"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span><span class="ml-3 text-slate-500">Lab: Compromised web server · 32:40 left</span></div>
+      <div class="grid sm:grid-cols-[1fr_13rem]">
+        <div class="space-y-1 p-4">
+          <p><span class="text-emerald-400">analyst@web01</span>:~$ last -i | head -3</p>
+          <p class="text-slate-400">deploy   pts/0   198.51.100.23   Tue 02:14 - 02:51</p>
+          <p><span class="text-emerald-400">analyst@web01</span>:~$ sudo grep -n "PermitRootLogin" /etc/ssh/sshd_config</p>
+          <p class="text-amber-300">33:PermitRootLogin yes</p>
+          <p><span class="text-emerald-400">analyst@web01</span>:~$ sudo sed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config</p>
+          <p><span class="text-emerald-400">analyst@web01</span>:~$ <span class="animate-pulse">▌</span></p>
+        </div>
+        <div class="border-t border-slate-800 p-4 font-sans text-xs sm:border-l sm:border-t-0">
+          <p class="font-semibold text-slate-300">Tasks</p>
+          <ul class="mt-3 space-y-2">
+            <li class="text-emerald-400">✔ Find the attacker’s IP</li>
+            <li class="text-emerald-400">✔ Disable root SSH login</li>
+            <li class="text-slate-400">○ Remove the backdoor user</li>
+            <li class="text-slate-400">○ Submit the flag</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="order-1 lg:order-2">
+      <p class="text-sm font-semibold uppercase tracking-wider text-secondary-400">Hands-on cyber security labs</p>
+      <h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Test what candidates can <em>do</em>, not just what they remember</h2>
+      <p class="mt-4 text-lg text-slate-300">Each candidate gets an isolated Linux environment in the browser. They investigate logs, fix misconfigurations and answer questions from inside the terminal — and the platform checks the final state automatically.</p>
+      <ul class="mt-6 grid gap-3 text-slate-200 sm:grid-cols-2">
+        <% ['Real-time terminal, any device', 'Automatic task checking', 'Scenarios for SOC, Linux and cloud roles', 'Mix labs with questions in one exam'].forEach(function (t) { %><li class="flex gap-2"><span class="text-secondary-400">▸</span><%= t %></li><% }) %>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<% if (certs.length) { %>
+<!-- Certifications -->
+<section id="certifications" class="container-page scroll-mt-20 py-20">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wider text-primary-700 dark:text-primary-300">Certification preparation</p>
+      <h2 class="mt-3 text-3xl font-bold tracking-tight">Practise for the exams that matter</h2>
+    </div>
+    <% if (stats.questions) { %><p class="muted"><strong class="text-slate-900 dark:text-white"><%= fmt.number(stats.questions) %></strong> published practice questions</p><% } %>
+  </div>
+  <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <% certs.forEach(function (c) { %>
+    <article class="card card-body">
+      <p class="font-mono text-xs font-semibold text-primary-700 dark:text-primary-300"><%= c.exam_code || 'Certification' %></p>
+      <h3 class="mt-1 text-lg font-semibold"><%= c.name %></h3>
+      <p class="text-sm muted"><%= c.issuing_body || '' %></p>
+      <dl class="mt-5 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-center text-xs dark:border-slate-800">
+        <div><dt class="muted">Domains</dt><dd class="mt-0.5 text-base font-semibold"><%= c.domains %></dd></div>
+        <div><dt class="muted">Questions</dt><dd class="mt-0.5 text-base font-semibold"><%= c.questions %></dd></div>
+        <div><dt class="muted">Exam time</dt><dd class="mt-0.5 text-base font-semibold"><%= c.official_duration_minutes ? c.official_duration_minutes + 'm' : '—' %></dd></div>
+      </dl>
+    </article>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<!-- Companies & plans -->
+<section id="companies" class="scroll-mt-20 border-t border-slate-200 bg-gradient-to-b from-primary-50/70 to-white py-20 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+  <div class="container-page">
+    <div class="mx-auto max-w-2xl text-center">
+      <p class="text-sm font-semibold uppercase tracking-wider text-primary-700 dark:text-primary-300">For IT companies &amp; training providers</p>
+      <h2 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">Your own assessment workspace — powered by AI</h2>
+      <p class="mt-4 text-lg muted">Subscribe, add your logo, and let your team build question banks, exams and cyber labs for your staff, students or clients. Your content and results stay private to your organisation.</p>
+    </div>
+    <% if (plans.length) { %>
+    <div id="pricing" class="mt-14 grid gap-6 lg:grid-cols-<%= Math.min(plans.length, 3) %>">
+      <% plans.forEach(function (p) { %>
+      <article class="relative flex flex-col rounded-2xl border bg-white p-7 dark:bg-slate-900 <%= p.is_featured ? 'border-primary-500 shadow-pop ring-1 ring-primary-500' : 'border-slate-200 shadow-card dark:border-slate-700' %>">
+        <% if (p.is_featured) { %><span class="absolute -top-3 left-7 rounded-full bg-primary-600 px-3 py-1 text-xs font-semibold text-on-primary">Most popular</span><% } %>
+        <h3 class="text-lg font-semibold"><%= p.name %></h3>
+        <p class="mt-1 text-sm muted"><%= p.tagline %></p>
+        <p class="mt-6"><span class="text-4xl font-extrabold tracking-tight"><%= fmt.money(p.sale_price_kobo || p.price_kobo, p.currency) %></span><span class="muted"> / <%= { monthly: 'month', quarterly: 'quarter', biannually: '6 months', annually: 'year' }[p.plan_interval] || 'month' %></span></p>
+        <ul class="mt-6 flex-1 space-y-3 text-sm">
+          <% p.features.forEach(function (f) { %><li class="flex gap-2.5"><span class="mt-0.5 text-emerald-600"><%- include('../partials/icon', { name: 'check', cls: 'h-4 w-4' }) %></span><%= f %></li><% }) %>
+        </ul>
+        <a href="/register?plan=<%= p.slug %>" class="mt-8 <%= p.is_featured ? 'btn-primary' : 'btn-secondary' %> w-full">Get started</a>
+      </article>
       <% }) %>
+    </div>
+    <p class="mt-6 text-center text-sm muted">Prices in Naira, billed through Paystack or bank transfer. Cancel any time.</p>
+    <% } %>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="container-page py-20">
+  <h2 class="text-center text-3xl font-bold tracking-tight">How it works</h2>
+  <ol class="mt-12 grid gap-6 md:grid-cols-3">
+    <% [['1', 'Build', 'Import your bank, write questions, or generate them with AI. Add labs for practical skills.'], ['2', 'Deliver', 'Candidates take timed, proctored exams on any device — progress is saved even if the connection drops.'], ['3', 'Certify', 'Results, domain breakdowns and certificates arrive the moment they submit.']].forEach(function (s) { %>
+    <li class="card card-body">
+      <span class="grid h-10 w-10 place-items-center rounded-full bg-primary-600 font-bold text-on-primary"><%= s[0] %></span>
+      <h3 class="mt-4 text-lg font-semibold"><%= s[1] %></h3>
+      <p class="mt-2 text-sm muted"><%= s[2] %></p>
+    </li>
+    <% }) %>
+  </ol>
+</section>
+
+<!-- CTA -->
+<section class="container-page pb-20">
+  <div class="relative overflow-hidden rounded-3xl bg-primary-700 px-6 py-14 text-center text-on-primary sm:px-12">
+    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(40rem_20rem_at_80%_0%,rgb(var(--c-secondary-500)/0.45),transparent)]" aria-hidden="true"></div>
+    <h2 class="relative text-3xl font-bold tracking-tight sm:text-4xl">Find out where you stand today</h2>
+    <p class="relative mx-auto mt-4 max-w-xl text-lg opacity-90">Take a diagnostic, practise with real exam conditions, and earn a certificate employers can verify.</p>
+    <div class="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+      <% if (!user && site.registrationOpen) { %><a href="/register" class="btn bg-white px-6 py-3 text-base text-primary-800 hover:bg-primary-50">Create a free account</a><% } %>
+      <a href="#companies" class="btn border border-white/40 px-6 py-3 text-base text-white hover:bg-white/10">Plans for companies</a>
     </div>
   </div>
 </section>

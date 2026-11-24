@@ -192,7 +192,12 @@ async function storeRecords(imp, records, { fileErrors = [], images = new Map() 
     let hash = null;
     if (q.type && types.TYPES[q.type]) {
       normalised = types.normalise(q);
-      for (const e of types.validate(normalised)) if (!errors.includes(e.message)) errors.push(e.message);
+      // Skip the registry's generic "mark the correct option" when the row already names the exact wrong key.
+      const keyError = errors.some((e) => /^Correct answer/.test(e));
+      for (const e of types.validate(normalised)) {
+        if (keyError && /correct option/i.test(e.message)) continue;
+        if (!errors.includes(e.message)) errors.push(e.message);
+      }
       hash = types.contentHash(normalised);
       if (seenHashes.has(hash)) warnings.push(`Duplicate of ${seenHashes.get(hash)} in this file.`);
       else seenHashes.set(hash, rec.rowRef);

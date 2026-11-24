@@ -4,6 +4,8 @@ A professional assessment and certification exam platform: pre-training diagnost
 
 It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for Hostinger hPanel Node.js hosting. There is no Docker, no Redis, no build step on deploy, and no native modules.
 
+> The revised phase plan (adds AI generation, cyber security labs and company workspaces) is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Import formats: [`docs/IMPORT_FORMATS.md`](docs/IMPORT_FORMATS.md).
+>
 > The full product brief is in [`PROMPT.md`](PROMPT.md). Decisions taken where the brief is open are in [`docs/DECISIONS.md`](docs/DECISIONS.md). The assessment of the earlier EXAMPRO prototype is in [`docs/00-exampro-assessment.md`](docs/00-exampro-assessment.md).
 
 ## Build status
@@ -12,8 +14,8 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 |---|---|---|
 | 1. Foundation | Config/env validation, all migrations, logging, errors, sessions, security, layouts, Tailwind, installer, auth (register, verify, login, 2FA, reset, Google), RBAC, admin and candidate shells | ✅ Done |
 | 2. Catalogue & question bank | Hierarchical categories, certifications with weighted domains, training programmes with per-band courses; 11 question types with a rich editor, candidate preview (KaTeX, code highlighting), versioning, review workflow, tags, bulk actions, duplicate finder, report inbox, private image uploads | ✅ Done |
-| 3. Import / export | | Next |
-| 4. Exam builder + instruction generator | | |
+| 3. Import / export + AI generation | Excel, CSV, JSON, Aiken, GIFT, Word and ZIP imports with dry-run preview, duplicate handling, background batches, error report and 24-hour undo; templates; export to xlsx/JSON/GIFT; **AI question generation with Claude or OpenAI**; marketing landing page with plans | ✅ Done |
+| 4. Exam builder + instruction generator (+ AI full-exam generation) | | Next |
 | 5. Exam engine, grading, results, certificates | | |
 | 6. Commerce (Paystack + bank transfer) | | |
 | 7. Organisations & cohorts | | |
