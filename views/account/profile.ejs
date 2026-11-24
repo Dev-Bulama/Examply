@@ -1,0 +1,94 @@
+<div class="mb-6">
+  <h1 class="h1">Profile</h1>
+  <p class="mt-1 muted">Your name appears on certificates and result slips exactly as written here.</p>
+</div>
+<div class="grid gap-6 lg:grid-cols-3">
+  <div class="space-y-6 lg:col-span-2">
+    <form method="post" action="/account/profile" class="card" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="card-body grid gap-5 sm:grid-cols-2">
+        <%- include('../partials/field', { name: 'full_name', label: 'Full name', value: user.full_name, required: true, autocomplete: 'name', maxlength: 150, wrapperClass: 'sm:col-span-2' }) %>
+        <div class="sm:col-span-2">
+          <p class="label">Email</p>
+          <p class="text-sm"><%= user.email %>
+            <% if (user.email_verified_at) { %><span class="badge-green ml-2">Verified</span><% } else { %><span class="badge-amber ml-2">Not verified</span><% } %>
+          </p>
+        </div>
+        <%- include('../partials/field', { name: 'phone', label: 'Phone', type: 'tel', value: user.phone, autocomplete: 'tel', maxlength: 40 }) %>
+        <%- include('../partials/field', { name: 'country', label: 'Country', type: 'select', value: user.country || '', options: [{ value: '', label: 'Select a country' }].concat(countries.map(function (c) { return { value: c.code, label: c.name }; })) }) %>
+        <%- include('../partials/field', { name: 'organisation_name', label: 'Organisation', value: user.organisation_name, autocomplete: 'organization', maxlength: 150 }) %>
+        <%- include('../partials/field', { name: 'job_title', label: 'Job title', value: user.job_title, autocomplete: 'organization-title', maxlength: 120 }) %>
+        <%- include('../partials/field', { name: 'years_experience', label: 'Years of experience', type: 'number', value: user.years_experience, min: 0, max: 60, inputmode: 'numeric' }) %>
+        <%- include('../partials/field', { name: 'timezone', label: 'Timezone', type: 'select', value: user.timezone || '', options: [{ value: '', label: `Site default (${site.timezone})` }].concat(timezones.map(function (t) { return { value: t, label: t.replace(/_/g, ' ') }; })) }) %>
+      </div>
+      <div class="flex justify-end border-t border-slate-200 px-5 py-4 dark:border-slate-800 sm:px-6">
+        <button type="submit" class="btn-primary" data-loading-text="Saving…">Save profile</button>
+      </div>
+    </form>
+
+    <section class="card">
+      <div class="card-body">
+        <h2 class="h2">Your data</h2>
+        <p class="mt-1 text-sm muted">Download a copy of everything we hold about you, or ask us to delete your account.</p>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <a href="/account/data-export" class="btn-secondary"><%- include('../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> Download my data (JSON)</a>
+        </div>
+        <div class="mt-6 border-t border-slate-200 pt-6 dark:border-slate-800">
+          <% if (user.deletion_requested_at) { %>
+            <div class="alert-warning"><%- include('../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %>
+              <div class="flex-1">
+                <p>You asked for your account to be deleted on <%= fmt.date(user.deletion_requested_at) %>. An administrator will process it within 30 days.</p>
+                <form method="post" action="/account/delete-request/cancel" class="mt-3">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn-secondary btn-sm">Cancel deletion request</button>
+                </form>
+              </div>
+            </div>
+          <% } else { %>
+            <h3 class="h3 text-red-700 dark:text-red-400">Delete my account</h3>
+            <p class="mt-1 text-sm muted">Your profile will be anonymised. Results needed for certificate verification are kept without personal details.</p>
+            <form method="post" action="/account/delete-request" class="mt-4 grid gap-4 sm:grid-cols-2" data-confirm="Request permanent deletion of your account?" data-confirm-label="Request deletion">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <%- include('../partials/field', { name: 'reason', label: 'Reason (optional)', maxlength: 500, wrapperClass: 'sm:col-span-2' }) %>
+              <% if (user.password_hash) { %><%- include('../partials/field', { name: 'password', label: 'Confirm with your password', type: 'password', required: true }) %><% } %>
+              <div class="flex items-end"><button type="submit" class="btn-danger">Request deletion</button></div>
+            </form>
+          <% } %>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card card-body">
+      <h2 class="h3">Photo</h2>
+      <div class="mt-4 flex items-center gap-4">
+        <% if (user.photo_path) { %>
+          <img src="/media/avatars/<%= user.photo_path %>" alt="Your profile photo" class="h-20 w-20 rounded-full object-cover">
+        <% } else { %>
+          <span class="grid h-20 w-20 place-items-center rounded-full bg-primary-100 text-2xl font-semibold text-primary-800 dark:bg-primary-900 dark:text-primary-100" aria-hidden="true"><%= user.full_name.trim().charAt(0).toUpperCase() %></span>
+        <% } %>
+        <p class="text-xs muted">PNG, JPG or WebP, up to 2 MB.</p>
+      </div>
+      <form method="post" action="/account/photo?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="mt-4 space-y-3">
+        <label class="label" for="photo">Upload a new photo</label>
+        <input id="photo" name="photo" type="file" accept="image/png,image/jpeg,image/webp" required class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-950 dark:file:text-primary-200">
+        <button type="submit" class="btn-secondary btn-sm" data-loading-text="Uploading…">Upload</button>
+      </form>
+      <% if (user.photo_path) { %>
+        <form method="post" action="/account/photo/remove" class="mt-2"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="text-sm link">Remove photo</button></form>
+      <% } %>
+    </section>
+    <% if (user.accommodations && (user.accommodations.extra_time_percent || user.accommodations.large_font || user.accommodations.high_contrast)) { %>
+    <section class="card card-body">
+      <h2 class="h3">Your accommodations</h2>
+      <ul class="mt-3 space-y-1.5 text-sm">
+        <% if (user.accommodations.extra_time_percent) { %><li>• <%= user.accommodations.extra_time_percent %>% extra time on every timed exam</li><% } %>
+        <% if (user.accommodations.large_font) { %><li>• Larger text</li><% } %>
+        <% if (user.accommodations.high_contrast) { %><li>• High-contrast display</li><% } %>
+      </ul>
+      <p class="mt-3 text-xs muted">Set by an administrator. Contact support to change them.</p>
+    </section>
+    <% } %>
+  </aside>
+</div>

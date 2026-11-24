@@ -1,0 +1,7 @@
+<h1 class="h2">Choose a new password</h1>
+<form method="post" action="/reset-password/<%= token %>" class="mt-6 space-y-4" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <%- include('../partials/field', { name: 'password', label: 'New password', type: 'password', required: true, autocomplete: 'new-password', hint: policyText }) %>
+  <%- include('../partials/field', { name: 'password_confirmation', label: 'Confirm new password', type: 'password', required: true, autocomplete: 'new-password' }) %>
+  <button type="submit" class="btn-primary w-full" data-loading-text="Saving…">Change password</button>
+</form>

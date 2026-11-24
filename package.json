@@ -1,0 +1,80 @@
+{
+  "name": "skillscore-assess",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Professional assessment & certification exam platform",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "seed": "knex seed:run",
+    "build:css": "tailwindcss -c tailwind/tailwind.config.js -i tailwind/input.css -o public/css/app.css --minify",
+    "watch:css": "tailwindcss -c tailwind/tailwind.config.js -i tailwind/input.css -o public/css/app.css --watch",
+    "vendor": "node scripts/vendor.js",
+    "key:generate": "node scripts/generate-key.js",
+    "cron": "node scripts/cron.js",
+    "create-admin": "node scripts/create-admin.js",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "bcryptjs": "^3.0.3",
+    "compression": "^1.8.2",
+    "csrf-sync": "^4.2.1",
+    "csv-parse": "^7.0.3",
+    "dotenv": "^18.0.10",
+    "ejs": "^3.1.10",
+    "exceljs": "^4.4.0",
+    "express": "^4.22.3",
+    "express-ejs-layouts": "^2.5.1",
+    "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^8.7.5",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "hpp": "^0.2.3",
+    "knex": "^3.3.0",
+    "mammoth": "^1.13.0",
+    "multer": "^2.5.0",
+    "mysql2": "^3.24.6",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.10.1",
+    "otplib": "^12.0.1",
+    "pdfkit": "^0.17.2",
+    "pino": "^9.14.0",
+    "pino-http": "^10.5.0",
+    "qrcode": "^1.5.4",
+    "rotating-file-stream": "^3.2.10",
+    "sanitize-html": "^2.17.0",
+    "socket.io": "^4.8.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@alpinejs/csp": "^3.17.5",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@highlightjs/cdn-assets": "^11.12.0",
+    "@tailwindcss/forms": "^0.5.11",
+    "alpinejs": "^3.17.5",
+    "chart.js": "^4.6.2",
+    "jest": "^30.5.2",
+    "katex": "^0.19.1",
+    "supertest": "^7.3.2",
+    "tailwindcss": "^3.4.19"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/tests/helpers/setupEnv.js"
+    ],
+    "globalSetup": "<rootDir>/tests/helpers/globalSetup.js",
+    "globalTeardown": "<rootDir>/tests/helpers/globalTeardown.js",
+    "testTimeout": 30000,
+    "roots": [
+      "<rootDir>/tests"
+    ]
+  }
+}

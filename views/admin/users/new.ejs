@@ -1,0 +1,40 @@
+<div class="mx-auto max-w-3xl">
+  <h1 class="h1">Add user</h1>
+  <p class="mt-1 muted">Create an account for a candidate or a staff member.</p>
+  <form method="post" action="/admin/users" class="card mt-6" novalidate x-data="tabs('<%= old.password_mode || 'invite' %>')">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="card-body space-y-5">
+      <div class="grid gap-5 sm:grid-cols-2">
+        <%- include('../../partials/field', { name: 'full_name', label: 'Full name', required: true, maxlength: 150 }) %>
+        <%- include('../../partials/field', { name: 'email', label: 'Email', type: 'email', required: true }) %>
+      </div>
+      <fieldset>
+        <legend class="label">Roles</legend>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <% const chosen = old.roles ? [].concat(old.roles) : ['candidate']; roles.forEach(function (r) { %>
+          <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
+            <input type="checkbox" name="roles" value="<%= r.slug %>" class="checkbox mt-0.5" <%= chosen.includes(r.slug) ? 'checked' : '' %>>
+            <span><span class="font-medium"><%= r.name %></span><span class="block text-xs muted"><%= r.description %></span></span>
+          </label>
+          <% }) %>
+        </div>
+        <% if (errors.roles) { %><p class="field-error"><%= errors.roles %></p><% } %>
+      </fieldset>
+      <fieldset>
+        <legend class="label">Password</legend>
+        <div class="space-y-2 text-sm">
+          <label class="flex items-center gap-2"><input type="radio" name="password_mode" value="invite" class="checkbox rounded-full" @change="select('invite')" <%= (old.password_mode || 'invite') === 'invite' ? 'checked' : '' %>> Email them a link to choose their own password (recommended)</label>
+          <label class="flex items-center gap-2"><input type="radio" name="password_mode" value="set" class="checkbox rounded-full" @change="select('set')" <%= old.password_mode === 'set' ? 'checked' : '' %>> Set a password now</label>
+        </div>
+        <div class="mt-3" x-show="is('set')" x-cloak>
+          <%- include('../../partials/field', { name: 'password', label: 'Password', type: 'password', autocomplete: 'new-password', hint: policyText }) %>
+        </div>
+      </fieldset>
+      <%- include('../../partials/field', { name: 'email_verified', label: 'Mark email as verified', type: 'checkbox', hint: 'Only if you have confirmed the address belongs to this person.' }) %>
+    </div>
+    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-800">
+      <a href="/admin/users" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary" data-loading-text="Creating…">Create user</button>
+    </div>
+  </form>
+</div>

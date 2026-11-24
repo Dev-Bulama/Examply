@@ -1,0 +1,11 @@
+<% if (flash && flash.length) { %>
+<div class="space-y-2 <%= locals.flashClass || 'mb-6' %>" role="region" aria-label="Notifications">
+  <% flash.forEach(function (f) { const tone = ['success','danger','warning','info'].includes(f.type) ? f.type : 'info'; %>
+  <div class="alert-<%= tone %>" role="<%= tone === 'danger' ? 'alert' : 'status' %>" x-data="dismissible" x-show="shown">
+    <%- include('icon', { name: tone === 'success' ? 'check' : tone === 'info' ? 'info' : 'warning', cls: 'mt-0.5 h-5 w-5 shrink-0' }) %>
+    <div class="flex-1"><%= f.message %></div>
+    <button type="button" class="-m-1 rounded p-1 opacity-60 hover:opacity-100" @click="dismiss" aria-label="Dismiss"><%- include('icon', { name: 'x', cls: 'h-4 w-4' }) %></button>
+  </div>
+  <% }) %>
+</div>
+<% } %>

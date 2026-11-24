@@ -1,0 +1,91 @@
+<div class="mb-8">
+  <h1 class="h1">Dashboard</h1>
+  <p class="mt-1 muted"><%= fmt.date(new Date()) %> · <%= site.timezone %></p>
+</div>
+
+<%
+  const tiles = [
+    { label: 'Total users', value: fmt.number(kpi.totalUsers), sub: `+${fmt.number(kpi.newUsers7)} in the last 7 days`, icon: 'users' },
+    { label: 'Attempts today', value: fmt.number(kpi.attemptsToday), sub: 'Started since midnight', icon: 'clock' },
+    { label: 'Pass rate (30 days)', value: kpi.passRate === null ? '—' : `${kpi.passRate}%`, sub: kpi.graded30 ? `${fmt.number(kpi.graded30)} graded results` : 'No graded results yet', icon: 'chart' },
+    { label: 'Revenue today', value: fmt.money(kpi.revenueToday), sub: `${fmt.money(kpi.revenueMtd)} this month`, icon: 'banknotes' },
+  ];
+  const attention = [
+    { label: 'Essays waiting to be graded', n: kpi.pendingEssays, icon: 'clipboard' },
+    { label: 'Reported questions', n: kpi.reportedQuestions, icon: 'flag' },
+    { label: 'Failed imports (30 days)', n: kpi.failedImports, icon: 'warning' },
+    { label: 'Bank transfers to review', n: kpi.pendingTransfers, icon: 'banknotes' },
+    { label: 'Failed background jobs', n: kpi.failedJobs, icon: 'queue', href: can('jobs.view') ? '/admin/jobs?status=failed' : null },
+    { label: 'Account deletion requests', n: kpi.deletionRequests, icon: 'user', href: can('users.view') ? '/admin/users?status=deletion' : null },
+  ];
+%>
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <% tiles.forEach(function (t) { %>
+  <div class="card card-body">
+    <div class="flex items-center justify-between">
+      <p class="text-sm font-medium muted"><%= t.label %></p>
+      <span class="text-primary-600 dark:text-primary-400"><%- include('../partials/icon', { name: t.icon }) %></span>
+    </div>
+    <p class="mt-3 text-3xl font-bold tracking-tight"><%= t.value %></p>
+    <p class="mt-1 text-xs muted"><%= t.sub %></p>
+  </div>
+  <% }) %>
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+  <section class="card lg:col-span-1">
+    <div class="card-body">
+      <h2 class="h2">Needs attention</h2>
+      <ul class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+        <% attention.forEach(function (a) { %>
+        <li class="flex items-center justify-between gap-3 py-3 text-sm">
+          <span class="flex items-center gap-2"><%- include('../partials/icon', { name: a.icon, cls: 'h-4 w-4 muted' }) %>
+            <% if (a.href && a.n) { %><a class="link" href="<%= a.href %>"><%= a.label %></a><% } else { %><%= a.label %><% } %>
+          </span>
+          <span class="<%= a.n ? 'badge-amber' : 'badge-gray' %>"><%= a.n %></span>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+  </section>
+
+  <% if (can('users.view')) { %>
+  <section class="card lg:col-span-1">
+    <div class="card-body">
+      <div class="flex items-center justify-between"><h2 class="h2">New users</h2><a href="/admin/users" class="text-sm link">All users</a></div>
+      <% if (!recentUsers.length) { %>
+        <p class="mt-4 text-sm muted">No users yet.</p>
+      <% } else { %>
+      <ul class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+        <% recentUsers.forEach(function (u) { %>
+        <li class="py-3 text-sm">
+          <a href="/admin/users/<%= u.id %>" class="font-medium hover:underline"><%= u.full_name %></a>
+          <p class="flex items-center gap-2 text-xs muted"><span class="truncate"><%= u.email %></span> · <%= fmt.relative(u.created_at) %></p>
+        </li>
+        <% }) %>
+      </ul>
+      <% } %>
+    </div>
+  </section>
+  <% } %>
+
+  <% if (can('audit.view')) { %>
+  <section class="card lg:col-span-1">
+    <div class="card-body">
+      <div class="flex items-center justify-between"><h2 class="h2">Recent activity</h2><a href="/admin/audit" class="text-sm link">Audit log</a></div>
+      <% if (!recentAudit.length) { %>
+        <p class="mt-4 text-sm muted">No admin activity recorded yet.</p>
+      <% } else { %>
+      <ul class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+        <% recentAudit.forEach(function (a) { %>
+        <li class="py-3 text-sm">
+          <a href="/admin/audit/<%= a.id %>" class="font-mono text-xs hover:underline"><%= a.action %></a>
+          <p class="text-xs muted"><%= a.full_name || 'System' %> · <%= fmt.relative(a.created_at) %></p>
+        </li>
+        <% }) %>
+      </ul>
+      <% } %>
+    </div>
+  </section>
+  <% } %>
+</div>

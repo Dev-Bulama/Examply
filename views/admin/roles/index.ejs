@@ -1,0 +1,37 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Roles & permissions</h1>
+    <p class="mt-1 muted">Built-in roles cover most needs. Create custom roles by ticking exactly the permissions you want.</p>
+  </div>
+  <a href="/admin/roles/new" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New role</a>
+</div>
+<div class="card overflow-hidden">
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>Role</th><th>Users</th><th>Permissions</th><th class="text-right">Actions</th></tr></thead>
+      <tbody>
+        <% roles.forEach(function (r) { %>
+        <tr>
+          <td data-label="Role">
+            <p class="font-medium"><%= r.name %> <% if (r.is_system) { %><span class="badge-gray ml-1">Built-in</span><% } %></p>
+            <p class="text-xs muted"><%= r.description %></p>
+          </td>
+          <td data-label="Users"><a class="link" href="/admin/users?role=<%= r.slug %>"><%= r.user_count %></a></td>
+          <td data-label="Permissions"><%= r.slug === 'super_admin' ? 'All' : r.permission_count %></td>
+          <td data-label="Actions" class="text-right">
+            <div class="flex justify-end gap-2">
+              <% if (r.slug !== 'super_admin') { %><a href="/admin/roles/<%= r.id %>/edit" class="btn-secondary btn-sm">Edit</a><% } %>
+              <% if (!r.is_system) { %>
+                <form method="post" action="/admin/roles/<%= r.id %>/delete" data-confirm="Delete the “<%= r.name %>” role?" data-confirm-label="Delete role">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="btn-ghost btn-sm text-red-600" <%= Number(r.user_count) ? 'disabled title="Remove it from all users first"' : '' %>>Delete</button>
+                </form>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

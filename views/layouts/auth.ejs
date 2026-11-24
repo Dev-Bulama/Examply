@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" class="<%= (htmlClasses || []).join(' ') %>" data-theme-pref="<%= themePref %>" <% if (user) { %>data-theme-source="user"<% } %>>
+<head>
+  <%- include('../partials/head') %>
+  <%- typeof style !== 'undefined' ? style : '' %>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-primary-50/60 to-slate-50 dark:from-slate-900 dark:to-slate-950" data-authenticated="<%= user ? '1' : '0' %>">
+  <main id="main" class="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+    <div class="mb-8 flex w-full max-w-md items-center justify-between">
+      <%- include('../partials/brand') %>
+      <%- include('../partials/theme-toggle') %>
+    </div>
+    <div class="card w-full max-w-md">
+      <div class="card-body sm:p-8">
+        <%- include('../partials/flash') %>
+        <%- body %>
+      </div>
+    </div>
+    <p class="mt-8 text-center text-xs muted">© <%= new Date().getFullYear() %> <%= site.name %></p>
+  </main>
+  <%- include('../partials/scripts') %>
+</body>
+</html>

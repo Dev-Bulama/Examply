@@ -1,0 +1,16 @@
+<div class="mx-auto max-w-2xl">
+  <% if (justEnabled) { %><div class="alert-success mb-6"><%- include('../partials/icon', { name: 'check', cls: 'h-5 w-5 shrink-0' }) %><p>Two-factor authentication is now on.</p></div><% } %>
+  <h1 class="h1">Save your recovery codes</h1>
+  <p class="mt-1 muted">If you lose access to your authenticator app, each of these codes lets you sign in once. They are shown only now — store them somewhere safe, like a password manager.</p>
+  <div class="card mt-6">
+    <div class="card-body">
+      <ul class="grid grid-cols-2 gap-3 font-mono text-base sm:grid-cols-4">
+        <% codes.forEach(function (c) { %><li class="rounded-lg bg-slate-100 px-3 py-2 text-center dark:bg-slate-800"><%= c %></li><% }) %>
+      </ul>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <button type="button" class="btn-secondary" data-copy="<%= codes.join('\n') %>">Copy all codes</button>
+        <a href="/account/security" class="btn-primary">I have saved them</a>
+      </div>
+    </div>
+  </div>
+</div>

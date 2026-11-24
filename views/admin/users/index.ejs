@@ -1,0 +1,68 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Users</h1>
+    <p class="mt-1 muted">Everyone with an account: candidates, staff and organisation managers.</p>
+  </div>
+  <% if (can('users.manage')) { %><a href="/admin/users/new" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> Add user</a><% } %>
+</div>
+
+<form method="get" action="/admin/users" class="card card-body mb-4 grid gap-3 sm:grid-cols-4" role="search">
+  <div class="sm:col-span-2">
+    <label for="q" class="sr-only">Search</label>
+    <div class="relative">
+      <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center muted"><%- include('../../partials/icon', { name: 'search', cls: 'h-4 w-4' }) %></span>
+      <input id="q" name="q" value="<%= filters.q %>" class="input pl-9" placeholder="Search name, email or organisation">
+    </div>
+  </div>
+  <label class="sr-only" for="role">Role</label>
+  <select id="role" name="role" class="input" data-autosubmit>
+    <option value="">All roles</option>
+    <% roles.forEach(function (r) { %><option value="<%= r.slug %>" <%= filters.role === r.slug ? 'selected' : '' %>><%= r.name %></option><% }) %>
+  </select>
+  <label class="sr-only" for="status">Status</label>
+  <select id="status" name="status" class="input" data-autosubmit>
+    <% [['', 'Any status'], ['active', 'Active'], ['suspended', 'Suspended'], ['unverified', 'Email not verified'], ['deletion', 'Deletion requested']].forEach(function (s) { %>
+      <option value="<%= s[0] %>" <%= filters.status === s[0] ? 'selected' : '' %>><%= s[1] %></option>
+    <% }) %>
+  </select>
+  <noscript><button type="submit" class="btn-secondary">Filter</button></noscript>
+</form>
+
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %>
+    <div class="flex flex-col items-center px-6 py-16 text-center">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"><%- include('../../partials/icon', { name: 'users' }) %></span>
+      <p class="mt-4 font-semibold"><%= filters.q || filters.role || filters.status ? 'No users match these filters' : 'No users yet' %></p>
+      <p class="mt-1 text-sm muted"><%= filters.q || filters.role || filters.status ? 'Try a different search or clear the filters.' : 'Add your first user to get started.' %></p>
+      <% if (filters.q || filters.role || filters.status) { %><a href="/admin/users" class="btn-secondary mt-4">Clear filters</a><% } else if (can('users.manage')) { %><a href="/admin/users/new" class="btn-primary mt-4">Add user</a><% } %>
+    </div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>Name</th><th>Roles</th><th>Status</th><th>Last sign-in</th><th>Joined</th></tr></thead>
+      <tbody>
+        <% pager.rows.forEach(function (u) { %>
+        <tr>
+          <td data-label="Name">
+            <a href="/admin/users/<%= u.id %>" class="font-medium hover:underline"><%= u.full_name %></a>
+            <p class="text-xs muted"><%= u.email %></p>
+          </td>
+          <td data-label="Roles"><div class="flex flex-wrap justify-end gap-1 sm:justify-start"><% u.roles.forEach(function (r) { %><span class="<%= r.slug === 'candidate' ? 'badge-gray' : 'badge-blue' %>"><%= r.name %></span><% }) %></div></td>
+          <td data-label="Status">
+            <div class="flex flex-wrap justify-end gap-1 sm:justify-start">
+              <% if (u.status === 'suspended') { %><span class="badge-red">Suspended</span><% } else { %><span class="badge-green">Active</span><% } %>
+              <% if (!u.email_verified_at) { %><span class="badge-amber">Unverified</span><% } %>
+              <% if (u.totp_enabled_at) { %><span class="badge-gray">2FA</span><% } %>
+              <% if (u.deletion_requested_at) { %><span class="badge-red">Deletion requested</span><% } %>
+            </div>
+          </td>
+          <td data-label="Last sign-in" class="whitespace-nowrap text-sm muted"><%= u.last_login_at ? fmt.relative(u.last_login_at) : 'Never' %></td>
+          <td data-label="Joined" class="whitespace-nowrap text-sm muted"><%= fmt.date(u.created_at) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/users', query: query }) %>
+</div>

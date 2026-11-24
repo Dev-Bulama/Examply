@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Fallback palette (overridden by /theme.css with the admin's brand colours). */
+:root {
+  --c-primary-50: 239 244 255; --c-primary-100: 219 229 254; --c-primary-200: 191 210 254; --c-primary-300: 147 180 253;
+  --c-primary-400: 96 143 250; --c-primary-500: 59 110 246; --c-primary-600: 31 79 209; --c-primary-700: 29 64 175;
+  --c-primary-800: 30 56 143; --c-primary-900: 30 50 113; --c-primary-950: 23 32 69; --c-on-primary: 255 255 255;
+  --c-secondary-50: 236 253 247; --c-secondary-100: 209 250 233; --c-secondary-200: 167 243 214; --c-secondary-300: 110 231 191;
+  --c-secondary-400: 52 211 160; --c-secondary-500: 16 185 135; --c-secondary-600: 15 157 122; --c-secondary-700: 4 120 92;
+  --c-secondary-800: 6 95 74; --c-secondary-900: 6 78 62; --c-secondary-950: 2 44 34;
+}
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; text-size-adjust: 100%; }
+  body { @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100; }
+  :focus-visible { @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900; }
+  [x-cloak] { display: none !important; }
+  html.font-large { font-size: 112.5%; }
+  html.font-xlarge { font-size: 125%; }
+  /* High-contrast accommodation */
+  html.high-contrast body { @apply bg-white text-black; }
+  html.high-contrast .card { @apply border-2 border-black shadow-none; }
+  html.high-contrast a { @apply underline; }
+  html.high-contrast .btn-primary { @apply bg-black text-white; }
+  ::selection { @apply bg-primary-200 text-primary-950; }
+}
+
+@layer components {
+  .container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
+  .card { @apply rounded-xl border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900; }
+  .card-body { @apply p-5 sm:p-6; }
+  .h1 { @apply text-2xl font-bold tracking-tight sm:text-3xl; }
+  .h2 { @apply text-xl font-semibold tracking-tight; }
+  .h3 { @apply text-base font-semibold; }
+  .muted { @apply text-slate-500 dark:text-slate-400; }
+  .link { @apply font-medium text-primary-700 hover:text-primary-800 hover:underline dark:text-primary-300 dark:hover:text-primary-200; }
+
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 min-h-[42px]; }
+  .btn-sm { @apply min-h-[34px] px-3 py-1.5 text-xs; }
+  .btn-primary { @apply btn bg-primary-600 text-on-primary hover:bg-primary-700 active:bg-primary-800; }
+  .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700; }
+  .btn-ghost { @apply btn text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800; }
+  .btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
+
+  .label { @apply mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200; }
+  .input { @apply block w-full rounded-lg border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm placeholder:text-slate-400 focus:border-primary-500 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100; }
+  .input-error { @apply border-red-500 focus:border-red-500 focus:ring-red-500; }
+  .field-error { @apply mt-1.5 text-sm text-red-600 dark:text-red-400; }
+  .hint { @apply mt-1.5 text-xs text-slate-500 dark:text-slate-400; }
+  .checkbox { @apply h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 dark:border-slate-600 dark:bg-slate-800; }
+
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+  .badge-gray { @apply badge bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300; }
+  .badge-green { @apply badge bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300; }
+  .badge-red { @apply badge bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300; }
+  .badge-amber { @apply badge bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300; }
+  .badge-blue { @apply badge bg-primary-100 text-primary-800 dark:bg-primary-900/50 dark:text-primary-200; }
+
+  .alert { @apply flex gap-3 rounded-lg border px-4 py-3 text-sm; }
+  .alert-info { @apply alert border-primary-200 bg-primary-50 text-primary-900 dark:border-primary-900 dark:bg-primary-950/50 dark:text-primary-100; }
+  .alert-success { @apply alert border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100; }
+  .alert-warning { @apply alert border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-100; }
+  .alert-danger { @apply alert border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/50 dark:text-red-100; }
+
+  /* Tables become stacked cards below the sm breakpoint (add data-label to each td). */
+  .table { @apply w-full text-left text-sm; }
+  .table thead th { @apply border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400; }
+  .table tbody td { @apply border-b border-slate-100 px-4 py-3 align-top dark:border-slate-800; }
+  .table tbody tr:hover { @apply bg-slate-50/70 dark:bg-slate-800/40; }
+  @media (max-width: 639px) {
+    .table-responsive thead { @apply sr-only; }
+    .table-responsive tbody tr { @apply mb-3 block rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900; }
+    .table-responsive tbody td { @apply flex justify-between gap-4 border-0 px-0 py-1.5 text-right; }
+    .table-responsive tbody td::before { content: attr(data-label); @apply text-left font-medium text-slate-500; }
+  }
+
+  .skeleton { @apply animate-pulse rounded bg-slate-200 dark:bg-slate-800; }
+  .nav-link { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white; }
+  .nav-link-active { @apply bg-primary-50 text-primary-800 hover:bg-primary-50 hover:text-primary-800 dark:bg-primary-950/60 dark:text-primary-200; }
+  .prose-content { @apply max-w-prose leading-relaxed [&_a]:link [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-3 [&_ul]:list-disc; }
+}

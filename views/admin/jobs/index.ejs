@@ -1,0 +1,42 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Background jobs</h1>
+    <p class="mt-1 muted">Emails, imports and certificate generation run in the background and retry automatically.</p>
+  </div>
+  <form method="post" action="/admin/jobs/run"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-secondary" data-loading-text="Running…">Run due jobs now</button></form>
+</div>
+<nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter by status">
+  <% [['', 'All'], ['pending', 'Pending'], ['running', 'Running'], ['completed', 'Completed'], ['failed', 'Failed']].forEach(function (s) { %>
+    <a href="/admin/jobs<%= s[0] ? `?status=${s[0]}` : '' %>" class="<%= status === s[0] ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= s[1] %><% if (s[0]) { %> <span class="opacity-75">(<%= counts[s[0]] || 0 %>)</span><% } %></a>
+  <% }) %>
+</nav>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %>
+    <div class="px-6 py-16 text-center"><p class="font-semibold">No jobs<%= status ? ` with status “${status}”` : '' %></p><p class="mt-1 text-sm muted">Jobs appear here when emails or imports are queued.</p></div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>#</th><th>Type</th><th>Status</th><th>Tries</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        <% pager.rows.forEach(function (j) { %>
+        <tr>
+          <td data-label="#" class="font-mono text-xs"><%= j.id %></td>
+          <td data-label="Type"><code class="text-xs"><%= j.type %></code><% if (j.summary) { %><p class="text-xs muted break-all"><%= j.summary %></p><% } %>
+            <% if (j.last_error) { %><details class="mt-1"><summary class="cursor-pointer text-xs text-red-600">Last error</summary><pre class="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-2 text-xs dark:bg-slate-800"><%= j.last_error %></pre></details><% } %>
+          </td>
+          <td data-label="Status"><span class="<%= { completed: 'badge-green', failed: 'badge-red', running: 'badge-blue', pending: 'badge-gray' }[j.status] %>"><%= j.status %></span></td>
+          <td data-label="Tries"><%= j.attempts %>/<%= j.max_attempts %></td>
+          <td data-label="Created" class="whitespace-nowrap text-sm muted"><%= fmt.dateTime(j.created_at) %></td>
+          <td data-label="" class="text-right">
+            <% if (j.status === 'failed') { %>
+              <form method="post" action="/admin/jobs/<%= j.id %>/retry"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-secondary btn-sm">Retry</button></form>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/jobs', query: query }) %>
+</div>

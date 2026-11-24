@@ -1,0 +1,81 @@
+<div class="mb-6">
+  <h1 class="h1">Settings</h1>
+  <p class="mt-1 muted"><%= section.description %></p>
+</div>
+<div class="grid gap-6 lg:grid-cols-4">
+  <nav class="lg:col-span-1" aria-label="Settings sections">
+    <ul class="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+      <% Object.entries(sections).forEach(function (s) { %>
+      <li><a href="/admin/settings/<%= s[0] %>" class="nav-link whitespace-nowrap <%= current === s[0] ? 'nav-link-active' : '' %>" <%= current === s[0] ? 'aria-current="page"' : '' %>><%= s[1].label %></a></li>
+      <% }) %>
+    </ul>
+  </nav>
+  <div class="space-y-6 lg:col-span-3">
+    <form method="post" action="/admin/settings/<%= current %>" class="card" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="card-body space-y-5">
+        <h2 class="h2"><%= section.label %></h2>
+        <% section.fields.forEach(function (f) { %>
+          <% if (f.type === 'secret') { %>
+            <div>
+              <label class="label" for="f-<%= f.key.replace(/\./g, '-') %>"><%= f.label %></label>
+              <input id="f-<%= f.key.replace(/\./g, '-') %>" type="password" name="<%= f.key %>" class="input" autocomplete="new-password" placeholder="<%= secretsSet[f.key] ? '•••••••• (saved — leave blank to keep)' : 'Not set' %>">
+              <p class="hint">Stored encrypted. It is never shown again after saving.</p>
+              <% if (secretsSet[f.key]) { %><label class="mt-2 flex items-center gap-2 text-xs"><input type="checkbox" name="<%= f.key %>__clear" value="1" class="checkbox"> Remove the saved value</label><% } %>
+            </div>
+          <% } else if (f.type === 'color') { %>
+            <div x-data="colorField('<%= old[f.key] || values[f.key] %>')">
+              <label class="label" for="f-<%= f.key.replace(/\./g, '-') %>"><%= f.label %></label>
+              <div class="flex items-center gap-3">
+                <input type="color" :value="value" @input="sync" class="h-10 w-14 cursor-pointer rounded border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900" aria-label="<%= f.label %> picker">
+                <input id="f-<%= f.key.replace(/\./g, '-') %>" name="<%= f.key %>" :value="value" @input="sync" value="<%= old[f.key] || values[f.key] %>" class="input max-w-[9rem] font-mono <%= errors[f.key] ? 'input-error' : '' %>" pattern="#[0-9a-fA-F]{6}" maxlength="7">
+              </div>
+              <% if (errors[f.key]) { %><p class="field-error"><%= errors[f.key] %></p><% } %>
+            </div>
+          <% } else { %>
+            <%- include('../../partials/field', { name: f.key, label: f.label, type: f.type, value: values[f.key], hint: f.hint, required: f.required, min: f.min, max: f.type === 'number' ? f.max : undefined, maxlength: f.type !== 'number' ? f.max : undefined, options: f.options ? f.options() : undefined }) %>
+          <% } %>
+        <% }) %>
+        <% if (current === 'auth') { %>
+          <div class="rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-800/60">
+            <p class="font-medium">Authorised redirect URI</p>
+            <p class="mt-1 muted">Add this exact URI to your OAuth client in the Google Cloud console.</p>
+            <div class="mt-2 flex items-center gap-2"><code class="break-all"><%= googleRedirect %></code><button type="button" class="btn-ghost btn-sm" data-copy="<%= googleRedirect %>">Copy</button></div>
+          </div>
+        <% } %>
+      </div>
+      <div class="flex justify-end border-t border-slate-200 px-6 py-4 dark:border-slate-800"><button type="submit" class="btn-primary" data-loading-text="Saving…">Save <%= section.label.toLowerCase() %> settings</button></div>
+    </form>
+
+    <% if (current === 'email') { %>
+    <form method="post" action="/admin/settings/email/test" class="card card-body flex flex-col gap-3 sm:flex-row sm:items-end">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="flex-1"><%- include('../../partials/field', { name: 'to', label: 'Send a test email to', type: 'email', value: user.email }) %></div>
+      <button type="submit" class="btn-secondary" data-loading-text="Sending…"><%- include('../../partials/icon', { name: 'mail', cls: 'h-4 w-4' }) %> Send test email</button>
+    </form>
+    <% } %>
+
+    <% (section.uploads || []).forEach(function (u) { %>
+    <section class="card card-body">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="grid h-16 w-28 place-items-center rounded-lg border border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+            <% if (uploaded[u.key]) { %><img src="/media/branding/<%= uploaded[u.key] %>" alt="Current <%= u.label.toLowerCase() %>" class="max-h-14 max-w-[6.5rem] object-contain"><% } else { %><span class="text-xs muted">None</span><% } %>
+          </div>
+          <div><p class="h3"><%= u.label %></p><p class="text-xs muted"><%= u.hint %></p></div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <form method="post" action="/admin/settings/branding/upload/<%= u.key %>?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="flex items-center gap-2">
+            <label class="sr-only" for="up-<%= u.key.replace(/\./g, '-') %>">Choose <%= u.label.toLowerCase() %></label>
+            <input id="up-<%= u.key.replace(/\./g, '-') %>" type="file" name="file" required class="block w-48 text-xs file:mr-2 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1.5 file:text-xs file:font-semibold file:text-slate-800 dark:file:bg-slate-800 dark:file:text-slate-100">
+            <button type="submit" class="btn-secondary btn-sm">Upload</button>
+          </form>
+          <% if (uploaded[u.key]) { %>
+          <form method="post" action="/admin/settings/branding/remove/<%= u.key %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-ghost btn-sm text-red-600">Remove</button></form>
+          <% } %>
+        </div>
+      </div>
+    </section>
+    <% }) %>
+  </div>
+</div>

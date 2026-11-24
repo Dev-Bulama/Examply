@@ -1,0 +1,10 @@
+<div class="relative" x-data="dropdown" @keydown.escape="close" @click.outside="close">
+  <button type="button" class="btn-ghost px-2.5" @click="toggle" :aria-expanded="open" aria-haspopup="menu" aria-label="Colour theme">
+    <span class="dark:hidden"><%- include('icon', { name: 'sun' }) %></span><span class="hidden dark:inline"><%- include('icon', { name: 'moon' }) %></span>
+  </button>
+  <div x-cloak x-show="open" x-transition class="absolute right-0 z-40 mt-2 w-40 rounded-lg border border-slate-200 bg-white p-1 shadow-pop dark:border-slate-700 dark:bg-slate-900" role="menu" x-data="themeToggle">
+    <% [['light','sun','Light'],['dark','moon','Dark'],['system','computer','System']].forEach(function (o) { %>
+      <button type="button" role="menuitemradio" class="nav-link w-full" :class="isPref('<%= o[0] %>') && 'nav-link-active'" :aria-checked="isPref('<%= o[0] %>')" @click="set('<%= o[0] %>')"><%- include('icon', { name: o[1], cls: 'h-4 w-4' }) %> <%= o[2] %></button>
+    <% }) %>
+  </div>
+</div>

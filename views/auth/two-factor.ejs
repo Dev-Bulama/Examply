@@ -1,0 +1,17 @@
+<div class="flex items-center gap-3">
+  <span class="grid h-10 w-10 place-items-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"><%- include('../partials/icon', { name: 'shield' }) %></span>
+  <div>
+    <h1 class="h2">Two-factor verification</h1>
+    <p class="text-sm muted">Enter the 6-digit code from your authenticator app.</p>
+  </div>
+</div>
+<form method="post" action="/login/2fa" class="mt-6 space-y-4" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div>
+    <label for="code" class="label">Authentication code</label>
+    <input id="code" name="code" class="input text-center font-mono text-lg tracking-[0.4em]" inputmode="numeric" autocomplete="one-time-code" maxlength="9" required autofocus placeholder="123456">
+    <p class="hint">Lost your phone? Enter one of your recovery codes (like <span class="font-mono">abcd-2345</span>) instead.</p>
+  </div>
+  <button type="submit" class="btn-primary w-full" data-loading-text="Verifying…">Verify and sign in</button>
+</form>
+<p class="mt-6 text-center text-sm"><a href="/login" class="link">Start over</a></p>

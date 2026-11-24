@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" class="<%= (htmlClasses || []).join(' ') %>" data-theme-pref="<%= themePref %>" <% if (user) { %>data-theme-source="user"<% } %>>
+<head>
+  <%- include('../partials/head') %>
+  <%- typeof style !== 'undefined' ? style : '' %>
+</head>
+<body class="flex min-h-screen flex-col" data-authenticated="<%= user ? '1' : '0' %>">
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow-pop">Skip to content</a>
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90" x-data="drawer">
+    <div class="container-page flex h-16 items-center justify-between gap-4">
+      <%- include('../partials/brand') %>
+      <nav class="hidden items-center gap-1 md:flex" aria-label="Main">
+        <a href="/" class="nav-link <%= isActive('/', true) ? 'nav-link-active' : '' %>">Home</a>
+        <% if (user) { %><a href="/dashboard" class="nav-link <%= isActive('/dashboard') ? 'nav-link-active' : '' %>">Dashboard</a><% } %>
+      </nav>
+      <div class="flex items-center gap-1 sm:gap-2">
+        <%- include('../partials/theme-toggle') %>
+        <% if (user) { %>
+          <%- include('../partials/user-menu') %>
+        <% } else { %>
+          <a href="/login" class="btn-ghost hidden sm:inline-flex">Sign in</a>
+          <% if (site.registrationOpen) { %><a href="/register" class="btn-primary">Create account</a><% } %>
+        <% } %>
+      </div>
+    </div>
+  </header>
+  <% if (typeof maintenanceOn !== 'undefined' && maintenanceOn) { %>
+    <div class="bg-amber-100 px-4 py-2 text-center text-sm text-amber-900 dark:bg-amber-900/60 dark:text-amber-100">Maintenance mode is on — only staff can use the site.</div>
+  <% } %>
+  <main id="main" class="flex-1">
+    <% if (flash && flash.length) { %><div class="container-page pt-6"><%- include('../partials/flash') %></div><% } %>
+    <%- body %>
+  </main>
+  <footer class="mt-16 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+    <div class="container-page flex flex-col gap-4 py-8 text-sm muted sm:flex-row sm:items-center sm:justify-between">
+      <p>© <%= new Date().getFullYear() %> <%= site.name %>. All rights reserved.</p>
+      <p><%= site.tagline %></p>
+    </div>
+  </footer>
+  <%- include('../partials/scripts') %>
+</body>
+</html>

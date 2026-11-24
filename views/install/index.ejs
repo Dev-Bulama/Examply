@@ -1,0 +1,41 @@
+<div class="card mb-6">
+  <div class="card-body">
+    <h2 class="h3">1. Server check</h2>
+    <ul class="mt-4 space-y-3 text-sm">
+      <% const row = function (ok, label, detail) { %>
+        <li class="flex items-start gap-3">
+          <span class="<%= ok ? 'badge-green' : 'badge-red' %>"><%= ok ? 'OK' : 'Fix' %></span>
+          <div><p class="font-medium"><%= label %></p><% if (detail) { %><p class="muted break-all"><%= detail %></p><% } %></div>
+        </li>
+      <% } %>
+      <% row(checks.node.ok, `Node.js ${checks.node.value}`, checks.node.ok ? null : `Supported versions: ${checks.node.need}. Change it in hPanel → Node.js.`) %>
+      <% row(checks.database.ok, checks.database.ok ? `Database connected (${checks.database.version})` : 'Database connection', checks.database.ok ? null : `${checks.database.error}. Check DB_HOST, DB_PORT, DB_USER, DB_PASSWORD and DB_NAME in the environment variables, then reload this page.`) %>
+      <% row(checks.storage.ok, 'storage/ folder is writable', checks.storage.ok ? null : checks.storage.problems.join('; ')) %>
+    </ul>
+  </div>
+</div>
+
+<% if (ready) { %>
+<form method="post" action="/install" class="card" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="card-body space-y-5">
+    <div>
+      <h2 class="h3">2. Site</h2>
+      <p class="mt-1 text-sm muted">You can change these later in Settings.</p>
+    </div>
+    <%- include('../partials/field', { name: 'site_name', label: 'Site name', value: 'Skillscore Assess', required: true, maxlength: 120 }) %>
+    <%- include('../partials/field', { name: 'timezone', label: 'Timezone', type: 'select', value: defaultTimezone, options: timezones.map(function (t) { return { value: t, label: t.replace(/_/g, ' ') }; }), hint: 'Dates are shown in this timezone; they are stored in UTC.' }) %>
+    <div class="border-t border-slate-200 pt-5 dark:border-slate-800">
+      <h2 class="h3">3. Super Admin account</h2>
+      <p class="mt-1 text-sm muted">You will be asked to set up two-factor authentication when you first sign in.</p>
+    </div>
+    <%- include('../partials/field', { name: 'admin_name', label: 'Full name', required: true, autocomplete: 'name', maxlength: 150 }) %>
+    <%- include('../partials/field', { name: 'admin_email', label: 'Email', type: 'email', required: true, autocomplete: 'email' }) %>
+    <%- include('../partials/field', { name: 'admin_password', label: 'Password', type: 'password', required: true, autocomplete: 'new-password', hint: policyText }) %>
+    <%- include('../partials/field', { name: 'admin_password_confirmation', label: 'Confirm password', type: 'password', required: true, autocomplete: 'new-password' }) %>
+    <button type="submit" class="btn-primary w-full" data-loading-text="Installing… this can take a minute">Install now</button>
+  </div>
+</form>
+<% } else { %>
+  <div class="alert-warning"><%- include('../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %><p>Fix the items above, then <a class="font-semibold underline" href="/install">reload this page</a>.</p></div>
+<% } %>

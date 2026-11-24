@@ -1,0 +1,154 @@
+<%
+  const targetSlugs = target.roles.map(function (r) { return r.slug; });
+  const chosenRoles = old.roles ? [].concat(old.roles) : targetSlugs;
+  const extra = accommodations.extra_time_percent || 0;
+  const extraMode = [0, 25, 50].includes(extra) ? String(extra) : 'custom';
+%>
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex items-center gap-4">
+    <% if (target.photo_path) { %><img src="/media/avatars/<%= target.photo_path %>" alt="" class="h-14 w-14 rounded-full object-cover"><% } else { %>
+    <span class="grid h-14 w-14 place-items-center rounded-full bg-primary-100 text-xl font-semibold text-primary-800 dark:bg-primary-900 dark:text-primary-100" aria-hidden="true"><%= target.full_name.charAt(0).toUpperCase() %></span><% } %>
+    <div>
+      <h1 class="h1"><%= target.full_name %></h1>
+      <p class="muted"><%= target.email %></p>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (target.status === 'suspended') { %><span class="badge-red">Suspended</span><% } else { %><span class="badge-green">Active</span><% } %>
+    <% if (target.email_verified_at) { %><span class="badge-green">Email verified</span><% } else { %><span class="badge-amber">Email not verified</span><% } %>
+    <% if (target.totp_enabled_at) { %><span class="badge-blue">2FA on</span><% } %>
+  </div>
+</div>
+
+<% if (target.deletion_requested_at) { %>
+  <div class="alert-warning mb-6"><%- include('../../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %>
+    <div><p class="font-semibold">Deletion requested <%= fmt.date(target.deletion_requested_at) %></p><% if (target.deletion_reason) { %><p class="mt-1">Reason: “<%= target.deletion_reason %>”</p><% } %><p class="mt-1">Process it with “Delete and anonymise” below within 30 days.</p></div>
+  </div>
+<% } %>
+<% if (!canManage) { %>
+  <div class="alert-info mb-6"><%- include('../../partials/icon', { name: 'lock', cls: 'h-5 w-5 shrink-0' }) %><p>This user holds a role above your permissions, so their account is read-only for you.</p></div>
+<% } %>
+
+<div class="grid gap-6 lg:grid-cols-3">
+  <div class="space-y-6 lg:col-span-2">
+    <form method="post" action="/admin/users/<%= target.id %>" class="card" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <fieldset <%= canManage && can('users.manage') ? '' : 'disabled' %>>
+        <div class="card-body space-y-5">
+          <h2 class="h2">Account</h2>
+          <div class="grid gap-5 sm:grid-cols-2">
+            <%- include('../../partials/field', { name: 'full_name', label: 'Full name', value: target.full_name, required: true, maxlength: 150 }) %>
+            <%- include('../../partials/field', { name: 'email', label: 'Email', type: 'email', value: target.email, required: true, hint: 'Changing it un-verifies the address.' }) %>
+            <%- include('../../partials/field', { name: 'status', label: 'Status', type: 'select', value: target.status, options: [{ value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended (cannot sign in)' }] }) %>
+          </div>
+          <fieldset>
+            <legend class="label">Roles</legend>
+            <div class="grid gap-2 sm:grid-cols-2">
+              <% allRoles.forEach(function (r) { const allowed = assignable.some(function (a) { return a.id === r.id; }); %>
+              <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700 <%= allowed ? 'hover:bg-slate-50 dark:hover:bg-slate-800/50' : 'opacity-60' %>">
+                <input type="checkbox" name="roles" value="<%= r.slug %>" class="checkbox mt-0.5" <%= chosenRoles.includes(r.slug) ? 'checked' : '' %> <%= allowed ? '' : 'disabled' %>>
+                <% if (!allowed && chosenRoles.includes(r.slug)) { %><input type="hidden" name="roles" value="<%= r.slug %>"><% } %>
+                <span><span class="font-medium"><%= r.name %></span><span class="block text-xs muted"><%= allowed ? r.description : 'You cannot assign this role.' %></span></span>
+              </label>
+              <% }) %>
+            </div>
+            <% if (errors.roles) { %><p class="field-error"><%= errors.roles %></p><% } %>
+          </fieldset>
+        </div>
+        <% if (canManage && can('users.manage')) { %>
+        <div class="flex justify-end border-t border-slate-200 px-6 py-4 dark:border-slate-800"><button type="submit" class="btn-primary" data-loading-text="Saving…">Save changes</button></div>
+        <% } %>
+      </fieldset>
+    </form>
+
+    <% if (can('users.accommodations')) { %>
+    <form id="accommodations" method="post" action="/admin/users/<%= target.id %>/accommodations" class="card" novalidate x-data="tabs('<%= old.extra_time || extraMode %>')">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="card-body space-y-5">
+        <div>
+          <h2 class="h2">Accessibility accommodations</h2>
+          <p class="mt-1 text-sm muted">Applied automatically to every exam attempt and shown in the generated instructions.</p>
+        </div>
+        <fieldset>
+          <legend class="label">Extra time</legend>
+          <div class="flex flex-wrap gap-2">
+            <% [['0', 'None'], ['25', '+25%'], ['50', '+50%'], ['custom', 'Custom']].forEach(function (o) { %>
+              <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                <input type="radio" name="extra_time" value="<%= o[0] %>" class="checkbox rounded-full" @change="select('<%= o[0] %>')" <%= (old.extra_time || extraMode) === o[0] ? 'checked' : '' %>> <%= o[1] %>
+              </label>
+            <% }) %>
+          </div>
+          <div class="mt-3 max-w-xs" x-show="is('custom')" x-cloak>
+            <%- include('../../partials/field', { name: 'extra_time_custom', label: 'Custom extra time (%)', type: 'number', value: extraMode === 'custom' ? extra : '', min: 1, max: 300 }) %>
+          </div>
+        </fieldset>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <%- include('../../partials/field', { name: 'large_font', label: 'Larger text', type: 'checkbox', value: accommodations.large_font }) %>
+          <%- include('../../partials/field', { name: 'high_contrast', label: 'High-contrast mode', type: 'checkbox', value: accommodations.high_contrast }) %>
+        </div>
+        <%- include('../../partials/field', { name: 'notes', label: 'Internal notes', type: 'textarea', rows: 2, value: accommodations.notes, maxlength: 500, hint: 'Visible to staff only (e.g. reference to supporting documents).' }) %>
+      </div>
+      <div class="flex justify-end border-t border-slate-200 px-6 py-4 dark:border-slate-800"><button type="submit" class="btn-primary">Save accommodations</button></div>
+    </form>
+    <% } %>
+
+    <section class="card">
+      <div class="card-body"><h2 class="h2">Recent sign-ins</h2></div>
+      <% if (!history.length) { %><p class="px-6 pb-6 text-sm muted">No sign-ins recorded.</p><% } else { %>
+      <div class="overflow-x-auto p-2 sm:p-0">
+        <table class="table table-responsive">
+          <thead><tr><th>When</th><th>Result</th><th>IP</th><th>Method</th></tr></thead>
+          <tbody>
+            <% history.forEach(function (h) { %>
+            <tr>
+              <td data-label="When" class="whitespace-nowrap"><%= fmt.dateTime(h.created_at) %></td>
+              <td data-label="Result"><% if (h.success) { %><span class="badge-green">Success</span><% } else { %><span class="badge-red"><%= h.reason %></span><% } %></td>
+              <td data-label="IP" class="font-mono text-xs"><%= h.ip %></td>
+              <td data-label="Method" class="text-xs muted"><%= h.success ? h.reason : '' %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card card-body text-sm">
+      <h2 class="h3">Details</h2>
+      <dl class="mt-3 space-y-2">
+        <div class="flex justify-between gap-3"><dt class="muted">Joined</dt><dd><%= fmt.date(target.created_at) %></dd></div>
+        <div class="flex justify-between gap-3"><dt class="muted">Last sign-in</dt><dd><%= target.last_login_at ? fmt.dateTime(target.last_login_at) : 'Never' %></dd></div>
+        <div class="flex justify-between gap-3"><dt class="muted">Organisation</dt><dd class="text-right"><%= target.organisation_name || '—' %></dd></div>
+        <div class="flex justify-between gap-3"><dt class="muted">Job title</dt><dd class="text-right"><%= target.job_title || '—' %></dd></div>
+        <div class="flex justify-between gap-3"><dt class="muted">Phone</dt><dd><%= target.phone || '—' %></dd></div>
+        <div class="flex justify-between gap-3"><dt class="muted">Timezone</dt><dd><%= target.timezone || 'Site default' %></dd></div>
+        <div class="flex justify-between gap-3"><dt class="muted">Sign-in</dt><dd><%= target.password_hash ? 'Password' : '' %><%= target.password_hash && target.google_id ? ' + ' : '' %><%= target.google_id ? 'Google' : '' %></dd></div>
+      </dl>
+    </section>
+    <% if (canManage && can('users.manage')) { %>
+    <section class="card card-body space-y-3">
+      <h2 class="h3">Actions</h2>
+      <% if (!target.email_verified_at) { %>
+        <form method="post" action="/admin/users/<%= target.id %>/verify-email"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary w-full" type="submit">Mark email verified</button></form>
+      <% } %>
+      <form method="post" action="/admin/users/<%= target.id %>/send-reset"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary w-full" type="submit">Email a password reset link</button></form>
+      <% if (target.totp_enabled_at) { %>
+        <form method="post" action="/admin/users/<%= target.id %>/reset-2fa" data-confirm="Reset two-factor authentication for <%= target.full_name %>? They will need to set it up again." data-confirm-label="Reset 2FA"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary w-full" type="submit">Reset two-factor</button></form>
+      <% } %>
+      <% if (target.id !== user.id) { %>
+        <form method="post" action="/admin/users/<%= target.id %>/delete" data-confirm="Delete <%= target.full_name %> and anonymise their personal data? This cannot be undone." data-confirm-label="Delete user"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-danger w-full" type="submit"><%- include('../../partials/icon', { name: 'trash', cls: 'h-4 w-4' }) %> Delete and anonymise</button></form>
+      <% } %>
+    </section>
+    <% } %>
+    <% if (auditRows.length) { %>
+    <section class="card card-body">
+      <h2 class="h3">Admin changes</h2>
+      <ul class="mt-3 space-y-2 text-sm">
+        <% auditRows.forEach(function (a) { %><li><a class="font-mono text-xs link" href="/admin/audit/<%= a.id %>"><%= a.action %></a> <span class="text-xs muted">· <%= fmt.relative(a.created_at) %></span></li><% }) %>
+      </ul>
+    </section>
+    <% } %>
+  </aside>
+</div>

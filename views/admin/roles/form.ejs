@@ -1,0 +1,32 @@
+<div class="mx-auto max-w-4xl">
+  <h1 class="h1"><%= role.id ? `Edit role: ${role.name}` : 'New role' %></h1>
+  <% if (role.is_system) { %><p class="mt-1 muted">This is a built-in role. You can change its permissions; it cannot be renamed away or deleted.</p><% } %>
+  <form method="post" action="<%= role.id ? `/admin/roles/${role.id}` : '/admin/roles' %>" class="mt-6 space-y-6" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="card card-body grid gap-5 sm:grid-cols-2">
+      <%- include('../../partials/field', { name: 'name', label: 'Name', value: role.name, required: true, maxlength: 100 }) %>
+      <%- include('../../partials/field', { name: 'description', label: 'Description', value: role.description, maxlength: 255 }) %>
+    </div>
+    <% if (errors.permissions) { %><p class="field-error"><%= errors.permissions %></p><% } %>
+    <div class="grid gap-4 md:grid-cols-2">
+      <% groups.forEach(function (g) { %>
+      <fieldset class="card card-body">
+        <legend class="sr-only"><%= g.name %></legend>
+        <p class="h3" aria-hidden="true"><%= g.name %></p>
+        <div class="mt-3 space-y-2.5">
+          <% g.items.forEach(function (p) { %>
+          <label class="flex items-start gap-3 text-sm">
+            <input type="checkbox" name="permissions" value="<%= p.key %>" class="checkbox mt-0.5" <%= granted.includes(p.key) ? 'checked' : '' %>>
+            <span><span class="block"><%= p.description %></span><code class="text-xs muted"><%= p.key %></code></span>
+          </label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <% }) %>
+    </div>
+    <div class="flex justify-end gap-3">
+      <a href="/admin/roles" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary" data-loading-text="Saving…">Save role</button>
+    </div>
+  </form>
+</div>

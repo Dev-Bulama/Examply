@@ -1,0 +1,82 @@
+<div class="mb-6">
+  <h1 class="h1">Security</h1>
+  <p class="mt-1 muted">Manage your password, two-factor authentication and recent sign-ins.</p>
+</div>
+<div class="grid gap-6 lg:grid-cols-2">
+  <section class="card">
+    <form method="post" action="/account/security/password" class="card-body space-y-4" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h2 class="h2"><%= user.password_hash ? 'Change password' : 'Set a password' %></h2>
+      <% if (!user.password_hash) { %><p class="text-sm muted">You sign in with Google. Set a password to also sign in with your email.</p><% } %>
+      <% if (user.password_hash) { %><%- include('../partials/field', { name: 'current_password', label: 'Current password', type: 'password', required: true }) %><% } %>
+      <%- include('../partials/field', { name: 'password', label: 'New password', type: 'password', required: true, autocomplete: 'new-password', hint: policyText }) %>
+      <%- include('../partials/field', { name: 'password_confirmation', label: 'Confirm new password', type: 'password', required: true, autocomplete: 'new-password' }) %>
+      <button type="submit" class="btn-primary" data-loading-text="Saving…">Save password</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="h2">Two-factor authentication</h2>
+          <p class="mt-1 text-sm muted">A 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…) is required when you sign in.</p>
+        </div>
+        <% if (user.totp_enabled_at) { %><span class="badge-green shrink-0">On</span><% } else { %><span class="badge-gray shrink-0">Off</span><% } %>
+      </div>
+      <% if (!user.totp_enabled_at) { %>
+        <% if (twoFactorRequired) { %><div class="alert-warning mt-4"><%- include('../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %><p>Your role requires two-factor authentication.</p></div><% } %>
+        <a href="/account/security/2fa" class="btn-primary mt-5">Set up two-factor authentication</a>
+      <% } else { %>
+        <p class="mt-4 text-sm">Enabled <%= fmt.dateTime(user.totp_enabled_at) %>. <strong><%= recoveryCount %></strong> unused recovery code<%= recoveryCount === 1 ? '' : 's' %> left.</p>
+        <div class="mt-5 space-y-5" x-data="tabs('')">
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn-secondary btn-sm" @click="select('codes')">New recovery codes</button>
+            <% if (!twoFactorRequired) { %><button type="button" class="btn-secondary btn-sm" @click="select('disable')">Turn off</button><% } %>
+          </div>
+          <form method="post" action="/account/security/2fa/recovery-codes" class="space-y-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700" x-show="is('codes')" x-cloak>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <p class="text-sm muted">Old recovery codes stop working.</p>
+            <% if (user.password_hash) { %><%- include('../partials/field', { name: 'password', id: 'rc-password', label: 'Password', type: 'password', required: true }) %><% } %>
+            <%- include('../partials/field', { name: 'code', id: 'rc-code', label: 'Authentication code', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 7, required: true }) %>
+            <button type="submit" class="btn-primary btn-sm">Generate new codes</button>
+          </form>
+          <% if (!twoFactorRequired) { %>
+          <form method="post" action="/account/security/2fa/disable" class="space-y-3 rounded-lg border border-red-200 p-4 dark:border-red-900" x-show="is('disable')" x-cloak data-confirm="Turn off two-factor authentication?">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <% if (user.password_hash) { %><%- include('../partials/field', { name: 'password', id: 'd-password', label: 'Password', type: 'password', required: true }) %><% } %>
+            <%- include('../partials/field', { name: 'code', id: 'd-code', label: 'Authentication code', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 7, required: true }) %>
+            <button type="submit" class="btn-danger btn-sm">Turn off two-factor</button>
+          </form>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <section class="card lg:col-span-2">
+    <div class="card-body">
+      <h2 class="h2">Recent sign-ins</h2>
+      <p class="mt-1 text-sm muted">If you don’t recognise an entry, change your password immediately.</p>
+    </div>
+    <% if (!history.length) { %>
+      <p class="px-6 pb-6 text-sm muted">No sign-ins recorded yet.</p>
+    <% } else { %>
+    <div class="overflow-x-auto px-2 pb-2 sm:px-0">
+      <table class="table table-responsive">
+        <thead><tr><th>When</th><th>Result</th><th>IP address</th><th>Device</th></tr></thead>
+        <tbody>
+          <% history.forEach(function (h) { %>
+          <tr>
+            <td data-label="When"><%= fmt.dateTime(h.created_at) %></td>
+            <td data-label="Result"><% if (h.success) { %><span class="badge-green">Signed in</span><% } else { %><span class="badge-red"><%= h.reason === 'bad_2fa' ? 'Wrong 2FA code' : h.reason === 'locked' ? 'Locked' : 'Failed' %></span><% } %></td>
+            <td data-label="IP address" class="font-mono text-xs"><%= h.ip %></td>
+            <td data-label="Device" class="max-w-xs truncate text-xs muted" title="<%= h.user_agent %>"><%= h.user_agent %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </section>
+</div>

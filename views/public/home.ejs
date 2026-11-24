@@ -1,0 +1,32 @@
+<section class="relative overflow-hidden border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+  <div class="absolute inset-0 -z-0 bg-[radial-gradient(60rem_30rem_at_70%_-10%,rgb(var(--c-primary-100)/0.9),transparent)] dark:bg-[radial-gradient(60rem_30rem_at_70%_-10%,rgb(var(--c-primary-900)/0.5),transparent)]" aria-hidden="true"></div>
+  <div class="container-page relative grid gap-12 py-16 sm:py-24 lg:grid-cols-2 lg:items-center">
+    <div>
+      <p class="badge-blue">Assess · Practise · Certify</p>
+      <h1 class="mt-5 text-4xl font-bold tracking-tight sm:text-5xl"><%= site.tagline || 'Professional assessment & certification practice' %></h1>
+      <p class="mt-5 max-w-xl text-lg muted">Find your starting level before training, practise under real exam conditions, and measure how much you have learned — with instant, detailed results.</p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <% if (user) { %>
+          <a href="/dashboard" class="btn-primary">Go to my dashboard <%- include('../partials/icon', { name: 'arrowRight', cls: 'h-4 w-4' }) %></a>
+        <% } else { %>
+          <% if (site.registrationOpen) { %><a href="/register" class="btn-primary">Create a free account <%- include('../partials/icon', { name: 'arrowRight', cls: 'h-4 w-4' }) %></a><% } %>
+          <a href="/login" class="btn-secondary">Sign in</a>
+        <% } %>
+      </div>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <% [
+        ['chart', 'Diagnostic placement', 'A pre-training test places you in a proficiency band and recommends a training track.'],
+        ['clock', 'Realistic mock exams', 'Timed simulations with sections, negative marking and scaled scores, like the real thing.'],
+        ['academic', 'Past-question packs', 'Study, practise with instant feedback, or sit a timed mock from each pack.'],
+        ['shield', 'Verified certificates', 'Every certificate has a unique ID and QR code that anyone can verify.'],
+      ].forEach(function (f) { %>
+        <div class="card card-body">
+          <span class="grid h-10 w-10 place-items-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"><%- include('../partials/icon', { name: f[0] }) %></span>
+          <h2 class="mt-4 h3"><%= f[1] %></h2>
+          <p class="mt-1.5 text-sm muted"><%= f[2] %></p>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</section>

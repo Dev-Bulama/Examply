@@ -1,0 +1,38 @@
+<%
+/* Form field. Locals: name, label, type='text', value, hint, required, autocomplete, placeholder, inputmode, min, max, step, maxlength, options ([{value,label}]) for select, rows for textarea */
+const t = locals.type || 'text';
+const id = locals.id || `f-${name.replace(/[^a-z0-9]+/gi, '-')}`;
+const err = (typeof errors !== 'undefined' && errors[name]) || null;
+const fromOld = (typeof old !== 'undefined' && Object.prototype.hasOwnProperty.call(old, name)) ? old[name] : undefined;
+const val = fromOld !== undefined ? fromOld : (locals.value === undefined || locals.value === null ? '' : locals.value);
+const describedBy = [locals.hint ? `${id}-hint` : '', err ? `${id}-error` : ''].filter(Boolean).join(' ');
+%>
+<div class="<%= locals.wrapperClass || '' %>">
+  <% if (t === 'checkbox') { %>
+    <label class="flex items-start gap-3 text-sm" for="<%= id %>">
+      <input type="hidden" name="<%= name %>" value="0">
+      <input id="<%= id %>" type="checkbox" name="<%= name %>" value="1" class="checkbox mt-0.5" <%= (val === true || val === 1 || val === '1' || val === 'on') ? 'checked' : '' %> <% if (describedBy) { %>aria-describedby="<%= describedBy %>"<% } %>>
+      <span><span class="font-medium"><%= label %></span><% if (locals.hint) { %><span id="<%= id %>-hint" class="block muted text-xs mt-0.5"><%= hint %></span><% } %></span>
+    </label>
+  <% } else { %>
+    <label class="label" for="<%= id %>"><%= label %><% if (locals.required) { %> <span class="text-red-600" aria-hidden="true">*</span><% } %></label>
+    <% if (t === 'select') { %>
+      <select id="<%= id %>" name="<%= name %>" class="input <%= err ? 'input-error' : '' %>" <%= locals.required ? 'required' : '' %> <% if (describedBy) { %>aria-describedby="<%= describedBy %>"<% } %> <% if (err) { %>aria-invalid="true"<% } %>>
+        <% (locals.options || []).forEach(function (o) { %>
+          <option value="<%= o.value %>" <%= String(o.value) === String(val) ? 'selected' : '' %>><%= o.label %></option>
+        <% }) %>
+      </select>
+    <% } else if (t === 'textarea') { %>
+      <textarea id="<%= id %>" name="<%= name %>" rows="<%= locals.rows || 4 %>" class="input <%= err ? 'input-error' : '' %>" <%= locals.required ? 'required' : '' %> <% if (locals.maxlength) { %>maxlength="<%= maxlength %>"<% } %> <% if (locals.placeholder) { %>placeholder="<%= placeholder %>"<% } %> <% if (describedBy) { %>aria-describedby="<%= describedBy %>"<% } %> <% if (err) { %>aria-invalid="true"<% } %>><%= val %></textarea>
+    <% } else if (t === 'password') { %>
+      <div class="relative" x-data="passwordField">
+        <input id="<%= id %>" :type="type()" type="password" name="<%= name %>" class="input pr-16 <%= err ? 'input-error' : '' %>" <%= locals.required ? 'required' : '' %> autocomplete="<%= locals.autocomplete || 'current-password' %>" <% if (locals.maxlength) { %>maxlength="<%= maxlength %>"<% } %> <% if (describedBy) { %>aria-describedby="<%= describedBy %>"<% } %> <% if (err) { %>aria-invalid="true"<% } %>>
+        <button type="button" class="absolute inset-y-0 right-0 px-3 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200" @click="toggle" x-text="label()" aria-controls="<%= id %>">Show</button>
+      </div>
+    <% } else { %>
+      <input id="<%= id %>" type="<%= t %>" name="<%= name %>" value="<%= val %>" class="input <%= err ? 'input-error' : '' %>" <%= locals.required ? 'required' : '' %> <% if (locals.autocomplete) { %>autocomplete="<%= autocomplete %>"<% } %> <% if (locals.placeholder) { %>placeholder="<%= placeholder %>"<% } %> <% if (locals.inputmode) { %>inputmode="<%= inputmode %>"<% } %> <% if (locals.min !== undefined) { %>min="<%= min %>"<% } %> <% if (locals.max !== undefined) { %>max="<%= max %>"<% } %> <% if (locals.step !== undefined) { %>step="<%= step %>"<% } %> <% if (locals.maxlength) { %>maxlength="<%= maxlength %>"<% } %> <% if (locals.pattern) { %>pattern="<%= pattern %>"<% } %> <% if (describedBy) { %>aria-describedby="<%= describedBy %>"<% } %> <% if (err) { %>aria-invalid="true"<% } %>>
+    <% } %>
+    <% if (locals.hint) { %><p id="<%= id %>-hint" class="hint"><%= hint %></p><% } %>
+  <% } %>
+  <% if (err) { %><p id="<%= id %>-error" class="field-error"><%= err %></p><% } %>
+</div>

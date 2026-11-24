@@ -1,0 +1,37 @@
+<div class="mb-6">
+  <h1 class="h1">Audit log</h1>
+  <p class="mt-1 muted">Every admin action with who, what, before/after values, IP and time.</p>
+</div>
+<form method="get" action="/admin/audit" class="card card-body mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6" role="search">
+  <div class="lg:col-span-2"><label class="label" for="action">Action starts with</label><input id="action" name="action" value="<%= filters.action %>" class="input" placeholder="e.g. user. or settings."></div>
+  <div class="lg:col-span-2"><label class="label" for="user">Staff member</label><input id="user" name="user" value="<%= filters.user %>" class="input" placeholder="Name or email"></div>
+  <div><label class="label" for="entity">Entity</label>
+    <select id="entity" name="entity" class="input"><option value="">Any</option><% entities.forEach(function (e) { %><option <%= filters.entity === e ? 'selected' : '' %>><%= e %></option><% }) %></select>
+  </div>
+  <div class="flex items-end"><button type="submit" class="btn-secondary w-full">Filter</button></div>
+  <div><label class="label" for="from">From</label><input id="from" type="date" name="from" value="<%= filters.from %>" class="input"></div>
+  <div><label class="label" for="to">To</label><input id="to" type="date" name="to" value="<%= filters.to %>" class="input"></div>
+</form>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %>
+    <div class="px-6 py-16 text-center"><p class="font-semibold">No entries</p><p class="mt-1 text-sm muted">Nothing matches these filters yet.</p></div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Entity</th><th>IP</th></tr></thead>
+      <tbody>
+        <% pager.rows.forEach(function (a) { %>
+        <tr>
+          <td data-label="When" class="whitespace-nowrap"><a class="link" href="/admin/audit/<%= a.id %>"><%= fmt.dateTime(a.created_at) %></a></td>
+          <td data-label="Who"><%= a.full_name || 'System' %><% if (a.email) { %><p class="text-xs muted"><%= a.email %></p><% } %></td>
+          <td data-label="Action"><code class="text-xs"><%= a.action %></code></td>
+          <td data-label="Entity" class="text-sm"><%= a.entity_type ? `${a.entity_type} #${a.entity_id}` : '—' %></td>
+          <td data-label="IP" class="font-mono text-xs"><%= a.ip %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/audit', query: query }) %>
+</div>
