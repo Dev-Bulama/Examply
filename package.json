@@ -78,6 +78,7 @@
     "testTimeout": 30000,
     "roots": [
       "<rootDir>/tests"
-    ]
+    ],
+    "maxWorkers": 1
   }
 }

@@ -45,17 +45,18 @@ async function syncPermissions(knex = db()) {
     if (existing.has(key)) {
       await knex('permissions').where({ key }).update({ group, description });
     } else {
-      const [id] = await knex('permissions').insert({ key, group, description });
-      existing.set(key, id);
-      created.add(key);
+      // Two processes booting at once (e.g. parallel workers) may both try to insert: ignore the loser's insert.
+      const [id] = await knex('permissions').insert({ key, group, description }).onConflict('key').ignore();
+      if (id) created.add(key);
+      existing.set(key, id || (await knex('permissions').where({ key }).first('id')).id);
     }
   }
   for (const role of ROLES) {
     let row = await knex('roles').where({ slug: role.slug }).first();
     let grant;
     if (!row) {
-      const [id] = await knex('roles').insert({ slug: role.slug, name: role.name, description: role.description, is_system: true });
-      row = { id };
+      const [id] = await knex('roles').insert({ slug: role.slug, name: role.name, description: role.description, is_system: true }).onConflict('slug').ignore();
+      row = { id: id || (await knex('roles').where({ slug: role.slug }).first('id')).id };
       grant = role.permissions;
     } else {
       grant = role.permissions.filter((k) => created.has(k));

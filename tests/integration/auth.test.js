@@ -140,7 +140,10 @@ describe('two-factor authentication', () => {
     t = await csrf(a4, '/login');
     await a4.post('/login').type('form').send({ _csrf: t, email: user.email, password: 'Correct-Horse-9' });
     t = await csrf(a4, '/login/2fa');
-    const replay = await a4.post('/login/2fa').type('form').send({ _csrf: t, code: authenticator.generate(secret) });
+    // Re-create exactly the code accepted at the first login (same 30-second step), even if the clock moved on.
+    const { totp_last_step: usedStep } = await db()('users').where({ id: user.id }).first('totp_last_step');
+    const usedCode = authenticator.clone({ epoch: Number(usedStep) * 30000 }).generate(secret);
+    const replay = await a4.post('/login/2fa').type('form').send({ _csrf: t, code: usedCode });
     expect(replay.headers.location).toBe('/login/2fa');
 
     // same recovery code again fails

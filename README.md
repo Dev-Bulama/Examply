@@ -126,7 +126,7 @@ GRANT ALL ON skillscore_test.* TO 'skillscore'@'localhost';
 npm test
 ```
 
-The schema is rebuilt from the migrations at the start of every run, and each test file gets its own temporary `storage/` directory.
+The schema is rebuilt from the migrations at the start of every run, and each test file gets its own temporary `storage/` directory. Test files run one at a time (`maxWorkers: 1`) because they share the test database and job queue.
 
 ## Project layout
 
