@@ -31,7 +31,17 @@ router.get(
       db()('results').where({ user_id: u.id }).count('* as n').first(),
       db()('certificates').where({ user_id: u.id }).whereNull('revoked_at').count('* as n').first(),
     ]);
+    const recent = await db()('attempts as a')
+      .join('exams as e', 'e.id', 'a.exam_id')
+      .leftJoin('results as r', 'r.attempt_id', 'a.id')
+      .where('a.user_id', u.id)
+      .orderBy('a.id', 'desc')
+      .limit(6)
+      .select('a.uuid', 'a.status', 'a.mode', 'a.attempt_no', 'a.started_at', 'a.expires_at', 'e.title', 'r.percent', 'r.passed', 'r.band', 'r.release_status', 'r.has_pending_manual');
+    const suggested = await db()('exams').where({ status: 'published', visibility: 'public' }).whereNull('deleted_at').whereNull('organisation_id').orderBy('published_at', 'desc').limit(3).select('slug', 'title', 'type', 'duration_minutes', 'is_paid');
     res.render('candidate/dashboard', {
+      recent,
+      suggested,
       title: 'Dashboard',
       layout: 'layouts/app',
       completeness,

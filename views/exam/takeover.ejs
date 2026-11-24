@@ -1,0 +1,13 @@
+<div class="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-12">
+  <div class="card card-body text-center">
+    <span class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"><%- include('../partials/icon', { name: 'computer' }) %></span>
+    <h1 class="h2 mt-4"><%= exam.title %></h1>
+    <p class="mt-2 muted">This exam is open in another browser tab or on another device. It can only be open in one place at a time.</p>
+    <p class="mt-2 text-sm muted">Continuing here closes it there. Your saved answers and the timer carry over.</p>
+    <form method="post" action="/attempts/<%= attempt.uuid %>/take-over" class="mt-6">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="btn-primary w-full">Continue the exam here</button>
+    </form>
+    <a href="/dashboard" class="btn-ghost mt-2 w-full">Back to dashboard</a>
+  </div>
+</div>

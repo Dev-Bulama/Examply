@@ -42,6 +42,18 @@ exports.seed = async function seed(knex) {
     await exams.publish(id, user, 'Initial version', knex);
   }
 
+  // 1b. A free mock with a certificate — fixed list across every domain, so results show the domain radar.
+  if (!(await exists('oracle-1z0-082-free-practice-mock'))) {
+    const id = await exams.createExam({ title: 'Oracle 1Z0-082 Free Practice Mock', type: 'mock', category_id: oracleCat.id, certification_id: cert.id, user }, knex);
+    await knex('exams').where({ id }).update({ slug: 'oracle-1z0-082-free-practice-mock', short_description: 'A free 30-minute mock across all five 1Z0-082 domains, including two SQL lab tasks. Pass to earn a verifiable certificate.', difficulty_label: 'Professional', duration_minutes: 30, pass_mark: 60, partial_credit: true });
+    await exams.saveTab(id, 'certificate', { certificate_enabled: '1', certificate_template: 'classic', signatory_name: 'Ada Obi', signatory_title: 'Head of Assessment' }, user, {}, knex);
+    await exams.saveTab(id, 'integrity', { record_tab_switches: '1', single_session: '1' }, user, {}, knex);
+    const pick = await knex('questions').where({ certification_id: cert.id, status: 'published' }).whereNull('parent_id').whereNull('deleted_at').whereNot('type', 'essay').orderBy('id').select('id', 'type', 'domain_id');
+    const nonSql = pick.filter((q) => q.type !== 'sql');
+    await exams.addQuestions(id, [...nonSql.map((q) => q.id), ...sqlIds.slice(0, 2)], null, knex);
+    await exams.publish(id, user, 'Initial version', knex);
+  }
+
   // 2. Pre-training diagnostic — fixed list in two sections, default bands
   if (!(await exists('sql-skills-diagnostic'))) {
     const id = await exams.createExam({ title: 'SQL Skills Diagnostic', type: 'pre_training', category_id: oracleCat.id, certification_id: cert.id, user }, knex);

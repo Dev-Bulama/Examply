@@ -1,0 +1,60 @@
+<%
+/* One question in the candidate's review. Locals: r (review item), n (number label) */
+const a = r.authoring || {};
+const resp = r.response || {};
+const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const esc = function (t) { return String(t === undefined || t === null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+const inline = function (t) { return esc(t).replace(/`([^`]+)`/g, '<code>$1</code>'); };
+const chosen = [].concat(resp.selected || []);
+const state = r.status === 'pending_manual' ? 'pending' : r.unanswered ? 'unanswered' : r.correct ? 'correct' : (r.awarded > 0 ? 'partial' : 'wrong');
+const badge = { correct: ['badge-green', 'Correct'], partial: ['badge-amber', 'Partly correct'], wrong: ['badge-red', 'Incorrect'], unanswered: ['badge-gray', 'Not answered'], pending: ['badge-amber', 'Awaiting grading'] }[state];
+%>
+<article class="card" data-review="<%= state %><%= r.flagged ? ' flagged' : '' %>">
+  <div class="card-body">
+    <div class="mb-3 flex flex-wrap items-center gap-2">
+      <span class="text-sm font-semibold muted"><%= n %></span>
+      <span class="<%= badge[0] %>"><%= badge[1] %></span>
+      <% if (r.flagged) { %><span class="badge-amber">Flagged</span><% } %>
+      <span class="ml-auto text-sm font-semibold"><%= r.awarded === null ? '—' : r.awarded %> / <%= r.possible %></span>
+    </div>
+    <div class="q-content prose-content max-w-none"><%- r.stem_html %></div>
+
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <div class="rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide muted">Your answer</p>
+        <% if (r.unanswered && r.type !== 'essay') { %><p class="muted">No answer.</p>
+        <% } else if (['single_choice','multiple_response'].includes(r.type)) { %>
+          <ul class="space-y-1"><% (a.options || []).forEach(function (o, i) { if (!chosen.includes(L[i])) return; %><li class="flex gap-2"><span aria-hidden="true">•</span><span class="flex-1"><%- inline(o.text) %></span><%- o.correct ? '<span class="text-emerald-600">✔</span>' : '<span class="text-red-600">✘</span>' %></li><% }) %></ul>
+        <% } else if (r.type === 'true_false') { %><p><%= chosen[0] === 'T' ? 'True' : 'False' %></p>
+        <% } else if (r.type === 'hotspot') { %><p><%- inline(((a.regions || [])[Number(String(chosen[0] || 'H0').slice(1)) - 1] || {}).label) %></p>
+        <% } else if (r.type === 'fill_blank') { %><ol class="list-decimal pl-5"><% (resp.blanks || []).forEach(function (b) { %><li><code><%= b || '—' %></code></li><% }) %></ol>
+        <% } else if (r.type === 'numeric') { %><p><%= resp.value %> <%= a.units || '' %></p>
+        <% } else if (r.type === 'matching') { %><ul class="space-y-1"><% (a.pairs || []).forEach(function (p, i) { const pick = (resp.pairs || {})['L' + (i + 1)]; const all = (a.pairs || []).map(function (x) { return x.right; }).concat(a.distractors || []); const txt = pick ? all[Number(pick.slice(1)) - 1] : ''; %><li><%- inline(p.left) %> → <%- txt ? inline(txt) : '<span class="muted">—</span>' %> <%- pick === 'R' + (i + 1) ? '<span class="text-emerald-600">✔</span>' : '<span class="text-red-600">✘</span>' %></li><% }) %></ul>
+        <% } else if (r.type === 'ordering') { %><ol class="list-decimal pl-5"><% (resp.order || []).forEach(function (k) { %><li><%- inline((a.items || [])[Number(String(k).slice(1)) - 1]) %></li><% }) %></ol>
+        <% } else if (r.type === 'sql') { %><pre class="whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-xs dark:bg-slate-800/60"><%= resp.sql %></pre>
+        <% } else { %><p class="whitespace-pre-line"><%= resp.text || '' %></p><% } %>
+        <% if (r.feedback) { %><p class="mt-2 rounded bg-primary-50 p-2 text-xs dark:bg-primary-950/40"><span class="font-semibold">Examiner:</span> <%= r.feedback %></p><% } %>
+      </div>
+      <div class="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/20">
+        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Correct answer</p>
+        <% if (['single_choice','multiple_response'].includes(r.type)) { %>
+          <ul class="space-y-1"><% (a.options || []).forEach(function (o, i) { if (!o.correct) return; %><li class="flex gap-2"><span aria-hidden="true">•</span><span><%- inline(o.text) %></span></li><% }) %></ul>
+        <% } else if (r.type === 'true_false') { %><p><%= a.correct ? 'True' : 'False' %></p>
+        <% } else if (r.type === 'hotspot') { %><p><%- inline(((a.regions || []).find(function (x) { return x.correct; }) || {}).label) %></p>
+        <% } else if (r.type === 'fill_blank') { %><ol class="list-decimal pl-5"><% (a.blanks || []).forEach(function (b) { %><li><%- b.variants.map(function (v) { return '<code>' + esc(v) + '</code>'; }).join(' or ') %></li><% }) %></ol>
+        <% } else if (r.type === 'numeric') { %><p><%= a.value %> <%= a.units || '' %><%= a.tolerance ? ' (± ' + a.tolerance + ')' : '' %></p>
+        <% } else if (r.type === 'matching') { %><ul class="space-y-1"><% (a.pairs || []).forEach(function (p) { %><li><%- inline(p.left) %> → <%- inline(p.right) %></li><% }) %></ul>
+        <% } else if (r.type === 'ordering') { %><ol class="list-decimal pl-5"><% (a.items || []).forEach(function (t) { %><li><%- inline(t) %></li><% }) %></ol>
+        <% } else if (r.type === 'short_answer') { %><p>Key points: <%- (a.keywords || []).map(function (k) { return '<code>' + esc(k.terms[0]) + '</code>'; }).join(', ') %></p>
+        <% } else if (r.type === 'sql') { %><pre class="whitespace-pre-wrap rounded bg-white p-2 font-mono text-xs dark:bg-slate-900"><%= a.solution_sql %></pre><p class="mt-1 text-xs muted">Any query that returns the same result scores.</p>
+        <% } else { %><p class="muted">Graded by an examiner.</p><% } %>
+      </div>
+    </div>
+    <% if (r.explanation_html || r.reference) { %>
+    <div class="mt-4 rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800/60">
+      <% if (r.explanation_html) { %><p class="text-xs font-semibold uppercase tracking-wide muted">Explanation</p><div class="q-content prose-content mt-1 max-w-none"><%- r.explanation_html %></div><% } %>
+      <% if (r.reference) { %><p class="mt-2 text-xs muted">Reference: <%= r.reference %></p><% } %>
+    </div>
+    <% } %>
+  </div>
+</article>

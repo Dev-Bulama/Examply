@@ -15,6 +15,7 @@ const qs = require('../../controllers/admin/questionsController');
 const imports = require('../../controllers/admin/importsController');
 const ai = require('../../controllers/admin/aiController');
 const exams = require('../../controllers/admin/examsController');
+const att = require('../../controllers/admin/attemptsController');
 const sqlLab = require('../../controllers/admin/sqlLabController');
 const { uploadLimiter, sqlLimiter } = require('../../middleware/rateLimit');
 
@@ -94,6 +95,17 @@ router.post('/questions/:id(\\d+)/delete', can('questions.delete'), h(qs.destroy
 // SQL lab (editor "Run" and preview)
 router.post('/sql/run', canAny('questions.create', 'questions.edit_any'), sqlLimiter(), h(sqlLab.runDraft));
 router.post('/questions/:id(\\d+)/sql/run', can('questions.view'), sqlLimiter(), h(sqlLab.runQuestion));
+
+// Attempts, grading and certificates
+router.get('/attempts', can('attempts.view'), h(att.index));
+router.get('/attempts/:id(\\d+)', can('attempts.view'), h(att.show));
+router.post('/attempts/:id(\\d+)/items/:itemId(\\d+)/grade', can('results.manage'), h(att.gradeItem));
+router.post('/attempts/:id(\\d+)/regrade', can('results.manage'), h(att.regrade));
+router.post('/attempts/:id(\\d+)/release', can('results.manage'), h(att.release));
+router.post('/attempts/:id(\\d+)/submit', can('results.manage'), h(att.forceSubmit));
+router.post('/exams/:examId(\\d+)/results/release', can('results.manage'), h(att.releaseAll));
+router.post('/certificates/:certId(\\d+)/revoke', can('certificates.manage'), h(att.revokeCertificate));
+router.get('/grading', can('results.manage'), h(att.queue));
 
 // Exams
 router.get('/exams', can('exams.view'), h(exams.index));

@@ -1,0 +1,30 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div><h1 class="h1">Attempts &amp; results</h1><p class="mt-1 muted">Every attempt with its score, integrity record and release status.</p></div>
+  <div class="flex flex-wrap gap-2">
+    <% if (can('results.manage')) { %><a href="/admin/grading" class="btn-secondary">Grading queue<% if (pending) { %> <span class="badge-amber"><%= pending %></span><% } %></a><% } %>
+    <% if (f.exam && can('results.manage')) { %><form method="post" action="/admin/exams/<%= f.exam %>/results/release" data-confirm="Release every withheld, fully graded result for this exam? Candidates are emailed." data-confirm-label="Release"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-primary">Release all withheld results</button></form><% } %>
+  </div>
+</div>
+<form method="get" action="/admin/attempts" class="card card-body mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" role="search">
+  <div class="lg:col-span-2"><label class="sr-only" for="aq">Candidate</label><input id="aq" name="q" value="<%= f.q %>" class="input" placeholder="Candidate name or email"></div>
+  <div><label class="sr-only" for="ae">Exam</label><select id="ae" name="exam" class="input"><option value="">All exams</option><% exams.forEach(function (e) { %><option value="<%= e.id %>" <%= f.exam === e.id ? 'selected' : '' %>><%= e.title %></option><% }) %></select></div>
+  <div><label class="sr-only" for="as">Status</label><select id="as" name="status" class="input"><option value="">Any status</option><% Object.entries(STATUS).forEach(function (s) { %><option value="<%= s[0] %>" <%= f.status === s[0] ? 'selected' : '' %>><%= s[1][1] %></option><% }) %></select></div>
+  <div class="flex items-center gap-3"><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="integrity" value="low" class="checkbox" <%= f.integrity ? 'checked' : '' %>> Integrity &lt; 80</label><button class="btn-primary ml-auto">Filter</button></div>
+</form>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %><p class="p-10 text-center text-sm muted">No attempts match.</p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0"><table class="table table-responsive">
+    <thead><tr><th>Candidate</th><th>Exam</th><th>Status</th><th>Score</th><th>Integrity</th></tr></thead>
+    <tbody><% pager.rows.forEach(function (r) { %>
+      <tr>
+        <td data-label="Candidate"><a class="font-medium hover:underline" href="/admin/attempts/<%= r.id %>"><%= r.full_name %></a><p class="text-xs muted"><%= r.email %></p></td>
+        <td data-label="Exam" class="text-sm"><%= r.title %><p class="text-xs muted"><%= r.mode === 'study' ? 'Weak-area practice' : 'Attempt ' + r.attempt_no %> · <%= fmt.dateTime(r.started_at) %></p></td>
+        <td data-label="Status"><span class="<%= STATUS[r.status][0] %>"><%= STATUS[r.status][1] %></span><% if (r.release_status === 'withheld') { %> <span class="badge-gray">Withheld</span><% } %></td>
+        <td data-label="Score" class="text-sm"><% if (r.percent !== null) { %><span class="font-semibold"><%= Number(r.percent) %>%</span> <%= r.passed === null ? (r.band || '') : r.passed ? '· Pass' : '· Fail' %><% } else { %>—<% } %></td>
+        <td data-label="Integrity" class="text-sm"><span class="<%= r.integrity_score < 80 ? 'font-semibold text-red-600' : '' %>"><%= r.integrity_score %></span><span class="muted"> · <%= r.tab_switches %> tab switch<%= r.tab_switches === 1 ? '' : 'es' %></span></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/attempts', query: query }) %>
+</div>

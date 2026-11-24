@@ -13,6 +13,8 @@ const ADMIN_NAV = [
     heading: 'Content',
     items: [
       { label: 'Exams', href: '/admin/exams', icon: 'document', any: ['exams.view'] },
+      { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'] },
+      { label: 'Grading queue', href: '/admin/grading', icon: 'clipboard', any: ['results.manage'] },
       { label: 'Question bank', href: '/admin/questions', icon: 'clipboard', any: ['questions.view'], exclude: ['/admin/questions/reports'] },
       { label: 'AI generator', href: '/admin/ai/new', icon: 'academic', any: ['ai.generate'] },
       { label: 'Import questions', href: '/admin/imports', icon: 'download', any: ['questions.import'] },
@@ -44,6 +46,9 @@ const CANDIDATE_NAV = [
     heading: null,
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: 'home', exact: true },
+      { label: 'Browse exams', href: '/exams', icon: 'search' },
+      { label: 'My results', href: '/my/results', icon: 'chart' },
+      { label: 'Certificates', href: '/my/certificates', icon: 'academic' },
       { label: 'Profile', href: '/account', icon: 'user', exact: true },
       { label: 'Security', href: '/account/security', icon: 'lock' },
     ],

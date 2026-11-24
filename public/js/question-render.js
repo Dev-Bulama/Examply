@@ -38,7 +38,7 @@
         lis: function () {
           return Array.prototype.slice.call(this.$root.querySelectorAll('[data-order-item]'));
         },
-        renumber: function () {
+        renumber: function (silent) {
           var list = this.lis();
           list.forEach(function (li, i) {
             li.querySelector('[data-order-pos]').textContent = String(i + 1);
@@ -47,7 +47,7 @@
             if (up && !up.hasAttribute('data-locked')) up.disabled = i === 0;
             if (down && !down.hasAttribute('data-locked')) down.disabled = i === list.length - 1;
           });
-          this.$dispatch('answer-changed');
+          if (!silent) this.$dispatch('answer-changed');
         },
         init: function () {
           var self = this;
@@ -57,7 +57,7 @@
             });
           }
           this.$nextTick(function () {
-            self.renumber();
+            self.renumber(true);
           });
         },
         up: function (e) {
@@ -210,7 +210,7 @@
               }
             })
             .catch(function (err) {
-              self.error = err.message;
+              self.error = navigator.onLine ? err.message : 'You are offline. Your SQL is kept and will be saved when you reconnect; run it again then.';
             })
             .finally(function () {
               self.busy = false;

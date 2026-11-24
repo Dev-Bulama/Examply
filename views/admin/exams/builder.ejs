@@ -15,6 +15,7 @@
     <p class="mt-1 text-sm muted"><%= summary.questionCount %> question<%= summary.questionCount === 1 ? '' : 's' %> · <%= summary.totalMarks %> marks · <%= summary.durationMinutes ? summary.durationMinutes + ' min' : 'untimed' %><%= summary.passMark !== null ? ' · pass ' + summary.passMark + (summary.passMarkType === 'raw' ? ' marks' : '%') : '' %></p>
   </div>
   <div class="flex flex-wrap gap-2">
+    <% if (can('attempts.view')) { %><a href="/admin/attempts?exam=<%= e.id %>" class="btn-secondary">Attempts</a><% } %>
     <a href="/admin/exams/<%= e.id %>/instructions" class="btn-secondary"><%- include('../../partials/icon', { name: 'eye', cls: 'h-4 w-4' }) %> Candidate instructions</a>
     <% if (can('exams.publish')) { %><a href="/admin/exams/<%= e.id %>/publish" class="<%= blockers.length ? 'btn-secondary' : 'btn-primary' %>"><%= e.status === 'published' ? (unpublishedChanges ? 'Publish changes' : 'Published') : 'Publish' %><% if (blockers.length) { %> <span class="badge-amber"><%= blockers.length %> to fix</span><% } %></a><% } %>
   </div>

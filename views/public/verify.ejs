@@ -1,0 +1,26 @@
+<div class="container-page max-w-3xl py-12">
+  <h1 class="text-3xl font-bold tracking-tight">Verify a certificate</h1>
+  <p class="mt-2 muted">Enter the certificate ID printed on the certificate, or scan its QR code.</p>
+  <form method="get" action="/verify" class="mt-6 flex gap-2" role="search">
+    <label class="sr-only" for="vc">Certificate ID</label>
+    <input id="vc" name="code" value="<%= code %>" class="input font-mono uppercase" placeholder="SSA-XXXX-XXXX" autocomplete="off">
+    <button class="btn-primary">Verify</button>
+  </form>
+  <% if (code && !cert) { %>
+    <div class="alert-danger mt-8" role="alert"><%- include('../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %><p>No certificate with the ID <strong class="font-mono"><%= code %></strong> exists. Check the ID and try again.</p></div>
+  <% } else if (cert) { const ok = cert.status === 'valid'; %>
+    <section class="card mt-8 overflow-hidden">
+      <div class="<%= ok ? 'bg-emerald-600' : 'bg-red-600' %> px-6 py-4 text-white">
+        <p class="flex items-center gap-2 text-lg font-semibold"><%- include('../partials/icon', { name: ok ? 'check' : 'warning', cls: 'h-6 w-6' }) %> <%= ok ? 'Valid certificate' : cert.status === 'revoked' ? 'This certificate has been revoked' : 'This certificate has expired' %></p>
+      </div>
+      <dl class="grid gap-4 p-6 sm:grid-cols-2">
+        <div><dt class="text-sm muted">Awarded to</dt><dd class="mt-1 text-xl font-semibold"><%= cert.holder_name %></dd></div>
+        <div><dt class="text-sm muted">Certificate ID</dt><dd class="mt-1 font-mono text-lg"><%= cert.code %></dd></div>
+        <div class="sm:col-span-2"><dt class="text-sm muted">For passing</dt><dd class="mt-1 text-lg font-semibold"><%= cert.exam_title %></dd><% if (cert.certification_name) { %><dd class="text-sm muted">Preparation for <%= cert.certification_name %><%= cert.exam_code ? ' (' + cert.exam_code + ')' : '' %>. Not issued by the certification body.</dd><% } %></div>
+        <div><dt class="text-sm muted">Score</dt><dd class="mt-1"><%= Number(cert.percent) %>%<%= cert.scaled_score ? ' · scaled ' + Number(cert.scaled_score) : '' %><%= cert.band ? ' · ' + cert.band : '' %></dd></div>
+        <div><dt class="text-sm muted">Issued</dt><dd class="mt-1"><%= fmt.date(cert.issued_at) %><%= cert.expiresAt ? ' · valid until ' + fmt.date(cert.expiresAt) : '' %></dd></div>
+        <% if (cert.revoked_at) { %><div class="sm:col-span-2"><dt class="text-sm muted">Revoked</dt><dd class="mt-1"><%= fmt.date(cert.revoked_at) %><%= cert.revoke_reason ? ' — ' + cert.revoke_reason : '' %></dd></div><% } %>
+      </dl>
+    </section>
+  <% } %>
+</div>

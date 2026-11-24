@@ -47,6 +47,8 @@
 @layer components {
   .code-input { @apply font-mono text-[13px] leading-relaxed; tab-size: 2; }
   .target-only { @apply hidden; }
+  .exam-contrast { filter: contrast(1.35) saturate(1.15); }
+  .exam-contrast .muted { @apply text-slate-900 dark:text-white; }
   .target-only:target { @apply block; }
   .container-page { @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8; }
   .card { @apply rounded-xl border border-slate-200 bg-white shadow-card dark:border-slate-800 dark:bg-slate-900; }

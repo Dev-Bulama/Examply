@@ -51,6 +51,7 @@ function mountMain(app) {
   app.use(require('./auth'));
   app.use('/account', require('./account'));
   app.use(require('./candidate'));
+  app.use(require('./exams'));
   app.use('/admin', require('./admin'));
   // Question images: any signed-in user (exam content is never public).
   const { requireAuth } = require('../middleware/auth');

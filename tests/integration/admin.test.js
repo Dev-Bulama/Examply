@@ -24,10 +24,10 @@ function adminRoutes() {
     .map((r) => ({
       ...r,
       url: r.path
-        .replace(/:[a-z_]+\(\\\\d\+\)/g, '1')
-        .replace(/:[a-z_]+\(\\d\+\)/g, '1')
-        .replace(/:([a-z_]+)\(([a-z_-]+)[|)][^)]*\)?/g, '$2')
-        .replace(/:[a-z_]+\(\[a-z\]\+\)/g, 'basics')
+        .replace(/:[a-zA-Z_]+\(\\\\d\+\)/g, '1')
+        .replace(/:[a-zA-Z_]+\(\\d\+\)/g, '1')
+        .replace(/:([a-zA-Z_]+)\(([a-z_-]+)[|)][^)]*\)?/g, '$2')
+        .replace(/:[a-zA-Z_]+\(\[a-z\]\+\)/g, 'basics')
         .replace(/:section/, 'general')
         .replace(/:key/, 'general.logo_path'),
     }));

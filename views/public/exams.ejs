@@ -1,0 +1,46 @@
+<% const TYPE_BADGE = { pre_training: 'badge-amber', post_training: 'badge-green', practice: 'badge-gray', mock: 'badge-blue', past_questions: 'badge-gray', live_quiz: 'badge-blue', assignment: 'badge-gray' }; %>
+<section class="border-b border-slate-200 bg-gradient-to-b from-primary-50 to-white dark:border-slate-800 dark:from-primary-950/40 dark:to-slate-950">
+  <div class="container-page py-10 sm:py-14">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Exams</h1>
+    <p class="mt-2 max-w-2xl text-lg muted">Certification mock exams, diagnostics and practice tests, marked instantly with a breakdown by domain.</p>
+    <form method="get" action="/exams" class="mt-6 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]" role="search">
+      <label class="sr-only" for="eq">Search</label>
+      <input id="eq" name="q" value="<%= f.q %>" class="input" placeholder="Search by title or exam code (e.g. 1Z0-082)">
+      <label class="sr-only" for="et">Type</label>
+      <select id="et" name="type" class="input"><option value="">All types</option><% Object.entries(EXAM_TYPES).filter(function (t) { return t[0] !== 'live_quiz'; }).forEach(function (t) { %><option value="<%= t[0] %>" <%= f.type === t[0] ? 'selected' : '' %>><%= t[1] %></option><% }) %></select>
+      <label class="sr-only" for="ec">Certification</label>
+      <select id="ec" name="certification" class="input"><option value="">All certifications</option><% certifications.forEach(function (c) { %><option value="<%= c.id %>" <%= f.certification === c.id ? 'selected' : '' %>><%= c.exam_code || c.name %></option><% }) %></select>
+      <label class="sr-only" for="ep">Price</label>
+      <select id="ep" name="price" class="input"><option value="">Free &amp; paid</option><option value="free" <%= f.price === 'free' ? 'selected' : '' %>>Free</option><option value="paid" <%= f.price === 'paid' ? 'selected' : '' %>>Paid</option></select>
+      <button class="btn-primary">Search</button>
+    </form>
+  </div>
+</section>
+<div class="container-page py-10">
+  <p class="mb-4 text-sm muted"><%= pager.total %> exam<%= pager.total === 1 ? '' : 's' %></p>
+  <% if (!pager.rows.length) { %>
+    <div class="card card-body flex flex-col items-center py-16 text-center"><p class="font-semibold">No exams match your search</p><p class="mt-1 text-sm muted">Try a different keyword or clear the filters.</p><a href="/exams" class="btn-secondary mt-4">Clear filters</a></div>
+  <% } else { %>
+  <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <% pager.rows.forEach(function (e) { %>
+    <li class="card flex flex-col transition hover:shadow-pop">
+      <a href="/exams/<%= e.slug %>" class="flex flex-1 flex-col p-5">
+        <div class="flex flex-wrap items-center gap-1.5"><span class="<%= TYPE_BADGE[e.type] %>"><%= EXAM_TYPES[e.type] %></span><% if (e.exam_code) { %><span class="badge-gray"><%= e.exam_code %></span><% } %><% if (e.questionTypes && e.questionTypes.includes('sql')) { %><span class="badge-green">SQL lab</span><% } %></div>
+        <h2 class="mt-3 text-lg font-semibold leading-snug"><%= e.title %></h2>
+        <% if (e.short_description) { %><p class="mt-2 line-clamp-3 text-sm muted"><%= e.short_description %></p><% } %>
+        <dl class="mt-auto grid grid-cols-3 gap-2 pt-5 text-center text-xs">
+          <div class="rounded-lg bg-slate-50 p-2 dark:bg-slate-800/60"><dt class="muted">Questions</dt><dd class="mt-0.5 text-sm font-semibold"><%= e.questionCount ?? '—' %></dd></div>
+          <div class="rounded-lg bg-slate-50 p-2 dark:bg-slate-800/60"><dt class="muted">Time</dt><dd class="mt-0.5 text-sm font-semibold"><%= e.duration_minutes ? e.duration_minutes + ' min' : 'Untimed' %></dd></div>
+          <div class="rounded-lg bg-slate-50 p-2 dark:bg-slate-800/60"><dt class="muted">Pass</dt><dd class="mt-0.5 text-sm font-semibold"><%= e.pass_mark !== null ? Number(e.pass_mark) + (e.pass_mark_type === 'raw' ? '' : '%') : 'Bands' %></dd></div>
+        </dl>
+      </a>
+      <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm dark:border-slate-800">
+        <span class="font-semibold"><% if (!e.is_paid) { %>Free<% } else if (e.sale_price_kobo) { %><span class="mr-1 text-xs font-normal line-through muted"><%= fmt.money(e.price_kobo) %></span><%= fmt.money(e.sale_price_kobo) %><% } else { %><%= fmt.money(e.price_kobo) %><% } %></span>
+        <span class="muted"><%= e.certificate_enabled ? 'Certificate on passing' : (e.category_name || '') %></span>
+      </div>
+    </li>
+    <% }) %>
+  </ul>
+  <div class="mt-6"><%- include('../partials/pagination', { pager: pager, basePath: '/exams', query: query }) %></div>
+  <% } %>
+</div>

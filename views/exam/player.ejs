@@ -1,0 +1,183 @@
+<%
+  const meta = top.map(function (it, idx) {
+    const kids = children(it.id);
+    const parts = kids.length ? kids : [it];
+    return { id: it.id, idx: idx, section: it.sectionId || null, items: parts.map(function (p) { return p.id; }), answered: parts.map(function (p) { return p.id; }).filter(function (id) { const x = parts.find(function (p) { return p.id === id; }); return x.response && Object.keys(x.response).length; }), flagged: it.flagged };
+  });
+  const sectionTitles = {}; sections.forEach(function (s) { sectionTitles[s.id] = s.title; });
+  const sectionInstr = {}; sections.forEach(function (s) { sectionInstr[s.id] = s.instructions_html; });
+  const d = settings.delivery;
+  const ig = settings.integrity;
+  const cfg = Object.assign({}, config, { items: meta, sectionTitles: sectionTitles, allowFlag: d.allow_flag, calculator: d.calculator, notepad: d.notepad });
+  const L = 'ABCDEFGHIJ';
+  const isStudy = attempt.mode === 'study';
+%>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<link rel="stylesheet" href="/vendor/highlight/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="/vendor/highlight/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<script type="application/json" id="player-config"><%- JSON.stringify(cfg).replace(/</g, '\\u003c') %></script>
+
+<div x-data="examPlayer" class="flex min-h-screen flex-col <%= accommodations.large_font ? 'text-lg' : '' %>" :class="rootClass()" @keydown.window="keys" @answer-changed="changed" @input="changed" @change="changed">
+  <% if (ig.watermark) { %><div class="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden opacity-[0.05]" aria-hidden="true"><div class="-rotate-12 whitespace-pre text-2xl font-semibold leading-[5rem] text-slate-900 dark:text-white"><% for (let w = 0; w < 30; w += 1) { %><%= (user.full_name + ' · ' + user.email + '     ').repeat(4) %>
+<% } %></div></div><% } %>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+    <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
+      <button type="button" class="btn-ghost px-2" @click="togglePalette" :aria-expanded="paletteOpen" aria-controls="palette" aria-label="Question list"><%- include('../partials/icon', { name: 'menu' }) %></button>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-semibold"><%= isStudy ? 'Weak-area practice · ' : '' %><%= exam.title %></p>
+        <p class="text-xs muted"><span x-text="progressText()"><%= meta.length %> questions</span> · <span x-text="saveText()" :class="saveClass()" aria-live="polite">All answers saved</span></p>
+      </div>
+      <% if (config.expiresAt && config.showTimer) { %>
+      <div class="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-mono text-base font-semibold tabular-nums sm:text-lg" :class="timerClass()" role="timer" aria-live="off">
+        <%- include('../partials/icon', { name: 'clock', cls: 'h-4 w-4' }) %><span x-text="timerText()">--:--</span>
+      </div>
+      <% } %>
+      <div class="hidden items-center gap-1 sm:flex">
+        <button type="button" class="btn-ghost px-2 text-sm" @click="fontSmaller" aria-label="Smaller text">A−</button>
+        <button type="button" class="btn-ghost px-2 text-base" @click="fontBigger" aria-label="Larger text">A+</button>
+        <button type="button" class="btn-ghost px-2" @click="toggleContrast" :aria-pressed="contrast" aria-label="High contrast">◐</button>
+      </div>
+    </div>
+    <div class="h-1 bg-slate-100 dark:bg-slate-800"><div class="h-1 bg-primary-600 transition-all" :style="progressStyle()"></div></div>
+    <div class="bg-red-600 px-4 py-1.5 text-center text-sm font-medium text-white" x-show="banner" x-text="banner" x-cloak role="alert"></div>
+  </header>
+
+  <div class="relative mx-auto flex w-full max-w-6xl flex-1 gap-6 px-4 py-6">
+    <!-- Palette -->
+    <aside id="palette" class="fixed inset-y-0 left-0 z-40 w-72 -translate-x-full overflow-y-auto border-r border-slate-200 bg-white p-4 shadow-pop transition-transform dark:border-slate-800 dark:bg-slate-900 lg:static lg:z-auto lg:w-60 lg:translate-x-0 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none <%= d.show_palette ? '' : 'lg:hidden' %>" :class="paletteOpen && 'translate-x-0'" aria-label="Question palette">
+      <div class="flex items-center justify-between lg:hidden"><p class="font-semibold">Questions</p><button type="button" class="btn-ghost px-2" @click="togglePalette" aria-label="Close"><%- include('../partials/icon', { name: 'x' }) %></button></div>
+      <% let lastSec = 'x'; meta.forEach(function (m) { if (m.section !== lastSec) { lastSec = m.section; %>
+        <% if (sections.length) { %><p class="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide muted first:mt-0"><%= m.section ? sectionTitles[m.section] : 'General' %></p><% } %>
+        <div class="grid grid-cols-6 gap-1.5 <%= sections.length ? '' : 'mt-3 lg:mt-0' %>">
+      <% } %>
+          <button type="button" class="h-9 rounded-lg border text-sm font-semibold transition" :class="palClass(<%= m.idx %>)" @click="go(<%= m.idx %>)" :disabled="!canGo(<%= m.idx %>)" :aria-label="palLabel(<%= m.idx %>)" :aria-current="isCurrent(<%= m.idx %>)"><%= m.idx + 1 %></button>
+      <% const next = meta[m.idx + 1]; if (!next || next.section !== m.section) { %></div><% } }) %>
+      <ul class="mt-5 space-y-1.5 text-xs muted">
+        <li class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-primary-600"></span> Answered</li>
+        <li class="flex items-center gap-2"><span class="h-3 w-3 rounded border border-slate-300 dark:border-slate-600"></span> Not answered</li>
+        <% if (d.allow_flag) { %><li class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-amber-400"></span> Flagged</li><% } %>
+      </ul>
+      <% if (d.calculator !== 'none' || d.notepad) { %>
+      <div class="mt-6 space-y-2">
+        <% if (d.calculator !== 'none') { %><button type="button" class="btn-secondary btn-sm w-full" @click="toggleCalc">Calculator</button><% } %>
+        <% if (d.notepad) { %><button type="button" class="btn-secondary btn-sm w-full" @click="toggleNotes">Notepad</button><% } %>
+      </div>
+      <% } %>
+    </aside>
+    <div class="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" x-show="paletteOpen" x-cloak @click="togglePalette" aria-hidden="true"></div>
+
+    <!-- Questions -->
+    <div class="relative z-10 min-w-0 flex-1">
+      <% if (config.timedSections) { %>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-2.5 text-sm dark:border-primary-900 dark:bg-primary-950/40" x-show="!reviewing">
+        <span><span class="font-semibold" x-text="sectionName()"></span> <span class="muted" x-text="sectionTimeText()"></span></span>
+        <button type="button" class="btn-secondary btn-sm" @click="askFinishSection" x-show="hasNextSection()">Finish this section</button>
+      </div>
+      <% } %>
+
+      <form id="answers" @submit.prevent novalidate x-show="!reviewing">
+        <% top.forEach(function (it, idx) { const kids = children(it.id); const secStart = sections.length && it.sectionId && (idx === 0 || top[idx - 1].sectionId !== it.sectionId) && sectionInstr[it.sectionId]; %>
+        <section class="card mb-4" x-show="shows(<%= idx %>)" <%= d.layout === 'one' && idx !== (config.pos || 0) ? 'style="display:none"' : '' %> data-pos="<%= idx %>" aria-labelledby="qh-<%= it.id %>">
+          <div class="card-body">
+            <% if (secStart) { %><div class="prose-content mb-4 rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800/60"><%- sectionInstr[it.sectionId] %></div><% } %>
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h2 id="qh-<%= it.id %>" class="text-sm font-semibold muted">Question <%= idx + 1 %> of <%= top.length %><% if (it.type !== 'case_study') { %> · <%= it.marks %> mark<%= it.marks === 1 ? '' : 's' %><% } %></h2>
+              <% if (d.allow_flag) { %><button type="button" class="btn-ghost btn-sm" @click="toggleFlag(<%= idx %>)" :aria-pressed="isFlagged(<%= idx %>)"><span :class="isFlagged(<%= idx %>) ? 'text-amber-500' : 'muted'"><%- include('../partials/icon', { name: 'flag', cls: 'h-4 w-4' }) %></span><span x-text="isFlagged(<%= idx %>) ? 'Flagged' : 'Flag'">Flag</span></button><% } %>
+            </div>
+            <div data-item="<%= it.id %>" data-type="<%= it.type %>">
+              <%- include('../questions/render', { view: it.view, name: 'i' + it.id, interactive: true, response: forRender(it.response), sqlRunUrl: it.type === 'sql' ? '/attempts/' + attempt.uuid + '/items/' + it.id + '/sql' : '', sqlCheck: false }) %>
+            </div>
+            <% if (kids.length) { %>
+            <div class="mt-6 space-y-6 border-t border-slate-200 pt-6 dark:border-slate-800">
+              <% kids.forEach(function (k, j) { %>
+              <div>
+                <p class="mb-2 text-sm font-semibold">Part <%= L[j] %> <span class="font-normal muted">· <%= k.marks %> mark<%= k.marks === 1 ? '' : 's' %></span></p>
+                <div data-item="<%= k.id %>" data-type="<%= k.type %>"><%- include('../questions/render', { view: k.view, name: 'i' + k.id, interactive: true, response: forRender(k.response), sqlRunUrl: k.type === 'sql' ? '/attempts/' + attempt.uuid + '/items/' + k.id + '/sql' : '', sqlCheck: false }) %></div>
+              </div>
+              <% }) %>
+            </div>
+            <% } %>
+          </div>
+        </section>
+        <% }) %>
+      </form>
+
+      <!-- Review -->
+      <section class="card" x-show="reviewing" x-cloak aria-labelledby="rv-h">
+        <div class="card-body">
+          <h2 id="rv-h" class="h2">Review before you submit</h2>
+          <p class="mt-1 muted" x-text="reviewSummary()"></p>
+          <div class="mt-4 grid grid-cols-6 gap-1.5 sm:grid-cols-10">
+            <% meta.forEach(function (m) { %><button type="button" class="h-9 rounded-lg border text-sm font-semibold" :class="palClass(<%= m.idx %>)" @click="goFromReview(<%= m.idx %>)" :disabled="!canGo(<%= m.idx %>)"><%= m.idx + 1 %></button><% }) %>
+          </div>
+          <div class="mt-6 flex flex-wrap justify-end gap-2">
+            <button type="button" class="btn-secondary" @click="closeReview">Back to the questions</button>
+            <button type="button" class="btn-primary" @click="askSubmit">Submit exam</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer navigation -->
+  <footer class="sticky bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95" x-show="!reviewing">
+    <div class="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
+      <% if (d.navigation !== 'linear' && d.layout === 'one') { %><button type="button" class="btn-secondary" @click="prev" :disabled="!hasPrev()"><span aria-hidden="true">←</span> <span class="hidden sm:inline">Previous</span></button><% } %>
+      <span class="flex-1 text-center text-xs muted" x-text="questionTimerText()"></span>
+      <% if (d.layout === 'one') { %><button type="button" class="btn-primary" @click="next" x-show="hasNext()"><span class="hidden sm:inline">Next</span> <span aria-hidden="true">→</span></button><% } %>
+      <button type="button" class="btn-primary" @click="openReview" x-show="!hasNext()">Review &amp; submit</button>
+    </div>
+  </footer>
+
+  <!-- Tools -->
+  <% if (d.calculator !== 'none') { %>
+  <div class="fixed bottom-20 right-4 z-40 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-pop dark:border-slate-700 dark:bg-slate-900" x-show="calcOpen" x-cloak role="dialog" aria-label="Calculator">
+    <div class="flex items-center justify-between"><p class="text-sm font-semibold"><%= d.calculator === 'scientific' ? 'Scientific calculator' : 'Calculator' %></p><button type="button" class="btn-ghost px-2" @click="toggleCalc" aria-label="Close calculator"><%- include('../partials/icon', { name: 'x', cls: 'h-4 w-4' }) %></button></div>
+    <input class="input mt-2 text-right font-mono" x-model="calcExpr" @keydown.enter.prevent="calcEval" aria-label="Expression" placeholder="e.g. (12.5 * 4) / 3">
+    <p class="mt-1 h-6 text-right font-mono text-lg font-semibold" x-text="calcOut" aria-live="polite"></p>
+    <div class="mt-2 grid grid-cols-4 gap-1.5 text-sm">
+      <% ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','(',')'].concat(d.calculator === 'scientific' ? ['sqrt(','^','sin(','cos(','tan(','log(','ln(','pi'] : []).forEach(function (k) { %><button type="button" class="btn-secondary btn-sm" @click="calcPress" data-key="<%= k %>"><%= k %></button><% }) %>
+      <button type="button" class="btn-secondary btn-sm" @click="calcPress" data-key="+">+</button>
+      <button type="button" class="btn-secondary btn-sm" @click="calcClear">C</button>
+      <button type="button" class="btn-primary btn-sm col-span-2" @click="calcEval">=</button>
+    </div>
+  </div>
+  <% } %>
+  <% if (d.notepad) { %>
+  <div class="fixed bottom-20 left-4 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-pop dark:border-slate-700 dark:bg-slate-900" x-show="notesOpen" x-cloak role="dialog" aria-label="Notepad">
+    <div class="flex items-center justify-between"><p class="text-sm font-semibold">Notepad <span class="font-normal muted">(only on this device, not marked)</span></p><button type="button" class="btn-ghost px-2" @click="toggleNotes" aria-label="Close notepad"><%- include('../partials/icon', { name: 'x', cls: 'h-4 w-4' }) %></button></div>
+    <textarea class="input mt-2 h-48 text-sm" x-model="notes" @input.stop="saveNotes" aria-label="Notes"></textarea>
+  </div>
+  <% } %>
+
+  <!-- Confirm dialogs -->
+  <div class="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4" x-show="confirming" x-cloak role="dialog" aria-modal="true" aria-labelledby="cf-h">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-pop dark:bg-slate-900">
+      <h2 id="cf-h" class="h3" x-text="confirmTitle()"></h2>
+      <p class="mt-2 text-sm muted" x-text="confirmText()"></p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="btn-secondary" @click="cancelConfirm">Cancel</button>
+        <button type="button" class="btn-primary" @click="doConfirm" :disabled="busy" x-text="confirmLabel()">Confirm</button>
+      </div>
+    </div>
+  </div>
+  <form method="post" action="/attempts/<%= attempt.uuid %>/submit" x-ref="submitForm" class="hidden"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="reason" value="candidate" x-ref="submitReason"></form>
+
+  <% if (ig.fullscreen) { %>
+  <div class="fixed inset-0 z-50 grid place-items-center bg-slate-900/80 p-4" x-show="needFullscreen" x-cloak role="dialog" aria-modal="true" aria-labelledby="fs-h">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 text-center shadow-pop dark:bg-slate-900">
+      <h2 id="fs-h" class="h3">Full screen is required</h2>
+      <p class="mt-2 text-sm muted">This exam runs in full-screen mode. Leaving it is recorded.</p>
+      <button type="button" class="btn-primary mt-5" @click="enterFullscreen">Continue in full screen</button>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<script src="/vendor/katex/katex.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/vendor/katex/auto-render.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/vendor/highlight/highlight.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/question-render.js?v=<%= assetVersion %>"></script>
+<script src="/js/exam-player.js?v=<%= assetVersion %>"></script>

@@ -1,0 +1,89 @@
+<%
+  const EV = { started: 'Started', resume: 'Opened / resumed', tab_hidden: 'Left the exam tab', tab_visible: 'Returned', fullscreen_exit: 'Left full screen', fullscreen_enter: 'Entered full screen', copy: 'Tried to copy', paste: 'Tried to paste', context_menu: 'Right-clicked', offline: 'Went offline', online: 'Back online', section_finished: 'Finished a section', session_moved: 'Moved to another browser', submitted: 'Submitted' };
+  const bad = ['tab_hidden', 'fullscreen_exit', 'copy', 'paste', 'context_menu', 'session_moved'];
+  const tops = review.filter(function (x) { return !x.parentId; });
+%>
+<div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <div class="flex flex-wrap items-center gap-2"><span class="<%= STATUS[a.status][0] %>"><%= STATUS[a.status][1] %></span><% if (result && result.release_status === 'withheld') { %><span class="badge-gray">Result withheld</span><% } %></div>
+    <h1 class="h1 mt-2"><%= a.full_name %></h1>
+    <p class="mt-1 muted"><%= a.email %> · <a class="hover:underline" href="/admin/exams/<%= a.exam_id %>/basics"><%= a.title %></a> · <%= a.mode === 'study' ? 'weak-area practice' : 'attempt ' + a.attempt_no %> (version <%= a.exam_version %>)</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (can('results.manage')) { %>
+      <% if (a.status === 'in_progress') { %><form method="post" action="/admin/attempts/<%= a.id %>/submit" data-confirm="Submit this attempt now on the candidate’s behalf?" data-confirm-label="Submit"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary">Submit now</button></form><% } %>
+      <% if (a.status !== 'in_progress') { %><form method="post" action="/admin/attempts/<%= a.id %>/regrade"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary">Re-grade</button></form><% } %>
+      <% if (result && result.release_status === 'withheld') { %><form method="post" action="/admin/attempts/<%= a.id %>/release"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-primary">Release result</button></form><% } %>
+    <% } %>
+  </div>
+</div>
+
+<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+  <div class="min-w-0 space-y-4">
+    <% if (result) { %>
+    <section class="card card-body grid gap-4 sm:grid-cols-4">
+      <div><p class="text-sm muted">Score</p><p class="text-2xl font-bold"><%= Number(result.percent) %>%</p><p class="text-xs muted"><%= Number(result.raw_score) %> / <%= Number(result.max_score) %></p></div>
+      <div><p class="text-sm muted">Result</p><p class="text-2xl font-bold <%= result.passed ? 'text-emerald-600' : result.passed === false ? 'text-red-600' : '' %>"><%= result.has_pending_manual ? 'Pending' : result.passed === null ? (result.band || '—') : result.passed ? 'Pass' : 'Fail' %></p></div>
+      <div><p class="text-sm muted">Percentile</p><p class="text-2xl font-bold"><%= result.percentile === null ? '—' : Math.round(Number(result.percentile)) %></p></div>
+      <div><p class="text-sm muted">Re-grades</p><p class="text-2xl font-bold"><%= result.regrade_count %></p></div>
+    </section>
+    <% } %>
+    <h2 class="h2 pt-2">Answers</h2>
+    <% if (!review.length) { %><p class="text-sm muted">No items.</p><% } %>
+    <% tops.forEach(function (t, qi) { const parts = review.filter(function (x) { return x.parentId === t.id; }); const list = t.type === 'case_study' ? parts : [t]; %>
+      <% if (t.type === 'case_study') { %><div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/40"><p class="text-sm font-semibold muted">Question <%= qi + 1 %> · scenario</p><div class="q-content prose-content mt-2 max-w-none"><%- t.stem_html %></div></div><% } %>
+      <% list.forEach(function (r, pi) { %>
+      <div id="item-<%= r.id %>">
+        <%- include('../../candidate/_review-item', { r: r, n: 'Question ' + (qi + 1) + (t.type === 'case_study' ? ' · Part ' + 'ABCDEFGHIJ'[pi] : '') }) %>
+        <% if (can('results.manage') && a.status !== 'in_progress') { %>
+        <form method="post" action="/admin/attempts/<%= a.id %>/items/<%= r.id %>/grade" class="-mt-2 mb-4 flex flex-wrap items-end gap-2 rounded-b-xl border border-t-0 border-slate-200 bg-slate-50 px-5 py-3 dark:border-slate-800 dark:bg-slate-900/60">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div><label class="label" for="m<%= r.id %>"><%= r.status === 'pending_manual' ? 'Award marks' : 'Override marks' %></label><input id="m<%= r.id %>" name="marks" type="number" step="0.25" min="0" max="<%= r.possible %>" value="<%= r.awarded === null ? '' : r.awarded %>" class="input w-28" required></div>
+          <div class="min-w-[12rem] flex-1"><label class="label" for="fb<%= r.id %>">Feedback to the candidate</label><input id="fb<%= r.id %>" name="feedback" value="<%= r.feedback || '' %>" class="input" maxlength="5000"></div>
+          <button class="<%= r.status === 'pending_manual' ? 'btn-primary' : 'btn-secondary' %>">Save grade</button>
+        </form>
+        <% } %>
+      </div>
+      <% }) %>
+    <% }) %>
+  </div>
+
+  <aside class="space-y-4">
+    <section class="card card-body text-sm">
+      <h2 class="h3">Timing</h2>
+      <dl class="mt-3 grid grid-cols-2 gap-y-2">
+        <dt class="muted">Started</dt><dd><%= fmt.dateTime(a.started_at) %></dd>
+        <dt class="muted">Deadline</dt><dd><%= a.expires_at ? fmt.dateTime(a.expires_at) : 'Untimed' %></dd>
+        <dt class="muted">Submitted</dt><dd><%= a.submitted_at ? fmt.dateTime(a.submitted_at) : '—' %><%= a.submit_reason && a.submit_reason !== 'candidate' ? ' (' + a.submit_reason + ')' : '' %></dd>
+        <dt class="muted">Extra time</dt><dd><%= a.extra_time_percent ? a.extra_time_percent + '%' : 'None' %></dd>
+        <dt class="muted">IP address</dt><dd class="font-mono text-xs"><%= a.ip || '—' %></dd>
+      </dl>
+    </section>
+    <section class="card card-body text-sm">
+      <div class="flex items-center justify-between"><h2 class="h3">Integrity</h2><span class="text-2xl font-bold <%= a.integrity_score < 80 ? 'text-red-600' : 'text-emerald-600' %>"><%= a.integrity_score %></span></div>
+      <p class="mt-1 muted"><%= a.tab_switches %> tab switch<%= a.tab_switches === 1 ? '' : 'es' %> · <%= a.fullscreen_exits %> full-screen exit<%= a.fullscreen_exits === 1 ? '' : 's' %></p>
+      <ol class="mt-4 space-y-2 border-l border-slate-200 pl-4 dark:border-slate-700">
+        <% events.forEach(function (e) { %><li class="relative"><span class="absolute -left-[1.3rem] top-1.5 h-2 w-2 rounded-full <%= bad.includes(e.type) ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-600' %>"></span><p class="<%= bad.includes(e.type) ? 'font-medium text-red-700 dark:text-red-400' : '' %>"><%= EV[e.type] || e.type %><%= e.details && e.details.reason ? ' (' + e.details.reason + ')' : '' %></p><p class="text-xs muted"><%= fmt.dateTime(e.created_at) %><%= e.ip ? ' · ' + e.ip : '' %></p></li><% }) %>
+      </ol>
+    </section>
+    <% if (certificate) { %>
+    <section class="card card-body text-sm">
+      <h2 class="h3">Certificate</h2>
+      <p class="mt-2 font-mono"><%= certificate.code %></p>
+      <p class="muted"><%= certificate.revoked_at ? 'Revoked ' + fmt.date(certificate.revoked_at) + ' — ' + certificate.revoke_reason : 'Issued ' + fmt.date(certificate.issued_at) %></p>
+      <div class="mt-3 flex flex-wrap gap-2"><a class="btn-secondary btn-sm" href="/verify/<%= certificate.code %>">Verification page</a><% if (!certificate.revoked_at) { %><a class="btn-secondary btn-sm" href="/certificates/<%= certificate.code %>.pdf">PDF</a><% } %></div>
+      <% if (!certificate.revoked_at && can('certificates.manage')) { %>
+      <form method="post" action="/admin/certificates/<%= certificate.id %>/revoke" class="mt-4 space-y-2" data-confirm="Revoke this certificate? The public verification page will show it as revoked." data-confirm-label="Revoke">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="label" for="rv">Reason (shown publicly)</label><input id="rv" name="reason" class="input" maxlength="255" required>
+        <button class="btn-danger btn-sm">Revoke certificate</button>
+      </form>
+      <% } %>
+    </section>
+    <% } %>
+  </aside>
+</div>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<script src="/vendor/katex/katex.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/vendor/katex/auto-render.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/question-render.js?v=<%= assetVersion %>"></script>

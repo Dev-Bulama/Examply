@@ -16,8 +16,8 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 | 2. Catalogue & question bank | Hierarchical categories, certifications with weighted domains, training programmes with per-band courses; 11 question types with a rich editor, candidate preview (KaTeX, code highlighting), versioning, review workflow, tags, bulk actions, duplicate finder, report inbox, private image uploads | ✅ Done |
 | 3. Import / export + AI generation | Excel, CSV, JSON, Aiken, GIFT, Word and ZIP imports with dry-run preview, duplicate handling, background batches, error report and 24-hour undo; templates; export to xlsx/JSON/GIFT; **AI question generation with Claude or OpenAI**; marketing landing page with plans | ✅ Done |
 | 4. Exam builder + instruction generator + SQL lab + AI exams | 11-tab exam builder with autosave (sections, fixed lists, blueprint rules with live availability, bands, access rules, extra attempts, pre-publish checklist, versioned publishing, duplicate); instructions generated from the settings; **SQL lab question type** (sandboxed SQLite in worker threads, result-set marking); **AI “generate a complete exam”** | ✅ Done |
-| 5. Exam engine, grading, results, certificates | | Next |
-| 6. Commerce (Paystack + bank transfer) | | |
+| 5. Exam engine, grading, results, certificates | Public catalogue and exam pages; eligibility rules (attempts, cooldown, overrides, window, invite code, IP/organisation, prerequisite, entitlement); mobile-first player with server timer, autosave + offline queue, resume, sections, palette, flags, review, keyboard, calculator/notepad, integrity events; §4 grading engine; results with domain radar, percentile, history and review; weak-area practice; PDF result slip; certificates with QR and `/verify`; admin attempts, grading queue, release, re-grade, revoke | ✅ Done |
+| 6. Commerce (Paystack + bank transfer) | | Next |
 | 7. Organisations & cohorts | | |
 | 8. Live quiz | | |
 | 9. Analytics, notifications, CMS, support | | |
@@ -66,6 +66,16 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 - **SQL lab questions**: candidates write and run SQL against a sample database in the browser; answers are marked by comparing results with the model solution. Authors get a test bench (show tables, run the solution, verify).
 - **AI “generate a complete exam”**: questions across the certification's domains (including SQL lab tasks), catalogue copy, and timing/pass mark scaled from the official format.
 - `npm run seed` adds 6 SQL lab questions and three demo exams (a blueprint mock, a sectioned diagnostic, a draft practice test).
+
+## Phase 5 highlights
+
+- **Catalogue** at `/exams` and an exam page with the generated instructions, eligibility reasons and attempt history.
+- **Exam player**: server-synchronised timer, autosave per answer, offline queue with automatic replay, resume on any device, timed sections, linear mode, palette with answered/flagged states, review screen, keyboard shortcuts (A–E, 1–9, N, P, F), larger text and high contrast, calculator and notepad, integrity events (tab switches, full screen, copy/paste) and a watermark. SQL lab questions run inside the attempt.
+- **Grading** implements PROMPT §4 exactly (partial credit, negative marking, section minimums, bands, scaled scores) and is unit-tested rule by rule.
+- **Results**: pass/fail or band, scaled score, percentile, time taken, domain radar, section and difficulty breakdowns, attempt history, question-by-question review with filters, recommended next step and “Practise my weak areas”.
+- **Certificates and slips**: PDF certificate (three designs) and result slip with QR codes; public verification at `/verify`; LinkedIn sharing.
+- **Admin**: attempts list with integrity filter, attempt timeline, override marks, grading queue for essays, release withheld results, re-grade, revoke certificates.
+- To try the candidate side after `npm run seed`, register at `/register` and open the free certificate mock at `/exams/oracle-1z0-082-free-practice-mock`.
 
 ## Requirements
 

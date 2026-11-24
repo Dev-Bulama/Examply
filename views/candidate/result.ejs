@@ -1,0 +1,138 @@
+<%
+  const r = result;
+  const pending = r && r.has_pending_manual;
+  const passed = r ? r.passed : null;
+  const fmtDur = function (s) { if (s === null || s === undefined) return '—'; const m = Math.floor(s / 60); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min ' + (s % 60) + ' s'; };
+  const chart = { domains: domains.map(function (d) { return { label: d.label, percent: d.percent }; }), history: history.map(function (h) { return { label: 'Attempt ' + h.attempt_no, percent: Number(h.percent) }; }) };
+  const isStudy = attempt.mode === 'study';
+  // Review numbering: case-study parts are "Q3 · Part A".
+  const tops = review.filter(function (x) { return !x.parentId; });
+  const visible = function (x) { if (filter === 'all') return true; if (filter === 'flagged') return x.flagged; if (filter === 'unanswered') return x.unanswered; if (filter === 'pending') return x.status === 'pending_manual'; return x.correct === false && !x.unanswered && x.status !== 'pending_manual'; };
+%>
+<script type="application/json" id="result-chart-data"><%- JSON.stringify(chart).replace(/</g, '\\u003c') %></script>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-sm muted"><%= isStudy ? 'Weak-area practice' : 'Attempt ' + attempt.attempt_no %> · submitted <%= fmt.dateTime(attempt.submitted_at) %><%= attempt.submit_reason === 'timeout' || attempt.submit_reason === 'sweeper' ? ' (time ran out)' : attempt.submit_reason === 'integrity' ? ' (integrity limit reached)' : '' %></p>
+    <h1 class="h1 mt-1"><%= exam.title %></h1>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (!withheld && !isStudy) { %><a href="/results/<%= attempt.uuid %>/slip.pdf" class="btn-secondary"><%- include('../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> Result slip (PDF)</a><% } %>
+    <% if (examSlug) { %><a href="/exams/<%= examSlug %>" class="btn-secondary">Exam page</a><% } %>
+  </div>
+</div>
+
+<% if (withheld) { %>
+  <section class="card card-body flex flex-col items-center py-14 text-center">
+    <span class="grid h-14 w-14 place-items-center rounded-full bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"><%- include('../partials/icon', { name: 'clock' }) %></span>
+    <h2 class="h2 mt-4">Your exam has been submitted</h2>
+    <p class="mt-2 max-w-md muted"><%= exam.result_release === 'after_window' ? 'Results are released after the exam window closes' + (exam.available_until ? ' on ' + fmt.dateTime(exam.available_until) : '') + '.' : 'Your result will be released by the examiner. We will email you when it is ready.' %></p>
+  </section>
+<% } else { %>
+  <!-- Score hero -->
+  <section class="card overflow-hidden">
+    <div class="grid gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+      <div class="flex flex-wrap items-center gap-6">
+        <div class="relative grid h-32 w-32 shrink-0 place-items-center rounded-full" style="background: conic-gradient(<%= pending ? '#f59e0b' : passed === false ? '#dc2626' : 'rgb(var(--c-primary-600))' %> <%= Math.max(0, Math.min(100, Number(r.percent))) * 3.6 %>deg, rgb(226 232 240) 0deg)">
+          <div class="grid h-[6.5rem] w-[6.5rem] place-items-center rounded-full bg-white text-center dark:bg-slate-900"><div><p class="text-3xl font-bold"><%= Number(r.percent) %>%</p><p class="text-xs muted"><%= Number(r.raw_score) %> / <%= Number(r.max_score) %></p></div></div>
+        </div>
+        <div>
+          <% if (pending) { %><span class="badge-amber text-sm">Provisional</span><p class="mt-2 max-w-sm text-sm muted">Some answers are waiting for an examiner. Your score and result will update, and we will email you.</p>
+          <% } else if (passed !== null && !isStudy) { %><p class="text-4xl font-black tracking-tight <%= passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' %>"><%= passed ? 'PASS' : 'FAIL' %></p><p class="mt-1 text-sm muted">Pass mark <%= bd.passMark %><%= bd.passMarkType === 'raw' ? ' marks' : '%' %></p>
+          <% } %>
+          <% if (r.band) { %><p class="mt-2 text-sm muted">Proficiency band</p><p class="text-2xl font-bold"><%= r.band %></p><% } %>
+          <% if (r.scaled_score !== null) { %><p class="mt-2 text-sm">Scaled score <span class="font-semibold"><%= Number(r.scaled_score) %></span></p><% } %>
+          <% (bd.sectionMins || []).filter(function (x) { return !x.met; }).forEach(function (x) { %><p class="mt-2 text-sm text-red-600">“<%= x.section %>” needed at least <%= x.min %>% (you scored <%= x.percent %>%).</p><% }) %>
+        </div>
+      </div>
+      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 lg:grid-cols-2">
+        <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="muted">Correct</dt><dd class="mt-0.5 font-semibold"><%= bd.correct %> of <%= (bd.items || []).length %></dd></div>
+        <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="muted">Percentile</dt><dd class="mt-0.5 font-semibold"><%= r.percentile === null ? '—' : Math.round(Number(r.percentile)) + (Math.round(Number(r.percentile)) % 10 === 1 && Math.round(Number(r.percentile)) !== 11 ? 'st' : Math.round(Number(r.percentile)) % 10 === 2 && Math.round(Number(r.percentile)) !== 12 ? 'nd' : Math.round(Number(r.percentile)) % 10 === 3 && Math.round(Number(r.percentile)) !== 13 ? 'rd' : 'th') %></dd></div>
+        <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="muted">Time taken</dt><dd class="mt-0.5 font-semibold"><%= fmtDur(taken) %></dd><% if (durationAllowed) { %><dd class="text-xs muted">of <%= durationAllowed %> min</dd><% } %></div>
+        <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><dt class="muted">Per question</dt><dd class="mt-0.5 font-semibold"><%= taken && (bd.items || []).length ? fmtDur(Math.round(taken / bd.items.length)) : '—' %></dd></div>
+      </dl>
+    </div>
+    <% if (certificate && !certificate.revoked_at) { %>
+    <div class="flex flex-col gap-3 border-t border-emerald-200 bg-emerald-50 px-6 py-4 dark:border-emerald-900 dark:bg-emerald-950/30 sm:flex-row sm:items-center sm:justify-between">
+      <p class="flex items-center gap-2 text-sm"><%- include('../partials/icon', { name: 'academic', cls: 'h-5 w-5 text-emerald-600' }) %> <span>Certificate <strong class="font-mono"><%= certificate.code %></strong> issued. Anyone can verify it online.</span></p>
+      <div class="flex flex-wrap gap-2">
+        <a href="/certificates/<%= certificate.code %>.pdf" class="btn-primary btn-sm">Download certificate</a>
+        <a href="/verify/<%= certificate.code %>" class="btn-secondary btn-sm">Verification page</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=<%= encodeURIComponent(site.url + '/verify/' + certificate.code) %>" target="_blank" rel="noopener" class="btn-secondary btn-sm">Share on LinkedIn</a>
+      </div>
+    </div>
+    <% } %>
+  </section>
+
+  <% if ((band && (band.message || band.course_url)) || programme || weak.length) { %>
+  <section class="card card-body mt-6">
+    <h2 class="h2">Your next step</h2>
+    <% if (band && band.message) { %><p class="mt-2"><%= band.message %></p><% } %>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <% if (band && band.course_url) { %><a href="<%= band.course_url %>" class="btn-primary" target="_blank" rel="noopener">Open the recommended course</a><% } %>
+      <% if (programme) { %><span class="badge-blue self-center">Recommended programme: <%= programme.name %></span><% } %>
+    </div>
+    <% if (weak.length) { %>
+      <p class="mt-4 text-sm">Focus on: <%= weak.map(function (d) { return d.label + ' (' + d.percent + '%)'; }).join(', ') %>.</p>
+      <% if (!isStudy) { %><form method="post" action="/results/<%= attempt.uuid %>/practice-weak" class="mt-3"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary">Practise my weak areas</button></form><% } %>
+    <% } %>
+  </section>
+  <% } %>
+
+  <% if (showBreakdown) { %>
+  <div class="mt-6 grid gap-6 lg:grid-cols-2">
+    <% if (domains.length) { %>
+    <section class="card card-body">
+      <h2 class="h2">By domain</h2>
+      <% if (domains.length >= 3) { %><div class="mx-auto mt-4 aspect-square w-full max-w-sm"><canvas id="domain-radar" role="img" aria-label="Radar chart of your score in each domain"></canvas></div><% } %>
+      <table class="mt-4 w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide muted"><th class="py-2">Domain</th><th class="py-2 text-right">Score</th><th class="py-2 text-right">%</th></tr></thead>
+        <tbody>
+        <% bd.domains.forEach(function (d) { %>
+          <tr class="border-t border-slate-100 dark:border-slate-800"><td class="py-2"><%= d.label %> <% if (d.percent >= 75) { %><span class="badge-green">Strength</span><% } else if (d.percent < 50) { %><span class="badge-red">Work on this</span><% } %></td><td class="py-2 text-right"><%= d.score %> / <%= d.max %></td><td class="py-2 text-right font-semibold"><%= d.percent %>%</td></tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </section>
+    <% } %>
+    <section class="card card-body">
+      <% if ((bd.sections || []).length > 1) { %>
+      <h2 class="h2">By section</h2>
+      <ul class="mt-4 space-y-3"><% bd.sections.forEach(function (s) { %><li><div class="flex justify-between text-sm"><span><%= s.label %></span><span class="font-semibold"><%= s.percent %>%</span></div><div class="mt-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-2 rounded-full bg-primary-600" style="width:<%= s.percent %>%"></div></div></li><% }) %></ul>
+      <% } %>
+      <h2 class="h2 <%= (bd.sections || []).length > 1 ? 'mt-8' : '' %>">By difficulty</h2>
+      <ul class="mt-4 space-y-3"><% (bd.difficulty || []).forEach(function (s) { %><li><div class="flex justify-between text-sm"><span><%= s.label %> <span class="muted">(<%= s.count %>)</span></span><span class="font-semibold"><%= s.percent %>%</span></div><div class="mt-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-2 rounded-full bg-secondary-500" style="width:<%= s.percent %>%"></div></div></li><% }) %></ul>
+      <% if (history.length > 1) { %><h2 class="h2 mt-8">Your attempts</h2><div class="mt-4 h-48"><canvas id="history-chart" role="img" aria-label="Your score across attempts"></canvas></div><% } %>
+    </section>
+  </div>
+  <% } %>
+
+  <% if (showReview) { %>
+  <section class="mt-8" id="review" aria-labelledby="rv">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h2 id="rv" class="h2">Question by question</h2>
+      <nav class="flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800" aria-label="Filter questions">
+        <% [['all','All'],['wrong','Wrong'],['flagged','Flagged'],['unanswered','Unanswered']].concat(pending ? [['pending','Awaiting grading']] : []).forEach(function (fl) { %>
+        <a href="?filter=<%= fl[0] %>#review" class="rounded-md px-3 py-1.5 <%= filter === fl[0] ? 'bg-white font-semibold shadow-sm dark:bg-slate-900' : '' %>" <%= filter === fl[0] ? 'aria-current="true"' : '' %>><%= fl[1] %></a>
+        <% }) %>
+      </nav>
+    </div>
+    <div class="space-y-4">
+      <% let shown = 0; tops.forEach(function (t, qi) { const parts = review.filter(function (x) { return x.parentId === t.id; }); if (t.type === 'case_study') { const vis = parts.filter(visible); if (!vis.length) return; shown += vis.length; %>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/40"><p class="text-sm font-semibold muted">Question <%= qi + 1 %> · scenario</p><div class="q-content prose-content mt-2 max-w-none"><%- t.stem_html %></div></div>
+        <% vis.forEach(function (p) { %><%- include('_review-item', { r: p, n: 'Question ' + (qi + 1) + ' · Part ' + 'ABCDEFGHIJ'[parts.indexOf(p)] }) %><% }) %>
+      <% } else if (visible(t)) { shown += 1; %><%- include('_review-item', { r: t, n: 'Question ' + (qi + 1) }) %><% } }) %>
+      <% if (!shown) { %><p class="card card-body text-sm muted">No questions match this filter.</p><% } %>
+    </div>
+  </section>
+  <% } else if (!withheld) { %>
+  <p class="mt-8 text-sm muted">Individual questions and answers are not shown for this exam, to protect the question bank.</p>
+  <% } %>
+<% } %>
+
+<link rel="stylesheet" href="/vendor/katex/katex.min.css">
+<script src="/vendor/katex/katex.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/vendor/katex/auto-render.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/vendor/highlight/highlight.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/question-render.js?v=<%= assetVersion %>"></script>
+<script src="/vendor/chartjs/chart.umd.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/results.js?v=<%= assetVersion %>" defer></script>
