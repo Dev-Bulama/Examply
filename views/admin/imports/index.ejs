@@ -1,0 +1,39 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Imports</h1>
+    <p class="mt-1 muted">Bring in hundreds of questions from Excel, CSV, Word, GIFT, Aiken, JSON or a ZIP with images — or let AI write them.</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (can('questions.create')) { %><a href="/admin/ai/new" class="btn-secondary">✨ Generate with AI</a><% } %>
+    <a href="/admin/imports/new" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New import</a>
+  </div>
+</div>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %>
+    <div class="flex flex-col items-center px-6 py-16 text-center">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"><%- include('../../partials/icon', { name: 'download' }) %></span>
+      <p class="mt-4 font-semibold">No imports yet</p>
+      <p class="mt-1 max-w-md text-sm muted">Download a template, fill it in, and upload it. You will see every problem in a dry-run before anything is saved.</p>
+      <a href="/admin/imports/new" class="btn-primary mt-4">Start an import</a>
+    </div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>#</th><th>File</th><th>Rows</th><th>Result</th><th>Status</th><th>By</th></tr></thead>
+      <tbody>
+        <% pager.rows.forEach(function (i) { %>
+        <tr>
+          <td data-label="#" class="font-mono text-xs"><a class="link" href="/admin/imports/<%= i.id %>"><%= i.id %></a></td>
+          <td data-label="File"><a href="/admin/imports/<%= i.id %>" class="font-medium hover:underline"><%= i.source === 'ai' ? '✨ ' : '' %><%= i.original_name %></a><p class="text-xs muted"><%= FORMATS[i.format] || (i.format === 'ai' ? 'AI generation' : i.format) %> · <%= fmt.relative(i.created_at) %></p></td>
+          <td data-label="Rows"><%= i.total_rows %><% if (i.error_rows) { %> <span class="text-xs text-red-600">(<%= i.error_rows %> with errors)</span><% } %></td>
+          <td data-label="Result" class="text-sm"><% if (i.status === 'completed' || i.status === 'undone') { %><%= i.imported_count %> imported · <%= i.skipped_count %> skipped · <%= i.failed_count %> failed<% } else { %>—<% } %></td>
+          <td data-label="Status"><span class="<%= STATUS_BADGE[i.status] %>"><%= i.status === 'parsed' ? 'awaiting review' : i.status %></span></td>
+          <td data-label="By" class="text-sm muted"><%= i.full_name || '—' %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/imports', query: query }) %>
+</div>

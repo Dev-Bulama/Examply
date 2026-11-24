@@ -12,6 +12,8 @@ const settingsC = require('../../controllers/admin/settingsController');
 const system = require('../../controllers/admin/systemController');
 const cat = require('../../controllers/admin/catalogueController');
 const qs = require('../../controllers/admin/questionsController');
+const imports = require('../../controllers/admin/importsController');
+const ai = require('../../controllers/admin/aiController');
 const { uploadLimiter } = require('../../middleware/rateLimit');
 
 const router = express.Router();
@@ -52,6 +54,23 @@ router.get('/catalogue/programmes/:id(\\d+)/edit', can('catalogue.manage'), h(ca
 router.post('/catalogue/programmes/:id(\\d+)', can('catalogue.manage'), h(cat.programmeSave));
 router.post('/catalogue/programmes/:id(\\d+)/delete', can('catalogue.manage'), h(cat.programmeDelete));
 
+// Imports & export
+const importUpload = memoryUpload({ field: 'file', maxBytes: 25 * 1024 * 1024 });
+router.get('/imports', can('questions.import'), h(imports.index));
+router.get('/imports/new', can('questions.import'), h(imports.newForm));
+router.post('/imports', can('questions.import'), uploadLimiter(), importUpload, h(imports.create));
+router.get('/imports/templates/:format(xlsx|csv|json|aiken|gift|docx)', can('questions.import'), h(imports.template));
+router.get('/imports/:id(\\d+)', can('questions.import'), h(imports.show));
+router.get('/imports/:id(\\d+)/status.json', can('questions.import'), h(imports.status));
+router.post('/imports/:id(\\d+)/decisions', can('questions.import'), h(imports.decisions));
+router.post('/imports/:id(\\d+)/confirm', can('questions.import'), h(imports.confirm));
+router.post('/imports/:id(\\d+)/discard', can('questions.import'), h(imports.discard));
+router.post('/imports/:id(\\d+)/undo', can('questions.import'), h(imports.undo));
+router.get('/imports/:id(\\d+)/error-report', can('questions.import'), h(imports.errorReport));
+router.get('/ai/new', can('ai.generate'), h(ai.newForm));
+router.post('/ai', can('ai.generate'), h(ai.create));
+router.get('/questions/export', can('questions.export'), h(imports.exportQuestions));
+
 // Question bank
 router.get('/questions', can('questions.view'), h(qs.index));
 router.get('/questions/new/choose', can('questions.create'), h(qs.chooseType));
@@ -83,6 +102,7 @@ router.post('/roles/:id(\\d+)/delete', can('roles.manage'), h(roles.destroy));
 router.get('/settings', can('settings.manage'), (req, res) => res.redirect('/admin/settings/general'));
 router.get('/settings/:section', can('settings.manage'), h(settingsC.show));
 router.post('/settings/email/test', can('settings.manage'), h(settingsC.testEmail));
+router.post('/settings/ai/test/:provider(anthropic|openai)', can('settings.manage'), h(settingsC.testAi));
 router.post('/settings/branding/upload/:key', can('settings.manage'), memoryUpload({ field: 'file', maxBytes: 1024 * 1024 }), h(settingsC.upload));
 router.post('/settings/branding/remove/:key', can('settings.manage'), h(settingsC.removeUpload));
 router.post('/settings/:section', can('settings.manage'), h(settingsC.save));

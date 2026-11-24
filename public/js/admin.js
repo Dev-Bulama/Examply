@@ -84,6 +84,71 @@
       };
     });
 
+    /* ---------------- AI generator: certification → domains ---------------- */
+    Alpine.data('aiForm', function () {
+      return {
+        certs: [],
+        certId: '',
+        init: function () {
+          try {
+            this.certs = JSON.parse(this.$el.dataset.certs || '[]');
+          } catch (e) {
+            this.certs = [];
+          }
+          this.certId = this.$el.dataset.cert || '';
+        },
+        domains: function () {
+          var id = String(this.certId);
+          var c = this.certs.find(function (x) {
+            return String(x.id) === id;
+          });
+          return c ? c.domains : [];
+        },
+      };
+    });
+
+    /* ---------------- Background progress (imports / AI generation) ---------------- */
+    Alpine.data('importProgress', function () {
+      return {
+        pct: 3,
+        label: 'Starting…',
+        timer: null,
+        init: function () {
+          var self = this;
+          var url = this.$el.dataset.url;
+          var initial = this.$el.dataset.status;
+          var tick = function () {
+            fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+              .then(function (r) {
+                return r.json();
+              })
+              .then(function (s) {
+                if (s.status !== initial || s.status === 'completed' || s.status === 'failed') {
+                  window.location.reload();
+                  return;
+                }
+                if (s.status === 'importing') {
+                  self.pct = Math.max(3, s.progress);
+                  self.label = s.processed + ' of ' + s.total_rows + ' rows processed';
+                } else {
+                  self.pct = Math.max(self.pct, s.parse_progress || 5);
+                  self.label = s.status === 'parsing' ? 'Checking every row…' : 'Queued — starting shortly…';
+                }
+                self.timer = setTimeout(tick, 1500);
+              })
+              .catch(function () {
+                self.label = 'Connection lost — retrying…';
+                self.timer = setTimeout(tick, 4000);
+              });
+          };
+          tick();
+        },
+        destroy: function () {
+          clearTimeout(this.timer);
+        },
+      };
+    });
+
     /* ---------------- Bulk selection on list pages ---------------- */
     Alpine.data('bulkSelect', function () {
       return {

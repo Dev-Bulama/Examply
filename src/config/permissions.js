@@ -29,6 +29,7 @@ const PERMISSIONS = [
   ['questions.delete', 'Question bank', 'Delete questions'],
   ['questions.import', 'Question bank', 'Import questions from files'],
   ['questions.export', 'Question bank', 'Export questions to xlsx / JSON / GIFT'],
+  ['ai.generate', 'Question bank', 'Generate questions and exams with AI (uses the configured AI provider)'],
   ['question_reports.manage', 'Question bank', 'Handle reported questions and re-grade affected attempts'],
   // Exams
   ['exams.view', 'Exams', 'View exams in the admin area'],

@@ -47,6 +47,14 @@
       <div class="flex justify-end border-t border-slate-200 px-6 py-4 dark:border-slate-800"><button type="submit" class="btn-primary" data-loading-text="Saving…">Save <%= section.label.toLowerCase() %> settings</button></div>
     </form>
 
+    <% if (current === 'ai') { %>
+    <section class="card card-body flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div><p class="h3">Test the connection</p><p class="text-sm muted">Checks the saved key and that the model is available (no questions are generated).</p></div>
+      <div class="flex flex-wrap gap-2">
+        <% ['anthropic','openai'].forEach(function (p) { %><form method="post" action="/admin/settings/ai/test/<%= p %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-secondary btn-sm" data-loading-text="Testing…">Test <%= p === 'anthropic' ? 'Claude' : 'OpenAI' %></button></form><% }) %>
+      </div>
+    </section>
+    <% } %>
     <% if (current === 'email') { %>
     <form method="post" action="/admin/settings/email/test" class="card card-body flex flex-col gap-3 sm:flex-row sm:items-end">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">

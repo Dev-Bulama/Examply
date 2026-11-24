@@ -1,0 +1,98 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">✨ Generate questions with AI</h1>
+    <p class="mt-1 muted">Describe the exam you need. The AI writes original, certification-level questions that you review in the same preview as an import before anything is saved.</p>
+  </div>
+  <a href="/admin/imports" class="btn-secondary">Imports &amp; generations</a>
+</div>
+
+<% if (!enabled || !available.length) { %>
+  <div class="card card-body flex flex-col items-start gap-3">
+    <h2 class="h2">Connect an AI provider first</h2>
+    <p class="text-sm muted">AI generation needs a Claude (Anthropic) or OpenAI API key<%= enabled ? '' : ' and must be turned on' %>. Keys are stored encrypted and never shown again.</p>
+    <% if (can('settings.manage')) { %><a href="/admin/settings/ai" class="btn-primary">Open AI settings</a><% } else { %><p class="text-sm">Ask a Super Admin to configure Settings → AI.</p><% } %>
+  </div>
+<% } else { %>
+<form method="post" action="/admin/ai" class="grid gap-6 lg:grid-cols-3" x-data="aiForm" data-certs="<%= certJson %>" data-cert="<%= old.certification_id || '' %>" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="space-y-6 lg:col-span-2">
+    <section class="card card-body space-y-5">
+      <h2 class="h2">What should the questions cover?</h2>
+      <%- include('../../partials/field', { name: 'title', label: 'Name for this set (optional)', maxlength: 120, placeholder: 'e.g. CompTIA Security+ mock — network security' }) %>
+      <%- include('../../partials/field', { name: 'prompt', label: 'Brief', type: 'textarea', rows: 5, required: true, maxlength: 4000, placeholder: 'e.g. Write scenario-based questions for the CompTIA Security+ exam covering incident response, log analysis and hardening Linux servers. Include commands where relevant.', hint: 'Be specific about the audience, tools, versions and the skills to test.' }) %>
+      <%- include('../../partials/field', { name: 'reference', label: 'Reference material (optional)', type: 'textarea', rows: 5, maxlength: 60000, placeholder: 'Paste a syllabus, course notes or a policy. Questions will be grounded in it (not copied).' }) %>
+    </section>
+
+    <section class="card card-body grid gap-5 sm:grid-cols-2">
+      <h2 class="h2 sm:col-span-2">Coverage</h2>
+      <%- include('../../partials/field', { name: 'category_id', label: 'Category', type: 'select', required: true, value: old.category_id || '', options: [{ value: '', label: 'Choose…' }].concat(categories.map(function (c) { return { value: c.id, label: c.path }; })) }) %>
+      <div>
+        <label class="label" for="ai-cert">Certification (optional)</label>
+        <select id="ai-cert" name="certification_id" class="input" x-model="certId">
+          <option value="">— None —</option>
+          <% certifications.forEach(function (c) { %><option value="<%= c.id %>" <%= String(old.certification_id) === String(c.id) ? 'selected' : '' %>><%= c.exam_code ? c.exam_code + ' · ' : '' %><%= c.name %></option><% }) %>
+        </select>
+        <p class="hint">Questions are spread across its domains by weight.</p>
+      </div>
+      <fieldset class="sm:col-span-2" x-show="domains().length" x-cloak>
+        <legend class="label">Domains to cover <span class="font-normal muted">(leave all unticked for the full blueprint)</span></legend>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <template x-for="d in domains()" :key="d.id">
+            <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700"><input type="checkbox" name="domain_ids" :value="d.id" class="checkbox"> <span class="flex-1" x-text="d.label"></span> <span class="text-xs muted" x-text="d.weight + '%'"></span></label>
+          </template>
+        </div>
+      </fieldset>
+      <%- include('../../partials/field', { name: 'count', label: 'Number of questions', type: 'number', value: old.count || 20, min: 1, max: maxPerRun, hint: `Up to ${maxPerRun} per run; written in batches of 20.` }) %>
+      <%- include('../../partials/field', { name: 'difficulty', label: 'Difficulty', type: 'select', value: old.difficulty || 'mixed', options: [{ value: 'mixed', label: 'Realistic mix (20% easy · 50% medium · 30% hard)' }].concat([1,2,3,4,5].map(function (d) { return { value: String(d), label: d + ' — ' + ['Very easy','Easy','Medium','Hard','Very hard'][d-1] }; })) }) %>
+      <%- include('../../partials/field', { name: 'level', label: 'Level', type: 'select', value: old.level || LEVELS[0], options: LEVELS.map(function (l) { return { value: l, label: l }; }), wrapperClass: 'sm:col-span-2' }) %>
+      <fieldset class="sm:col-span-2">
+        <legend class="label">Question types</legend>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <% const chosen = old.types ? [].concat(old.types) : ['single_choice','multiple_response','true_false']; GENERATABLE.forEach(function (t) { %>
+          <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="types" value="<%= t %>" class="checkbox" <%= chosen.includes(t) ? 'checked' : '' %>> <%= TYPES[t].label %></label>
+          <% }) %>
+        </div>
+        <% if (errors.types) { %><p class="field-error"><%= errors.types %></p><% } %>
+      </fieldset>
+      <%- include('../../partials/field', { name: 'language', label: 'Language', value: old.language || 'English', maxlength: 40 }) %>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card card-body space-y-4">
+      <h2 class="h3">Model</h2>
+      <%- include('../../partials/field', { name: 'provider', label: 'AI provider', type: 'select', value: old.provider || defaultProvider, options: available.map(function (p) { return { value: p.id, label: p.label + ' — ' + p.model }; }) }) %>
+      <p class="text-xs muted">Original questions only — the AI is instructed never to reproduce real exam content. Always review before publishing.</p>
+    </section>
+    <section class="card card-body space-y-4" x-data="tabs('<%= old.exam_mode || 'none' %>')">
+      <h2 class="h3">After review</h2>
+      <fieldset>
+        <legend class="label">Status when imported</legend>
+        <div class="space-y-2 text-sm">
+          <label class="flex items-center gap-2"><input type="radio" name="status" value="draft" class="checkbox rounded-full" <%= (old.status || 'draft') === 'draft' ? 'checked' : '' %>> Draft</label>
+          <% if (canPublish) { %><label class="flex items-center gap-2"><input type="radio" name="status" value="published" class="checkbox rounded-full" <%= old.status === 'published' ? 'checked' : '' %>> Published</label><% } %>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend class="label">Exam</legend>
+        <div class="space-y-2 text-sm">
+          <% [['none','Only add to the question bank'],['create','Create a new exam from them'],['attach','Add them to an existing exam']].forEach(function (o) { %>
+          <label class="flex items-center gap-2"><input type="radio" name="exam_mode" value="<%= o[0] %>" class="checkbox rounded-full" @change="select('<%= o[0] %>')" <%= (old.exam_mode || 'none') === o[0] ? 'checked' : '' %>> <%= o[1] %></label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <div x-show="is('create')" x-cloak><%- include('../../partials/field', { name: 'exam_title', label: 'New exam title', maxlength: 200 }) %></div>
+      <div x-show="is('attach')" x-cloak><%- include('../../partials/field', { name: 'exam_id', label: 'Exam', type: 'select', value: old.exam_id || '', options: [{ value: '', label: exams.length ? 'Choose…' : 'No exams yet' }].concat(exams.map(function (e) { return { value: e.id, label: e.title }; })) }) %></div>
+      <button type="submit" class="btn-primary w-full" data-loading-text="Starting…">✨ Generate questions</button>
+    </section>
+    <% if (recent.length) { %>
+    <section class="card card-body text-sm">
+      <h2 class="h3">Recent generations</h2>
+      <ul class="mt-3 space-y-2">
+        <% recent.forEach(function (g) { %><li><a class="link" href="/admin/imports/<%= g.import_id %>"><%= g.prompt.slice(0, 60) %><%= g.prompt.length > 60 ? '…' : '' %></a><p class="text-xs muted"><%= g.generated_count %>/<%= g.requested_count %> · <%= g.status %> · <%= fmt.relative(g.created_at) %></p></li><% }) %>
+      </ul>
+    </section>
+    <% } %>
+  </aside>
+</form>
+<% } %>

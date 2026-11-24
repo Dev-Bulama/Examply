@@ -13,6 +13,8 @@ const ADMIN_NAV = [
     heading: 'Content',
     items: [
       { label: 'Question bank', href: '/admin/questions', icon: 'clipboard', any: ['questions.view'], exclude: ['/admin/questions/reports'] },
+      { label: 'AI generator', href: '/admin/ai/new', icon: 'academic', any: ['ai.generate'] },
+      { label: 'Import questions', href: '/admin/imports', icon: 'download', any: ['questions.import'] },
       { label: 'Reported questions', href: '/admin/questions/reports', icon: 'flag', any: ['question_reports.manage'] },
       { label: 'Categories', href: '/admin/catalogue/categories', icon: 'list', any: ['catalogue.manage'] },
       { label: 'Certifications', href: '/admin/catalogue/certifications', icon: 'academic', any: ['catalogue.manage'] },

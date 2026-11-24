@@ -74,6 +74,21 @@ const SECTIONS = {
       { key: 'auth.google_client_secret', label: 'Google OAuth client secret', type: 'secret' },
     ],
   },
+  ai: {
+    label: 'AI generation',
+    description: 'Connect Claude (Anthropic) or OpenAI so staff can generate certification-level questions and exams from a prompt.',
+    fields: [
+      { key: 'ai.enabled', label: 'Enable AI question generation', type: 'checkbox' },
+      { key: 'ai.default_provider', label: 'Default provider', type: 'select', options: () => [{ value: 'anthropic', label: 'Claude (Anthropic)' }, { value: 'openai', label: 'OpenAI / OpenAI-compatible' }] },
+      { key: 'ai.anthropic_api_key', label: 'Anthropic API key', type: 'secret' },
+      { key: 'ai.anthropic_model', label: 'Claude model', type: 'select', options: () => require('../../services/ai/providers').ANTHROPIC_MODELS.map((m) => ({ value: m.id, label: m.label })) },
+      { key: 'ai.anthropic_effort', label: 'Claude effort', type: 'select', options: () => ['low', 'medium', 'high', 'xhigh', 'max'].map((e) => ({ value: e, label: e === 'high' ? 'high (recommended for exam writing)' : e })), hint: 'Higher effort = more careful questions, more tokens.' },
+      { key: 'ai.openai_api_key', label: 'OpenAI API key', type: 'secret' },
+      { key: 'ai.openai_model', label: 'OpenAI model', type: 'text', max: 80, hint: 'The exact model name from your OpenAI account; it must support JSON-schema structured outputs.' },
+      { key: 'ai.openai_base_url', label: 'OpenAI API base URL', type: 'text', max: 255, hint: 'Leave as https://api.openai.com/v1 unless you use Azure OpenAI or a compatible gateway.' },
+      { key: 'ai.max_questions_per_run', label: 'Maximum questions per generation', type: 'number', min: 1, max: 300 },
+    ],
+  },
   maintenance: {
     label: 'Maintenance & SEO',
     description: 'Maintenance mode blocks everyone except staff. SEO defaults apply to every public page.',
@@ -170,6 +185,7 @@ async function save(req, res) {
     const hasSecret = changes['auth.google_client_secret'] || (await settings.isSet('auth.google_client_secret'));
     if (!changes['auth.google_client_id'] || !hasSecret) errors['auth.google_enabled'] = 'Enter the client ID and secret before enabling Google sign-in.';
   }
+  if (name === 'ai' && changes['ai.openai_base_url'] && !/^https:\/\/[^\s]+$/i.test(changes['ai.openai_base_url'])) errors['ai.openai_base_url'] = 'Enter an https:// URL.';
   if (Object.keys(errors).length) {
     req.setFormState(req.body, errors);
     req.flash('danger', 'Settings were not saved. Please correct the highlighted fields.');
@@ -229,4 +245,12 @@ async function testEmail(req, res) {
   return res.redirect('/admin/settings/email');
 }
 
-module.exports = { show, save, upload, removeUpload, testEmail, SECTIONS };
+async function testAi(req, res) {
+  const provider = req.params.provider === 'openai' ? 'openai' : 'anthropic';
+  const problem = await require('../../services/ai/providers').testConnection(provider);
+  await audit.record(req, 'settings.test_ai', { entityType: 'settings', entityId: 'ai', after: { provider, ok: !problem } });
+  req.flash(problem ? 'danger' : 'success', problem ? `Connection test failed: ${problem}` : `${provider === 'anthropic' ? 'Claude' : 'OpenAI'} is connected and the model is available.`);
+  return res.redirect('/admin/settings/ai');
+}
+
+module.exports = { show, save, upload, removeUpload, testEmail, testAi, SECTIONS };

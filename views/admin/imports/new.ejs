@@ -1,0 +1,77 @@
+<div class="mb-6">
+  <h1 class="h1">Import questions</h1>
+  <p class="mt-1 muted">Step 1 of 3 — upload and choose defaults. Nothing is saved until you confirm the preview.</p>
+</div>
+<div class="grid gap-6 lg:grid-cols-3">
+  <form method="post" action="/admin/imports?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="space-y-6 lg:col-span-2" x-data="tabs('<%= old.exam_mode || 'none' %>')">
+    <section class="card card-body space-y-5">
+      <h2 class="h2">File</h2>
+      <div>
+        <label for="file" class="label">Questions file <span class="text-red-600" aria-hidden="true">*</span></label>
+        <label for="file" class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center hover:border-primary-400 hover:bg-primary-50/40 dark:border-slate-700 dark:bg-slate-900 <%= errors.file ? 'border-red-500' : '' %>">
+          <span class="text-primary-600"><%- include('../../partials/icon', { name: 'download', cls: 'h-8 w-8 rotate-180' }) %></span>
+          <span class="mt-3 font-semibold">Choose a file or drag it here</span>
+          <span class="mt-1 text-xs muted">.xlsx · .csv · .json · .txt (Aiken/GIFT) · .docx · .zip — up to 25 MB, 10,000 questions</span>
+          <input id="file" name="file" type="file" required accept=".xlsx,.csv,.json,.txt,.gift,.docx,.zip" class="mt-4 block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-primary-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-on-primary">
+        </label>
+        <% if (errors.file) { %><p class="field-error"><%= errors.file %></p><% } %>
+      </div>
+      <%- include('../../partials/field', { name: 'format', label: 'Format', type: 'select', value: old.format || 'auto', options: Object.entries(FORMATS).map(function (f) { return { value: f[0], label: f[1] }; }) }) %>
+    </section>
+
+    <section class="card card-body grid gap-5 sm:grid-cols-2">
+      <div class="sm:col-span-2"><h2 class="h2">Defaults</h2><p class="mt-1 text-sm muted">Used when a row leaves these columns empty.</p></div>
+      <%- include('../../partials/field', { name: 'category_id', label: 'Default category', type: 'select', value: old.category_id || '', options: [{ value: '', label: '— From the file —' }].concat(categories.map(function (c) { return { value: c.id, label: c.path }; })) }) %>
+      <%- include('../../partials/field', { name: 'certification_id', label: 'Default certification', type: 'select', value: old.certification_id || '', options: [{ value: '', label: '— From the file / none —' }].concat(certifications.map(function (c) { return { value: c.id, label: (c.exam_code ? c.exam_code + ' · ' : '') + c.name }; })) }) %>
+      <%- include('../../partials/field', { name: 'difficulty', label: 'Default difficulty', type: 'select', value: old.difficulty || 3, options: [1,2,3,4,5].map(function (d) { return { value: d, label: d + ' — ' + ['Very easy','Easy','Medium','Hard','Very hard'][d-1] }; }) }) %>
+      <%- include('../../partials/field', { name: 'duplicate_default', label: 'When a question already exists', type: 'select', value: old.duplicate_default || 'skip', options: [{ value: 'skip', label: 'Skip it (recommended)' }, { value: 'overwrite', label: 'Overwrite it (new version)' }, { value: 'new', label: 'Import as a new question' }] }) %>
+      <fieldset class="sm:col-span-2">
+        <legend class="label">Status after import</legend>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"><input type="radio" name="status" value="draft" class="checkbox rounded-full" <%= (old.status || 'draft') === 'draft' ? 'checked' : '' %>> Draft (review first)</label>
+          <% if (canPublish) { %><label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"><input type="radio" name="status" value="published" class="checkbox rounded-full" <%= old.status === 'published' ? 'checked' : '' %>> Publish immediately (usable in exams at once)</label><% } %>
+        </div>
+      </fieldset>
+    </section>
+
+    <section class="card card-body space-y-4">
+      <h2 class="h2">Use in an exam <span class="text-sm font-normal muted">(optional)</span></h2>
+      <div class="flex flex-wrap gap-3 text-sm">
+        <% [['none','No'],['attach','Attach to an existing exam'],['create','Create a new exam from these questions']].forEach(function (o) { %>
+          <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"><input type="radio" name="exam_mode" value="<%= o[0] %>" class="checkbox rounded-full" @change="select('<%= o[0] %>')" <%= (old.exam_mode || 'none') === o[0] ? 'checked' : '' %>> <%= o[1] %></label>
+        <% }) %>
+      </div>
+      <div x-show="is('attach')" x-cloak>
+        <% if (!exams.length) { %><p class="text-sm muted">There are no exams yet — choose “Create a new exam” instead.</p><% } else { %>
+        <%- include('../../partials/field', { name: 'exam_id', label: 'Exam', type: 'select', value: old.exam_id || '', options: [{ value: '', label: 'Choose…' }].concat(exams.map(function (e) { return { value: e.id, label: e.title + ' (' + e.status + ')' }; })) }) %><% } %>
+      </div>
+      <div x-show="is('create')" x-cloak><%- include('../../partials/field', { name: 'exam_title', label: 'New exam title', maxlength: 200, placeholder: 'e.g. Oracle 1Z0-082 Practice Set 1', hint: 'Created as a draft you can finish in the exam builder.' }) %></div>
+    </section>
+
+    <div class="flex justify-end gap-3">
+      <a href="/admin/imports" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary" data-loading-text="Uploading…">Upload and preview</button>
+    </div>
+  </form>
+
+  <aside class="space-y-6">
+    <section class="card card-body">
+      <h2 class="h3">Templates</h2>
+      <p class="mt-1 text-sm muted">Start from a template; every example row imports cleanly.</p>
+      <ul class="mt-4 space-y-2 text-sm">
+        <% [['xlsx','Excel template (all types + instructions)'],['csv','CSV template'],['docx','Word template'],['json','JSON sample'],['gift','GIFT sample'],['aiken','Aiken sample']].forEach(function (t) { %>
+          <li><a class="link flex items-center gap-2" href="/admin/imports/templates/<%= t[0] %>"><%- include('../../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> <%= t[1] %></a></li>
+        <% }) %>
+      </ul>
+    </section>
+    <section class="card card-body text-sm">
+      <h2 class="h3">How it works</h2>
+      <ol class="mt-3 list-decimal space-y-2 pl-5 muted">
+        <li>Upload — the file is read in the background.</li>
+        <li>Preview — every row shows ✅, ⚠️ or ❌ with the exact problem. Choose what to do with duplicates.</li>
+        <li>Confirm — questions are saved in batches; you can leave the page.</li>
+        <li>Fix failed rows from the downloadable error report and re-upload. You can undo the whole import for 24 hours.</li>
+      </ol>
+    </section>
+  </aside>
+</div>

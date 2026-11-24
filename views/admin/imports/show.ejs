@@ -1,0 +1,146 @@
+<%
+  const isAi = imp.source === 'ai';
+  const steps = [['Upload', ['uploaded','parsing']], ['Preview', ['parsed']], ['Import', ['importing']], ['Done', ['completed','undone']]];
+  const stepIndex = steps.findIndex(function (s) { return s[1].includes(imp.status); });
+  const icon = function (s) { return s === 'valid' ? '✅' : s === 'warning' ? '⚠️' : '❌'; };
+%>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1"><%= isAi ? '✨ AI generation' : 'Import' %> #<%= imp.id %></h1>
+    <p class="mt-1 text-sm muted"><%= imp.original_name %> · <%= FORMATS[imp.format] || (isAi ? 'AI generated' : imp.format) %> · by <%= imp.full_name || '—' %> · <%= fmt.dateTime(imp.created_at) %></p>
+  </div>
+  <span class="<%= STATUS_BADGE[imp.status] %> self-start sm:self-auto"><%= imp.status === 'parsed' ? 'Awaiting your review' : imp.status %></span>
+</div>
+
+<% if (imp.status !== 'failed') { %>
+<ol class="mb-6 grid grid-cols-4 gap-2 text-xs sm:text-sm" aria-label="Progress">
+  <% steps.forEach(function (s, i) { const state = imp.status === 'undone' ? 'muted' : i < stepIndex ? 'done' : i === stepIndex ? 'current' : 'todo'; %>
+  <li class="rounded-lg border px-3 py-2 <%= state === 'current' ? 'border-primary-500 bg-primary-50 font-semibold text-primary-800 dark:bg-primary-950 dark:text-primary-200' : state === 'done' ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200' : 'border-slate-200 muted dark:border-slate-800' %>" <%= state === 'current' ? 'aria-current="step"' : '' %>><%= state === 'done' ? '✓ ' : `${i + 1}. ` %><%= s[0] %></li>
+  <% }) %>
+</ol>
+<% } %>
+
+<% if (generation) { %>
+<section class="card card-body mb-6 text-sm">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0"><p class="font-semibold">Prompt</p><p class="mt-1 whitespace-pre-line muted"><%= generation.prompt %></p></div>
+    <div class="text-xs muted"><%= generation.provider === 'anthropic' ? 'Claude' : 'OpenAI' %> · <%= generation.model %><br><%= generation.generated_count %>/<%= generation.requested_count %> generated · <%= fmt.number(generation.input_tokens + generation.output_tokens) %> tokens</div>
+  </div>
+  <% if (generation.last_error) { %><p class="mt-3 text-red-600"><%= generation.last_error %></p><% } %>
+</section>
+<% } %>
+
+<% if (['uploaded','parsing','importing'].includes(imp.status) || (isAi && generation && ['queued','running'].includes(generation.status))) { %>
+  <section class="card card-body" x-data="importProgress" data-url="/admin/imports/<%= imp.id %>/status.json" data-status="<%= imp.status %>">
+    <h2 class="h2"><%= imp.status === 'importing' ? 'Saving questions…' : isAi ? 'Writing questions with AI…' : 'Reading your file…' %></h2>
+    <p class="mt-1 text-sm muted">You can leave this page — the work continues in the background.</p>
+    <div class="mt-5 h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" role="progressbar" :aria-valuenow="pct" aria-valuemin="0" aria-valuemax="100" aria-label="Progress">
+      <div class="h-full rounded-full bg-primary-600 transition-all duration-500" :style="'width:' + pct + '%'"></div>
+    </div>
+    <p class="mt-2 text-sm" aria-live="polite"><span x-text="label">Starting…</span></p>
+  </section>
+<% } else if (imp.status === 'failed') { %>
+  <div class="alert-danger" role="alert"><%- include('../../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %>
+    <div><p class="font-semibold"><%= isAi ? 'The questions could not be generated' : 'The file could not be imported' %></p><p class="mt-1 whitespace-pre-line"><%= imp.last_error %></p>
+      <a href="<%= isAi ? '/admin/ai/new' : '/admin/imports/new' %>" class="btn-secondary btn-sm mt-3">Try again</a></div>
+  </div>
+<% } %>
+
+<% if (pager) { %>
+  <% if (imp.status === 'parsed') { %>
+    <div class="mb-6 grid gap-4 sm:grid-cols-4">
+      <% [['✅','Ready', imp.valid_rows, 'valid'], ['⚠️','Warnings', imp.warning_rows, 'warning'], ['❌','Errors', imp.error_rows, 'error'], ['⧉','Duplicates', counts.duplicates, 'duplicate']].forEach(function (k) { %>
+        <a href="?filter=<%= k[3] %>" class="card card-body <%= filter === k[3] ? 'ring-2 ring-primary-500' : '' %>"><p class="text-sm muted"><%= k[0] %> <%= k[1] %></p><p class="mt-1 text-2xl font-bold"><%= k[2] %></p></a>
+      <% }) %>
+    </div>
+    <% if (imp.last_error) { %><div class="alert-warning mb-4"><%- include('../../partials/icon', { name: 'info', cls: 'h-5 w-5 shrink-0' }) %><p class="whitespace-pre-line"><%= imp.last_error %></p></div><% } %>
+    <section class="card card-body mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p class="font-semibold"><%= counts.toImport %> question<%= counts.toImport === 1 ? '' : 's' %> will be <%= imp.options.status === 'published' ? 'imported and published' : 'imported as drafts' %>.</p>
+        <p class="text-sm muted"><%= imp.error_rows %> row<%= imp.error_rows === 1 ? '' : 's' %> with errors will be skipped and listed in a downloadable report<%= exam ? ` · added to “${exam.title}”` : imp.options.exam_mode === 'create' ? ` · a new exam “${imp.options.exam_title}” will be created` : '' %>.</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <form method="post" action="/admin/imports/<%= imp.id %>/discard" data-confirm="Discard this import? Nothing will be saved." data-confirm-label="Discard"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-ghost">Discard</button></form>
+        <form method="post" action="/admin/imports/<%= imp.id %>/confirm"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-primary" <%= counts.toImport ? '' : 'disabled' %>>Import <%= counts.toImport %> question<%= counts.toImport === 1 ? '' : 's' %></button></form>
+      </div>
+    </section>
+    <% if (counts.duplicates) { %>
+    <form method="post" action="/admin/imports/<%= imp.id %>/decisions" class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="filter" value="<%= filter %>">
+      <span>For all <%= counts.duplicates %> duplicates:</span>
+      <button name="all_duplicates" value="skip" class="btn-secondary btn-sm">Skip</button>
+      <button name="all_duplicates" value="overwrite" class="btn-secondary btn-sm">Overwrite (new version)</button>
+      <button name="all_duplicates" value="new" class="btn-secondary btn-sm">Import as new</button>
+    </form>
+    <% } %>
+  <% } %>
+
+  <% if (imp.status === 'completed' || imp.status === 'undone') { %>
+    <div class="mb-6 grid gap-4 sm:grid-cols-3">
+      <div class="card card-body"><p class="text-sm muted">Imported</p><p class="mt-1 text-3xl font-bold text-emerald-600"><%= imp.imported_count %></p></div>
+      <div class="card card-body"><p class="text-sm muted">Skipped</p><p class="mt-1 text-3xl font-bold"><%= imp.skipped_count %></p></div>
+      <div class="card card-body"><p class="text-sm muted">Failed</p><p class="mt-1 text-3xl font-bold <%= imp.failed_count ? 'text-red-600' : '' %>"><%= imp.failed_count %></p></div>
+    </div>
+    <section class="card card-body mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="text-sm">
+        <% if (imp.status === 'undone') { %><p class="font-semibold">This import was undone <%= fmt.relative(imp.undone_at) %>.</p>
+        <% } else { %><p class="font-semibold">Finished <%= fmt.relative(imp.completed_at) %>.</p><p class="muted"><%= undoOpen ? `You can undo it until ${fmt.dateTime(imp.undo_expires_at)}.` : 'The undo window has closed.' %><%= exam ? ` Questions were added to “${exam.title}”.` : '' %></p><% } %>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <% if (imp.status === 'completed') { %><a href="/admin/questions?import=<%= imp.id %>" class="btn-secondary">View imported questions</a><% } %>
+        <% if (imp.error_report_path) { %><a href="/admin/imports/<%= imp.id %>/error-report" class="btn-secondary"><%- include('../../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> Error report (.xlsx)</a><% } %>
+        <% if (undoOpen) { %><form method="post" action="/admin/imports/<%= imp.id %>/undo" data-confirm="Undo import #<%= imp.id %>? Imported questions are removed (or retired if candidates already answered them) and overwritten questions are restored." data-confirm-label="Undo import"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-danger">Undo this import</button></form><% } %>
+      </div>
+    </section>
+  <% } %>
+
+  <nav class="mb-3 flex flex-wrap gap-2 text-sm" aria-label="Filter rows">
+    <% [['all','All'],['valid','✅ Ready'],['warning','⚠️ Warnings'],['error','❌ Errors'],['duplicate','Duplicates']].concat(imp.status === 'completed' ? [['failed','Failed']] : []).forEach(function (f) { %>
+      <a href="?filter=<%= f[0] %>" class="<%= filter === f[0] ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= f[1] %></a>
+    <% }) %>
+  </nav>
+  <form method="post" action="/admin/imports/<%= imp.id %>/decisions" class="card overflow-hidden">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="filter" value="<%= filter %>"><input type="hidden" name="page" value="<%= pager.page %>">
+    <% if (!pager.rows.length) { %>
+      <p class="px-6 py-12 text-center text-sm muted">No rows in this view.</p>
+    <% } else { %>
+    <div class="overflow-x-auto p-2 sm:p-0">
+      <table class="table table-responsive">
+        <thead><tr><th class="w-24">Row</th><th>Question</th><th>Problems</th><th class="w-44"><%= imp.status === 'parsed' ? 'Action' : 'Result' %></th></tr></thead>
+        <tbody>
+          <% pager.rows.forEach(function (r) { %>
+          <tr class="<%= r.status === 'error' ? 'bg-red-50/50 dark:bg-red-950/20' : '' %>">
+            <td data-label="Row" class="whitespace-nowrap"><span aria-label="<%= r.status %>"><%= icon(r.status) %></span> <span class="text-sm"><%= r.row_ref %></span></td>
+            <td data-label="Question" class="text-sm">
+              <p class="line-clamp-2 text-left"><%= r.stem || '(no question text)' %></p>
+              <p class="mt-1 flex flex-wrap gap-1"><% if (r.qtype && TYPES[r.qtype]) { %><span class="badge-blue"><%= TYPES[r.qtype].short %></span><% } %><% if (r.caseId) { %><span class="badge-gray">case <%= r.caseId %></span><% } %><% if (r.parentCaseId) { %><span class="badge-gray">in case <%= r.parentCaseId %></span><% } %></p>
+            </td>
+            <td data-label="Problems" class="text-sm">
+              <% if (!r.messages.length) { %><span class="muted">—</span><% } %>
+              <ul class="space-y-1 text-left"><% r.messages.forEach(function (m) { %><li class="<%= m.level === 'error' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400' %>"><%= m.text %></li><% }) %></ul>
+              <% if (r.result_error) { %><p class="mt-1 text-red-700 dark:text-red-400"><%= r.result_error %></p><% } %>
+            </td>
+            <td data-label="<%= imp.status === 'parsed' ? 'Action' : 'Result' %>">
+              <% if (imp.status === 'parsed' && r.status !== 'error') { %>
+                <label class="sr-only" for="d-<%= r.id %>">Action for <%= r.row_ref %></label>
+                <select id="d-<%= r.id %>" name="decision[<%= r.id %>]" class="input py-1.5 text-sm" data-autosubmit>
+                  <% (r.duplicate_of_question_id ? [['skip','Skip'],['overwrite','Overwrite #' + r.duplicate_of_question_id],['new','Import as new']] : [['import','Import'],['skip','Skip']]).forEach(function (o) { %>
+                    <option value="<%= o[0] %>" <%= r.decision === o[0] || (o[0] === 'import' && r.decision === 'new') ? 'selected' : '' %>><%= o[1] %></option>
+                  <% }) %>
+                </select>
+              <% } else if (imp.status === 'parsed') { %><span class="text-sm text-red-700 dark:text-red-400">Will be skipped</span>
+              <% } else { %>
+                <span class="<%= { imported: 'badge-green', overwritten: 'badge-blue', skipped: 'badge-gray', failed: 'badge-red', pending: 'badge-gray' }[r.result] %>"><%= r.result %></span>
+                <% if (r.result_question_id) { %><a class="ml-1 text-sm link" href="/admin/questions/<%= r.result_question_id %>">#<%= r.result_question_id %></a><% } %>
+              <% } %>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <noscript><div class="border-t border-slate-200 p-3 text-right dark:border-slate-800"><button class="btn-secondary btn-sm" type="submit">Save choices</button></div></noscript>
+    <% } %>
+    <%- include('../../partials/pagination', { pager: pager, basePath: `/admin/imports/${imp.id}`, query: query }) %>
+  </form>
+<% } %>

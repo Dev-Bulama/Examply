@@ -13,6 +13,8 @@ function registerAll() {
   registered = true;
 
   queue.register('email.send', async (payload) => mail.sendNow(payload));
+  require('../import/pipeline').registerJobs();
+  require('../ai/generator').registerJobs();
 
   scheduler.defineTask('cleanup', 60, maintenance.cleanup);
 }

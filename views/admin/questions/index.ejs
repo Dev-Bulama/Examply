@@ -12,6 +12,16 @@
     </p>
   </div>
   <div class="flex flex-wrap gap-2">
+    <% if (can('questions.export')) { const exportQs = new URLSearchParams(Object.entries(query).filter(function (e) { return e[0] !== 'page' && e[1]; })).toString(); %>
+    <div class="relative" x-data="dropdown" @click.outside="close" @keydown.escape="close">
+      <button type="button" class="btn-secondary" @click="toggle" :aria-expanded="open" aria-haspopup="menu"><%- include('../../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> Export</button>
+      <div x-cloak x-show="open" class="absolute right-0 z-30 mt-2 w-60 rounded-lg border border-slate-200 bg-white p-1 shadow-pop dark:border-slate-700 dark:bg-slate-900" role="menu">
+        <p class="px-3 py-2 text-xs muted">Exports the questions matching the current filters.</p>
+        <% [['xlsx','Excel (re-importable)'],['json','JSON'],['gift','GIFT (Moodle)']].forEach(function (f) { %><a role="menuitem" class="nav-link" href="/admin/questions/export?format=<%= f[0] %><%= exportQs ? '&' + exportQs : '' %>"><%= f[1] %></a><% }) %>
+      </div>
+    </div>
+    <% } %>
+    <% if (can('questions.import')) { %><a href="/admin/imports/new" class="btn-secondary">Import</a><% } %>
     <a href="/admin/questions/duplicates" class="btn-secondary">Duplicate finder</a>
     <% if (can('questions.create')) { %><a href="/admin/questions/new/choose" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New question</a><% } %>
   </div>

@@ -43,6 +43,16 @@ const DEFINITIONS = {
   'email.smtp_password': { type: 'string', default: '', encrypted: true },
   'email.from_name': { type: 'string', default: '' },
   'email.from_address': { type: 'string', default: '' },
+  // AI question generation
+  'ai.enabled': { type: 'boolean', default: false },
+  'ai.default_provider': { type: 'string', default: 'anthropic' },
+  'ai.anthropic_api_key': { type: 'string', default: '', encrypted: true },
+  'ai.anthropic_model': { type: 'string', default: 'claude-opus-5-5' },
+  'ai.anthropic_effort': { type: 'string', default: 'high' },
+  'ai.openai_api_key': { type: 'string', default: '', encrypted: true },
+  'ai.openai_model': { type: 'string', default: '' },
+  'ai.openai_base_url': { type: 'string', default: 'https://api.openai.com/v1' },
+  'ai.max_questions_per_run': { type: 'number', default: 100 },
   // Maintenance
   'maintenance.enabled': { type: 'boolean', default: false },
   'maintenance.message': { type: 'string', default: 'We are performing scheduled maintenance and will be back shortly.' },
