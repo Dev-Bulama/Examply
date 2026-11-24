@@ -1,0 +1,57 @@
+<% const editable = can('exams.manage'); %>
+<section class="card" aria-labelledby="acc-h">
+  <div class="card-body">
+    <h2 id="acc-h" class="h2">Access rules</h2>
+    <p class="mt-1 text-sm muted">Limit where and by whom the exam can be taken. With no rules, anyone allowed by the visibility setting can take it.</p>
+    <% if (full.access.length) { %>
+    <ul class="mt-4 divide-y divide-slate-200 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+      <% full.access.forEach(function (a) { const org = a.rule_type === 'organisation' ? organisations.find(function (o) { return String(o.id) === a.value; }) : null; %>
+      <li class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+        <span><span class="badge-gray mr-2"><%= { ip_allow: 'IP range', organisation: 'Organisation', cohort: 'Cohort' }[a.rule_type] %></span><span class="font-mono"><%= org ? org.name : a.value %></span></span>
+        <% if (editable) { %><form method="post" action="/admin/exams/<%= e.id %>/access/<%= a.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600">Remove</button></form><% } %>
+      </li>
+      <% }) %>
+    </ul>
+    <% } %>
+    <% if (editable) { %>
+    <div class="mt-4 grid gap-4 md:grid-cols-2">
+      <form method="post" action="/admin/exams/<%= e.id %>/access" class="flex items-end gap-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="rule_type" value="ip_allow">
+        <div class="flex-1"><label class="label" for="ip">Allow IP address or range</label><input id="ip" name="value" class="input font-mono" placeholder="102.89.0.0/16"></div>
+        <button class="btn-secondary">Add</button>
+      </form>
+      <form method="post" action="/admin/exams/<%= e.id %>/access" class="flex items-end gap-2">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="rule_type" value="organisation">
+        <div class="flex-1"><label class="label" for="org">Allow organisation</label>
+          <select id="org" name="value" class="input" <%= organisations.length ? '' : 'disabled' %>><% if (!organisations.length) { %><option>No organisations yet</option><% } %><% organisations.forEach(function (o) { %><option value="<%= o.id %>"><%= o.name %></option><% }) %></select></div>
+        <button class="btn-secondary" <%= organisations.length ? '' : 'disabled' %>>Add</button>
+      </form>
+    </div>
+    <% } %>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="ov-h">
+  <div class="card-body">
+    <h2 id="ov-h" class="h2">Extra attempts</h2>
+    <p class="mt-1 text-sm muted">Give a candidate more attempts than the exam allows — for example after a power cut. Every grant is recorded in the audit log.</p>
+    <% if (can('exams.grant_attempts')) { %>
+    <form method="post" action="/admin/exams/<%= e.id %>/overrides" class="mt-4 grid gap-4 md:grid-cols-6" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="md:col-span-2"><label class="label" for="ov-email">Candidate email</label><input id="ov-email" name="email" type="email" class="input <%= errors.email ? 'input-error' : '' %>" required><% if (errors.email) { %><p class="field-error"><%= errors.email %></p><% } %></div>
+      <div><label class="label" for="ov-n">Extra attempts</label><input id="ov-n" name="extra_attempts" type="number" min="1" max="20" value="1" class="input"></div>
+      <div class="md:col-span-3"><label class="label" for="ov-r">Reason</label><input id="ov-r" name="reason" class="input <%= errors.reason ? 'input-error' : '' %>" maxlength="500" placeholder="e.g. Power outage during attempt on 12 Nov"><% if (errors.reason) { %><p class="field-error"><%= errors.reason %></p><% } %></div>
+      <label class="flex items-center gap-2 text-sm md:col-span-4"><input type="checkbox" name="reset_cooldown" value="1" class="checkbox"> Also skip the waiting period</label>
+      <div class="flex justify-end md:col-span-2"><button class="btn-primary">Grant attempts</button></div>
+    </form>
+    <% } %>
+    <% if (overrides.length) { %>
+    <div class="mt-5 overflow-x-auto"><table class="table table-responsive">
+      <thead><tr><th>Candidate</th><th>Extra</th><th>Reason</th><th>Granted</th></tr></thead>
+      <tbody><% overrides.forEach(function (o) { %>
+        <tr><td data-label="Candidate"><%= o.full_name %><p class="text-xs muted"><%= o.email %></p></td><td data-label="Extra">+<%= o.extra_attempts %><%= o.reset_cooldown ? ' · no wait' : '' %></td><td data-label="Reason" class="text-sm"><%= o.reason %></td><td data-label="Granted" class="text-sm"><%= o.granted_by_name || (o.source === 'purchase' ? 'Purchased' : '—') %><p class="text-xs muted"><%= fmt.dateTime(o.created_at) %></p></td></tr>
+      <% }) %></tbody>
+    </table></div>
+    <% } else { %><p class="mt-4 text-sm muted">No extra attempts granted yet.</p><% } %>
+  </div>
+</section>

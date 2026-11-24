@@ -105,3 +105,124 @@
     enhance(document);
   });
 })();
+
+/* SQL lab (candidate view): run SQL on the server's sandboxed copy of the dataset and show the result. */
+(function () {
+  'use strict';
+  document.addEventListener('alpine:init', function () {
+    window.Alpine.data('sqlLab', function () {
+      return {
+        tables: [],
+        cols: [],
+        rows: [],
+        error: '',
+        verdict: '',
+        good: false,
+        busy: false,
+        info: '',
+        loaded: false,
+        url: function () {
+          return this.$root.dataset.run;
+        },
+        init: function () {
+          var self = this;
+          if (!this.url()) {
+            this.loaded = true;
+            return;
+          }
+          window.App.api(this.url(), { method: 'POST', body: { describe: true } })
+            .then(function (r) {
+              self.tables = (r.schema && r.schema.tables) || [];
+            })
+            .catch(function () {
+              /* the schema SQL below is still available */
+            })
+            .finally(function () {
+              self.loaded = true;
+            });
+        },
+        schemaNote: function () {
+          if (!this.url()) return 'Run is available during the exam.';
+          return this.loaded ? 'See the schema below.' : 'Loading…';
+        },
+        canCheck: function () {
+          return this.$root.dataset.check === '1';
+        },
+        cell: function (v) {
+          return v === null ? 'NULL' : String(v);
+        },
+        status: function () {
+          if (this.busy) return 'Running…';
+          return this.info;
+        },
+        verdictClass: function () {
+          return this.good ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300';
+        },
+        keys: function (e) {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            this.run();
+          } else if (e.key === 'Tab' && !e.shiftKey) {
+            // Indent instead of leaving the editor; Shift+Tab or Esc then Tab still moves focus.
+            var ta = e.target;
+            if (ta.dataset.escaped === '1') {
+              ta.dataset.escaped = '';
+              return;
+            }
+            e.preventDefault();
+            var s = ta.selectionStart;
+            ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(ta.selectionEnd);
+            ta.selectionStart = ta.selectionEnd = s + 2;
+          } else if (e.key === 'Escape') {
+            e.target.dataset.escaped = '1';
+          }
+        },
+        insertColumn: function (e) {
+          var ta = this.$refs.editor;
+          var name = e.currentTarget.dataset.col;
+          var s = ta.selectionStart;
+          ta.value = ta.value.slice(0, s) + name + ta.value.slice(ta.selectionEnd);
+          ta.focus();
+          ta.selectionStart = ta.selectionEnd = s + name.length;
+          ta.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+        send: function (check) {
+          var self = this;
+          if (!this.url()) {
+            this.info = 'Running SQL is available during the exam.';
+            return;
+          }
+          this.busy = true;
+          this.error = '';
+          if (!check) this.verdict = '';
+          window.App.api(this.url(), { method: 'POST', body: { sql: this.$refs.editor.value, check: !!check } })
+            .then(function (r) {
+              var run = r.run;
+              self.cols = run.ok && run.result ? run.result.columns : [];
+              self.rows = run.ok && run.result ? run.result.rows : [];
+              self.error = run.ok ? '' : run.error;
+              if (run.ok && run.result) {
+                self.info = run.result.columns.length ? run.result.rowCount + ' row(s)' + (run.result.truncated ? ', first 200 shown' : '') + ' · ' + run.ms + ' ms' : run.result.changes + ' row(s) changed · ' + run.ms + ' ms (changes are discarded after each run)';
+              } else self.info = '';
+              if (r.check) {
+                self.good = r.check.correct;
+                self.verdict = r.check.correct ? 'Correct — your query returns the expected result.' : 'Not yet: ' + (r.check.reason || 'the result differs from the expected result.');
+              }
+            })
+            .catch(function (err) {
+              self.error = err.message;
+            })
+            .finally(function () {
+              self.busy = false;
+            });
+        },
+        run: function () {
+          this.send(false);
+        },
+        check: function () {
+          this.send(true);
+        },
+      };
+    });
+  });
+})();

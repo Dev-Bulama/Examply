@@ -16,6 +16,8 @@
  *   short_answer       { keywords: [{ terms: [string], weight }], threshold, case_sensitive }
  *   essay              { min_words, max_words, rubric_html }
  *   case_study         {}                              (children are separate questions with parent_id)
+ *   sql                { mode: 'query'|'modify', schema_sql, seed_sql, starter_sql, solution_sql, check_sql,
+ *                        order_matters, column_names_matter, numeric_tolerance }   (SQLite dialect, see services/sql)
  *
  * Short texts (options, items, variants) use "inline markup": `code` and \( maths \).
  *
@@ -39,6 +41,7 @@ const TYPES = {
   short_answer: { label: 'Short answer (keywords)', short: 'Short', auto: true },
   essay: { label: 'Essay (manual grading)', short: 'Essay', auto: false },
   case_study: { label: 'Case study / scenario group', short: 'Case', auto: false },
+  sql: { label: 'SQL lab (write and run a query)', short: 'SQL', auto: true },
 };
 const TYPE_KEYS = Object.keys(TYPES);
 const BLOOM = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
@@ -53,6 +56,7 @@ const blankCount = (html) => {
   const nums = [...String(html || '').matchAll(/\[\[(\d{1,2})\]\]/g)].map((m) => Number(m[1]));
   return nums.length ? Math.max(...nums) : 0;
 };
+const sqlText = (v) => (v === undefined || v === null ? '' : String(v)).replace(/\r\n/g, '\n').trim().slice(0, 200000);
 const blankNumbers = (html) => [...String(html || '').matchAll(/\[\[(\d{1,2})\]\]/g)].map((m) => Number(m[1]));
 
 /** Normalises loosely-typed input (form JSON or import rows) into a clean authoring model. */
@@ -106,6 +110,19 @@ function normalise(input) {
       return { ...base, min_words: num(a.min_words), max_words: num(a.max_words), rubric_html: sanitizeRich(a.rubric_html) };
     case 'case_study':
       return { ...base, marks: 0 };
+    case 'sql':
+      return {
+        ...base,
+        mode: str(a.mode) === 'modify' ? 'modify' : 'query',
+        schema_sql: sqlText(a.schema_sql),
+        seed_sql: sqlText(a.seed_sql),
+        starter_sql: sqlText(a.starter_sql),
+        solution_sql: sqlText(a.solution_sql),
+        check_sql: sqlText(a.check_sql),
+        order_matters: bool(a.order_matters),
+        column_names_matter: bool(a.column_names_matter),
+        numeric_tolerance: num(a.numeric_tolerance) === null ? 0 : num(a.numeric_tolerance),
+      };
     default:
       return base;
   }
@@ -220,6 +237,13 @@ function validate(q) {
       else if (q.threshold > total) add('threshold', `The threshold (${q.threshold}) is higher than the total keyword weight (${total}), so full marks could never be reached.`);
       break;
     }
+    case 'sql':
+      if (!q.schema_sql) add('schema_sql', 'Add the dataset schema (CREATE TABLE statements).');
+      if (!q.solution_sql) add('solution_sql', 'Add the model solution query.');
+      if (q.mode === 'modify' && !q.check_sql) add('check_sql', 'In “modify” mode, add a check query that reads the changed data.');
+      if (q.numeric_tolerance === null || q.numeric_tolerance < 0) add('numeric_tolerance', 'Numeric tolerance must be 0 or a positive number.');
+      if (q.schema_sql.length + q.seed_sql.length > 200000) add('seed_sql', 'The dataset is too large (200,000 characters at most).');
+      break;
     case 'essay':
       if (q.min_words !== null && q.min_words < 0) add('min_words', 'Minimum words cannot be negative.');
       if (q.max_words !== null && q.max_words < 1) add('max_words', 'Maximum words must be at least 1.');
@@ -284,6 +308,14 @@ function toStored(q) {
       settings.max_words = q.max_words;
       answer = { rubric_html: q.rubric_html || '' };
       break;
+    case 'sql':
+      settings.dialect = 'sqlite';
+      settings.mode = q.mode;
+      settings.schema_sql = q.schema_sql;
+      settings.seed_sql = q.seed_sql;
+      settings.starter_sql = q.starter_sql;
+      answer = { solution_sql: q.solution_sql, check_sql: q.check_sql, order_matters: q.order_matters, column_names_matter: q.column_names_matter, numeric_tolerance: q.numeric_tolerance };
+      break;
     default:
       break;
   }
@@ -313,6 +345,9 @@ function contentHash(q) {
       break;
     case 'numeric':
       parts.push(String(q.value));
+      break;
+    case 'sql':
+      parts.push(String(q.solution_sql).toLowerCase().replace(/\s+/g, ' ').trim());
       break;
     default:
       break;
@@ -348,6 +383,8 @@ function fromStored(version, options, answer, settings) {
       return { ...base, keywords: answer.keywords || [], threshold: answer.threshold, case_sensitive: !!settings.case_sensitive };
     case 'essay':
       return { ...base, min_words: settings.min_words ?? null, max_words: settings.max_words ?? null, rubric_html: answer.rubric_html || '' };
+    case 'sql':
+      return { ...base, mode: settings.mode || 'query', schema_sql: settings.schema_sql || '', seed_sql: settings.seed_sql || '', starter_sql: settings.starter_sql || '', solution_sql: answer.solution_sql || '', check_sql: answer.check_sql || '', order_matters: !!answer.order_matters, column_names_matter: !!answer.column_names_matter, numeric_tolerance: answer.numeric_tolerance || 0 };
     default:
       return base;
   }
@@ -403,6 +440,12 @@ function candidateView(version, options, settings, { optionOrder = null, shuffle
       view.settings.min_words = settings.min_words ?? null;
       view.settings.max_words = settings.max_words ?? null;
       break;
+    case 'sql':
+      // The schema DDL and starter code only — never the seed rows' expected output, the solution or the check query.
+      view.settings.mode = settings.mode || 'query';
+      view.settings.schema_sql = settings.schema_sql || '';
+      view.settings.starter_sql = settings.starter_sql || '';
+      break;
     default:
       break;
   }
@@ -435,6 +478,8 @@ function emptyAuthoring(type) {
       return { ...base, marks: 10, min_words: null, max_words: null, rubric_html: '' };
     case 'case_study':
       return { ...base, marks: 0 };
+    case 'sql':
+      return { ...base, marks: 2, mode: 'query', schema_sql: '', seed_sql: '', starter_sql: '', solution_sql: '', check_sql: '', order_matters: false, column_names_matter: false, numeric_tolerance: 0 };
     default:
       return base;
   }

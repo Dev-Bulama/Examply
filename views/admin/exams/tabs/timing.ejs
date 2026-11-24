@@ -1,0 +1,9 @@
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'duration_minutes', label: 'Duration (minutes)', type: 'number', min: 1, max: 1440, value: e.duration_minutes, hint: 'Leave empty for an untimed exam. Extra-time accommodations are added per candidate.' }) %>
+  <%- include('../../../partials/field', { name: 'time_out_action', label: 'When time runs out', type: 'select', value: s.timing.time_out_action, options: [{ value: 'auto_submit', label: 'Submit automatically' }, { value: 'lock', label: 'Lock answers; the candidate submits' }] }) %>
+  <%- include('../../../partials/field', { name: 'grace_seconds', label: 'Grace period (seconds)', type: 'number', min: 0, max: 600, value: e.grace_seconds, hint: 'Covers network delay at the deadline. Not shown on the timer.' }) %>
+  <%- include('../../../partials/field', { name: 'per_question_seconds', label: 'Time per question (seconds)', type: 'number', min: 10, max: 3600, value: e.per_question_seconds, hint: 'Optional. When set, the exam moves on automatically — use with linear navigation.' }) %>
+  <%- include('../../../partials/field', { name: 'available_from', label: 'Opens', type: 'datetime-local', value: toLocal(e.available_from), hint: 'Your time zone: ' + fmt.tz + '. Empty = available as soon as it is published.' }) %>
+  <%- include('../../../partials/field', { name: 'available_until', label: 'Closes', type: 'datetime-local', value: toLocal(e.available_until), hint: 'Empty = no closing date.' }) %>
+</div>
+<p class="text-sm muted">Section time limits are set on each section in the Content tab.</p>

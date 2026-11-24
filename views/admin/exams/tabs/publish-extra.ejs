@@ -1,0 +1,50 @@
+<section class="card" aria-labelledby="chk-h">
+  <div class="card-body">
+    <h2 id="chk-h" class="h2">Pre-publish checklist</h2>
+    <ul class="mt-4 divide-y divide-slate-200 dark:divide-slate-800">
+      <% checklist.forEach(function (c) { %>
+      <li class="flex gap-3 py-2.5 text-sm">
+        <span class="mt-0.5 shrink-0 <%= c.ok ? 'text-emerald-600' : (c.level === 'error' ? 'text-red-600' : 'text-amber-500') %>"><%- include('../../../partials/icon', { name: c.ok ? 'check' : 'warning', cls: 'h-4 w-4' }) %></span>
+        <span class="flex-1"><%= c.message %></span>
+        <% if (!c.ok) { %><span class="<%= c.level === 'error' ? 'badge-red' : 'badge-amber' %>"><%= c.level === 'error' ? 'Required' : 'Recommended' %></span><% } %>
+      </li>
+      <% }) %>
+    </ul>
+    <% if (can('exams.publish')) { %>
+    <form method="post" action="/admin/exams/<%= e.id %>/publish" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="flex-1"><label class="label" for="pub-note">Version note <span class="font-normal muted">(optional)</span></label><input id="pub-note" name="note" class="input" maxlength="255" placeholder="e.g. Replaced 3 questions after item review"></div>
+      <button class="btn-primary" <%= ready ? '' : 'disabled' %>><%= e.status === 'published' ? 'Publish as version ' + (e.version + 1) : 'Publish' %></button>
+    </form>
+    <p class="mt-2 text-xs muted">Publishing takes a snapshot. Candidates always get the latest published version; attempts already in progress keep the version they started.</p>
+    <% } %>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="ver-h">
+  <div class="card-body">
+    <h2 id="ver-h" class="h2">Version history</h2>
+    <% if (!versions.length) { %><p class="mt-2 text-sm muted">Not published yet.</p><% } else { %>
+    <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
+      <% versions.forEach(function (v) { %>
+      <li class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+        <span><a class="font-semibold hover:underline" href="/admin/exams/<%= e.id %>/versions/<%= v.version_no %>">Version <%= v.version_no %></a><%= v.version_no === e.version && e.status === 'published' ? ' · live' : '' %><% if (v.note) { %><span class="block muted"><%= v.note %></span><% } %></span>
+        <span class="muted"><%= v.created_by_name || 'System' %> · <%= fmt.dateTime(v.created_at) %></span>
+      </li>
+      <% }) %>
+    </ul>
+    <% } %>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="life-h">
+  <div class="card-body">
+    <h2 id="life-h" class="h2">More actions</h2>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <% if (can('exams.manage')) { %><form method="post" action="/admin/exams/<%= e.id %>/duplicate"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary">Duplicate</button></form><% } %>
+      <% if (can('exams.publish') && e.status === 'published') { %><form method="post" action="/admin/exams/<%= e.id %>/unpublish" data-confirm="Unpublish this exam? It disappears from the catalogue; attempts in progress can still be finished." data-confirm-label="Unpublish"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary">Unpublish</button></form><% } %>
+      <% if (can('exams.publish') && e.status !== 'archived') { %><form method="post" action="/admin/exams/<%= e.id %>/archive" data-confirm="Archive this exam?" data-confirm-label="Archive"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary">Archive</button></form><% } %>
+      <% if (can('exams.manage')) { %><form method="post" action="/admin/exams/<%= e.id %>/delete" data-confirm="Delete this exam? This is only possible when nobody has attempted it." data-confirm-label="Delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-danger">Delete</button></form><% } %>
+    </div>
+  </div>
+</section>

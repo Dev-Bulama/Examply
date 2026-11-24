@@ -1,0 +1,16 @@
+<% const d = s.delivery; %>
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'navigation', label: 'Navigation', type: 'select', value: d.navigation, options: [{ value: 'free', label: 'Free — move back and forth' }, { value: 'linear', label: 'Linear — no going back' }] }) %>
+  <%- include('../../../partials/field', { name: 'layout', label: 'Layout', type: 'select', value: d.layout, options: [{ value: 'one', label: 'One question per page' }, { value: 'all', label: 'All questions on one page' }] }) %>
+  <%- include('../../../partials/field', { name: 'calculator', label: 'Calculator', type: 'select', value: d.calculator, options: [{ value: 'none', label: 'None' }, { value: 'basic', label: 'Basic' }, { value: 'scientific', label: 'Scientific' }] }) %>
+  <% if (e.content_mode === 'fixed') { %><%- include('../../../partials/field', { name: 'deliver_count', label: 'Questions per candidate', type: 'number', min: 1, value: d.deliver_count, hint: 'Optional: give each candidate a random subset of the list.' }) %><% } %>
+</div>
+<div class="grid gap-3 md:grid-cols-2">
+  <%- include('_cb', { name: 'shuffle_questions', label: 'Shuffle question order', checked: d.shuffle_questions, hint: 'Within each section.' }) %>
+  <%- include('_cb', { name: 'shuffle_options', label: 'Shuffle answer options', checked: d.shuffle_options, hint: 'Options pinned last (e.g. “None of the above”) stay last.' }) %>
+  <%- include('_cb', { name: 'show_palette', label: 'Show the question palette', checked: d.show_palette }) %>
+  <%- include('_cb', { name: 'allow_flag', label: 'Allow flagging for review', checked: d.allow_flag }) %>
+  <%- include('_cb', { name: 'show_timer', label: 'Show the countdown timer', checked: d.show_timer }) %>
+  <%- include('_cb', { name: 'notepad', label: 'Provide a notepad', checked: d.notepad }) %>
+  <%- include('_cb', { name: 'practice_check_answer', label: 'Practice mode: “Check answer” button', checked: d.practice_check_answer, hint: 'Shows correctness and the explanation immediately. Use for practice tests only.' }) %>
+</div>

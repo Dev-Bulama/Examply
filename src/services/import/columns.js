@@ -7,7 +7,7 @@
 const OPTION_COLUMNS = 'abcdefghijkl'.split('').map((l) => `option_${l}`);
 
 const COLUMNS = [
-  { key: 'type', aliases: ['question type', 'qtype'], help: 'single_choice, multiple_response, true_false, fill_blank, numeric, matching, ordering, hotspot, short_answer, essay, case_study (short forms: mcq, multi, tf, blank, num, match, order, short).' },
+  { key: 'type', aliases: ['question type', 'qtype'], help: 'single_choice, multiple_response, true_false, fill_blank, numeric, matching, ordering, hotspot, short_answer, essay, case_study, sql (short forms: mcq, multi, tf, blank, num, match, order, short).' },
   { key: 'question', aliases: ['stem', 'question text', 'text'], help: 'The question text. Plain text or simple HTML. For fill-in-the-blank, mark blanks as [[1]], [[2]]…' },
   ...OPTION_COLUMNS.map((k, i) => ({ key: k, aliases: [`option ${k.slice(-1)}`, k.slice(-1)], help: i === 0 ? 'Options A–L (choice questions). Matching: “left => right”; a line without => is a distractor. Ordering: items in the CORRECT order. Hotspot: “label @ x,y,w,h” in % of the image.' : '' })),
   { key: 'answer', aliases: ['correct', 'correct answer', 'key'], help: 'MCQ: B · multiple response: A,C · true/false: TRUE or FALSE · numeric: 6 or 6 ± 0.1 · fill-in: answers per blank separated by ||, alternatives by | (e.g. 1521 | port 1521 || listener.ora) · short answer: keyword|synonym=weight; … · hotspot: the correct label or letter · essay: marking guide.' },
@@ -29,6 +29,14 @@ const COLUMNS = [
   { key: 'min_words', aliases: [], help: 'Essay: minimum words.' },
   { key: 'max_words', aliases: [], help: 'Essay: maximum words.' },
   { key: 'image', aliases: ['image file', 'hotspot image'], help: 'ZIP imports: file name in images/ (used by hotspot, or shown above the question).' },
+  { key: 'sql_mode', aliases: ['sql mode'], help: 'SQL lab: “query” (compare the SELECT result, default) or “modify” (run the candidate’s INSERT/UPDATE/DELETE, then the check query). The answer column holds the model solution SQL.' },
+  { key: 'schema_sql', aliases: ['schema', 'schema sql'], help: 'SQL lab: CREATE TABLE statements for the dataset (SQLite dialect).' },
+  { key: 'seed_sql', aliases: ['seed', 'seed sql', 'data sql'], help: 'SQL lab: INSERT statements that fill the dataset.' },
+  { key: 'starter_sql', aliases: ['starter', 'starter sql'], help: 'SQL lab: optional code shown in the candidate’s editor at the start.' },
+  { key: 'check_sql', aliases: ['check', 'check sql', 'check query'], help: 'SQL lab, modify mode: a SELECT that reads the changed data to compare.' },
+  { key: 'order_matters', aliases: ['order matters'], help: 'SQL lab: TRUE if the row order must match (the task asks for ORDER BY).' },
+  { key: 'column_names_matter', aliases: ['column names matter'], help: 'SQL lab: TRUE if column names/aliases must match.' },
+  { key: 'tolerance', aliases: ['numeric tolerance'], help: 'SQL lab: allowed difference for numeric values (e.g. 0.01 for rounded averages).' },
   { key: 'case_id', aliases: ['case', 'group', 'scenario id'], help: 'Case studies: give the case_study row an id (e.g. CS1) and put the same id on each of its child questions.' },
 ];
 
@@ -61,6 +69,7 @@ const TYPE_ALIASES = {
   hotspot: 'hotspot',
   short_answer: 'short_answer', short: 'short_answer', 'short answer': 'short_answer',
   essay: 'essay', 'long answer': 'essay',
+  sql: 'sql', 'sql lab': 'sql', 'sql query': 'sql', query: 'sql',
   case_study: 'case_study', case: 'case_study', scenario: 'case_study', 'case study': 'case_study',
 };
 

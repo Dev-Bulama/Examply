@@ -1,0 +1,12 @@
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'pass_mark', label: 'Pass mark', type: 'number', min: 0, step: '0.01', value: e.pass_mark === null ? '' : Number(e.pass_mark), hint: e.type === 'pre_training' ? 'Diagnostics usually have no pass mark — candidates are placed in a band instead.' : '' }) %>
+  <%- include('../../../partials/field', { name: 'pass_mark_type', label: 'Pass mark is', type: 'select', value: e.pass_mark_type, options: [{ value: 'percent', label: 'A percentage' }, { value: 'raw', label: 'Raw marks' }] }) %>
+  <%- include('../../../partials/field', { name: 'negative_marking', label: 'Marks lost per wrong answer', type: 'number', min: 0, max: 10, step: '0.01', value: Number(e.negative_marking), hint: '0 = no negative marking. Unanswered questions never lose marks; totals never go below 0.' }) %>
+  <div class="flex items-end"><%- include('_cb', { name: 'partial_credit', label: 'Partial credit', checked: e.partial_credit, hint: 'Multiple response, matching and ordering earn marks for partly correct answers.' }) %></div>
+</div>
+<h3 class="h3 pt-2">Scaled score</h3>
+<div class="grid gap-5 md:grid-cols-3">
+  <div class="flex items-end"><%- include('_cb', { name: 'scaling[enabled]', label: 'Report a scaled score', checked: s.scaling.enabled, hint: 'Like vendor exams (e.g. 100–1000).' }) %></div>
+  <%- include('../../../partials/field', { name: 'scaling[min]', id: 'f-scaling-min', label: 'Minimum', type: 'number', value: s.scaling.min }) %>
+  <%- include('../../../partials/field', { name: 'scaling[max]', id: 'f-scaling-max', label: 'Maximum', type: 'number', value: s.scaling.max }) %>
+</div>

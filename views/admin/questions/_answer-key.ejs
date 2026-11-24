@@ -40,6 +40,11 @@ const tick = '<span class="text-emerald-600 dark:text-emerald-400" aria-label="c
 <% } else if (a.type === 'essay') { %>
   <p class="muted">Graded manually<%= a.min_words || a.max_words ? ` · ${a.min_words || 0}–${a.max_words || '∞'} words` : '' %>.</p>
   <% if (a.rubric_html) { %><div class="prose-content rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><%- a.rubric_html %></div><% } %>
+<% } else if (a.type === 'sql') { %>
+  <p class="text-xs font-semibold uppercase tracking-wide muted"><%= a.mode === 'modify' ? 'Model solution (changes data)' : 'Model solution' %></p>
+  <pre class="mt-1 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs dark:border-slate-700 dark:bg-slate-800/60"><code class="nohighlight"><%= a.solution_sql %></code></pre>
+  <% if (a.mode === 'modify') { %><p class="mt-2 text-xs font-semibold uppercase tracking-wide muted">Check query</p><pre class="mt-1 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs dark:border-slate-700 dark:bg-slate-800/60"><code class="nohighlight"><%= a.check_sql %></code></pre><% } %>
+  <p class="text-xs muted">Marked by comparing result sets<%= a.order_matters ? '; row order must match' : '; row order ignored' %><%= a.column_names_matter ? '; column names must match' : '' %><%= Number(a.numeric_tolerance) ? '; numbers within ±' + a.numeric_tolerance : '' %>.</p>
 <% } else { %>
   <p class="muted">Marks come from the child questions.</p>
 <% } %>

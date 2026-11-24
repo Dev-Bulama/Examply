@@ -1,0 +1,51 @@
+<p class="mt-1 text-sm muted">Candidates get an empty copy of this dataset, write SQL (SQLite dialect — standard SELECT, JOIN, GROUP BY, window functions and CTEs all work) and run it as often as they like. Their final answer is marked by comparing its result with your model solution’s, so any correct query scores.</p>
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  <div><label class="label" for="sql-mode">Task type</label>
+    <select id="sql-mode" class="input" x-model="m.mode"><option value="query">Write a query (compare the result)</option><option value="modify">Change the data (INSERT / UPDATE / DELETE)</option></select></div>
+  <div><label class="label" for="sql-tol">Numeric tolerance</label><input id="sql-tol" type="number" step="any" min="0" class="input" x-model="m.numeric_tolerance"><p class="hint">e.g. 0.01 when averages may be rounded differently.</p></div>
+</div>
+<div class="mt-4 grid gap-4 lg:grid-cols-2">
+  <div><label class="label" for="sql-schema">Dataset schema <span class="text-red-600" aria-hidden="true">*</span></label><textarea id="sql-schema" rows="8" class="input code-input" x-model="m.schema_sql" spellcheck="false" placeholder="CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, …);"></textarea></div>
+  <div><label class="label" for="sql-seed">Dataset rows</label><textarea id="sql-seed" rows="8" class="input code-input" x-model="m.seed_sql" spellcheck="false" placeholder="INSERT INTO employees VALUES (1, 'Ada', …);"></textarea></div>
+  <div><label class="label" for="sql-sol">Model solution <span class="text-red-600" aria-hidden="true">*</span></label><textarea id="sql-sol" rows="6" class="input code-input" x-model="m.solution_sql" spellcheck="false"></textarea><p class="hint">Never shown to candidates.</p></div>
+  <div x-show="isModify()" x-cloak><label class="label" for="sql-check">Check query <span class="text-red-600" aria-hidden="true">*</span></label><textarea id="sql-check" rows="6" class="input code-input" x-model="m.check_sql" spellcheck="false" placeholder="SELECT id, salary FROM employees ORDER BY id;"></textarea><p class="hint">Runs after the candidate’s statements; its output is compared with the output after your solution.</p></div>
+  <div><label class="label" for="sql-start">Starter code <span class="font-normal muted">(optional)</span></label><textarea id="sql-start" rows="4" class="input code-input" x-model="m.starter_sql" spellcheck="false" placeholder="-- Write your query below"></textarea></div>
+</div>
+<div class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" x-model="m.order_matters"> Row order must match (the task asks for ORDER BY)</label>
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" x-model="m.column_names_matter"> Column names / aliases must match</label>
+</div>
+
+<div class="mt-5 rounded-xl border border-slate-200 dark:border-slate-700">
+  <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
+    <span class="flex items-center gap-1.5 text-sm font-semibold"><%- include('../../partials/icon', { name: 'database', cls: 'h-4 w-4' }) %> Test bench</span>
+    <button type="button" class="btn-secondary btn-sm ml-auto" @click="loadSchema" :disabled="sqlBusy">Show tables</button>
+    <button type="button" class="btn-secondary btn-sm" @click="runSolution" :disabled="sqlBusy"><%- include('../../partials/icon', { name: 'play', cls: 'h-3.5 w-3.5' }) %> Run solution</button>
+    <button type="button" class="btn-primary btn-sm" @click="runVerify" :disabled="sqlBusy">Verify question</button>
+  </div>
+  <div class="grid gap-3 p-3 lg:grid-cols-[14rem_minmax(0,1fr)]">
+    <div class="text-xs">
+      <p class="font-semibold uppercase tracking-wide muted">Tables</p>
+      <p class="mt-1 muted" x-show="!sqlTables.length">Click “Show tables”.</p>
+      <template x-for="tb in sqlTables" :key="tb.name">
+        <div class="mt-2"><p class="font-mono font-semibold" x-text="tb.name"></p>
+          <ul class="ml-2 font-mono muted"><template x-for="c in tb.columns" :key="c.name"><li><span x-text="c.name"></span> <span class="opacity-70" x-text="c.type"></span><span x-show="c.pk"> 🔑</span></li></template></ul></div>
+      </template>
+    </div>
+    <div class="min-w-0">
+      <label class="sr-only" for="sql-scratch">Try a query</label>
+      <textarea id="sql-scratch" rows="3" class="input code-input" x-model="sqlScratch" spellcheck="false" placeholder="Try any query against the dataset, e.g. SELECT * FROM employees LIMIT 5;"></textarea>
+      <div class="mt-2 flex justify-end"><button type="button" class="btn-secondary btn-sm" @click="runScratch" :disabled="sqlBusy">Run</button></div>
+      <div class="mt-2" aria-live="polite">
+        <p class="text-sm" :class="outError() ? 'text-red-600 dark:text-red-400' : 'muted'" x-text="outSummary()"></p>
+        <pre class="mt-1 whitespace-pre-wrap rounded bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300" x-show="outError()" x-text="sqlOut ? sqlOut.error : ''"></pre>
+        <div class="mt-2 max-h-72 overflow-auto rounded border border-slate-200 dark:border-slate-700" x-show="outOk() && outCols().length">
+          <table class="w-full text-left font-mono text-xs">
+            <thead class="sticky top-0 bg-slate-100 dark:bg-slate-800"><tr><template x-for="c in outCols()" :key="c"><th class="px-2 py-1" x-text="c"></th></template></tr></thead>
+            <tbody><template x-for="(r, ri) in outRows()" :key="ri"><tr class="border-t border-slate-100 dark:border-slate-800"><template x-for="(v, vi) in r" :key="vi"><td class="px-2 py-1" x-text="cell(v)"></td></template></tr></template></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

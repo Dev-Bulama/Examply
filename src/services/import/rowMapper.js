@@ -170,6 +170,19 @@ function mapRecord(rec) {
       q.max_words = get('max_words') ? Number(get('max_words')) : null;
       if (!q.marks) q.marks = 10;
       break;
+    case 'sql':
+      q.mode = /^modif/i.test(get('sql_mode')) ? 'modify' : 'query';
+      q.schema_sql = get('schema_sql');
+      q.seed_sql = get('seed_sql');
+      q.starter_sql = get('starter_sql');
+      q.solution_sql = answer;
+      q.check_sql = get('check_sql');
+      q.order_matters = truthy(get('order_matters'));
+      q.column_names_matter = truthy(get('column_names_matter'));
+      q.numeric_tolerance = get('tolerance') ? Number(get('tolerance')) : 0;
+      if (!answer) errors.push('The answer column is empty — put the model solution SQL there.');
+      if (!q.marks) q.marks = 2;
+      break;
     case 'case_study':
       if (!get('case_id')) errors.push('A case_study row needs a case_id so its child questions can refer to it.');
       break;

@@ -46,7 +46,7 @@ async function descendantIds(id, knex = db()) {
 }
 
 async function certificationsWithDomains(knex = db()) {
-  const certs = await knex('certifications as c').leftJoin('categories as cat', 'cat.id', 'c.category_id').orderBy('c.name').select('c.id', 'c.name', 'c.exam_code', 'c.category_id', 'cat.name as category_name', 'c.is_active');
+  const certs = await knex('certifications as c').leftJoin('categories as cat', 'cat.id', 'c.category_id').orderBy('c.name').select('c.id', 'c.name', 'c.exam_code', 'c.category_id', 'cat.name as category_name', 'c.is_active', 'c.official_duration_minutes', 'c.official_question_count', 'c.official_passing_score', 'c.official_score_scale');
   const domains = await knex('certification_domains').orderBy('display_order').select('id', 'certification_id', 'code', 'name', 'weight_percent');
   for (const c of certs) c.domains = domains.filter((d) => d.certification_id === c.id);
   return certs;

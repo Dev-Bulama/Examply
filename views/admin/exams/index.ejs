@@ -1,0 +1,86 @@
+<%
+  const TYPE_BADGE = { pre_training: 'badge-amber', post_training: 'badge-green', practice: 'badge-gray', mock: 'badge-blue', past_questions: 'badge-gray', live_quiz: 'badge-blue', assignment: 'badge-gray' };
+  const activeFilters = ['q','type','status'].filter(function (k) { return f[k]; }).length;
+%>
+<div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="h1">Exams</h1>
+    <p class="mt-1 muted"><% ['draft','published','archived'].forEach(function (s, i) { %><%= i ? ' · ' : '' %><a class="hover:underline" href="/admin/exams?status=<%= s %>"><%= counts[s] || 0 %> <%= s %></a><% }) %></p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (can('ai.generate')) { %><a href="/admin/ai/exam" class="btn-secondary"><%- include('../../partials/icon', { name: 'academic', cls: 'h-4 w-4' }) %> Generate an exam with AI</a><% } %>
+    <% if (can('exams.manage')) { %><a href="#new-exam" class="btn-primary" data-open-dialog="new-exam"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New exam</a><% } %>
+  </div>
+</div>
+
+<% if (can('exams.manage')) { %>
+<section id="new-exam" class="card mb-6 <%= query.new ? '' : 'target-only' %>" aria-labelledby="new-exam-h">
+  <form method="post" action="/admin/exams" class="card-body grid gap-4 md:grid-cols-2 lg:grid-cols-4" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2 id="new-exam-h" class="h3 md:col-span-2 lg:col-span-4">New exam</h2>
+    <div class="lg:col-span-2"><label class="label" for="ne-title">Title <span class="text-red-600" aria-hidden="true">*</span></label><input id="ne-title" name="title" class="input" required maxlength="200" placeholder="e.g. Oracle Database Administration I — Mock 1"></div>
+    <div><label class="label" for="ne-type">Type</label>
+      <select id="ne-type" name="type" class="input"><% Object.entries(EXAM_TYPES).forEach(function (t) { %><option value="<%= t[0] %>" <%= t[0] === 'mock' ? 'selected' : '' %>><%= t[1] %></option><% }) %></select></div>
+    <div><label class="label" for="ne-mode">Questions</label>
+      <select id="ne-mode" name="content_mode" class="input"><option value="fixed">A fixed list I choose</option><option value="blueprint">Drawn at random by blueprint</option></select></div>
+    <div class="lg:col-span-2"><label class="label" for="ne-cert">Certification</label>
+      <select id="ne-cert" name="certification_id" class="input"><option value="">None</option><% certifications.forEach(function (c) { %><option value="<%= c.id %>"><%= c.exam_code ? c.exam_code + ' · ' : '' %><%= c.name %></option><% }) %></select></div>
+    <div class="lg:col-span-2"><label class="label" for="ne-cat">Category</label>
+      <select id="ne-cat" name="category_id" class="input"><option value="">Choose later</option><% categories.forEach(function (c) { %><option value="<%= c.id %>"><%= c.path %></option><% }) %></select></div>
+    <p class="text-sm muted md:col-span-2 lg:col-span-3">Sensible defaults are set for the type you choose (for example, a mock exam is timed with a 70% pass mark and a certificate). You can change everything in the builder.</p>
+    <div class="flex items-end justify-end"><button class="btn-primary">Create and open the builder</button></div>
+  </form>
+</section>
+<% } %>
+
+<form method="get" action="/admin/exams" class="card card-body mb-4 flex flex-col gap-3 sm:flex-row" role="search">
+  <div class="relative flex-1">
+    <label for="q" class="sr-only">Search exams</label>
+    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center muted"><%- include('../../partials/icon', { name: 'search', cls: 'h-4 w-4' }) %></span>
+    <input id="q" name="q" value="<%= f.q %>" class="input pl-9" placeholder="Search by title">
+  </div>
+  <label class="sr-only" for="ft">Type</label>
+  <select id="ft" name="type" class="input sm:w-56"><option value="">All types</option><% Object.entries(EXAM_TYPES).forEach(function (t) { %><option value="<%= t[0] %>" <%= f.type === t[0] ? 'selected' : '' %>><%= t[1] %></option><% }) %></select>
+  <label class="sr-only" for="fs">Status</label>
+  <select id="fs" name="status" class="input sm:w-40"><option value="">Any status</option><% ['draft','published','archived'].forEach(function (s) { %><option value="<%= s %>" <%= f.status === s ? 'selected' : '' %>><%= s[0].toUpperCase() + s.slice(1) %></option><% }) %></select>
+  <button class="btn-primary">Filter</button>
+</form>
+
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %>
+    <div class="flex flex-col items-center px-6 py-16 text-center">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"><%- include('../../partials/icon', { name: 'document' }) %></span>
+      <p class="mt-4 font-semibold"><%= activeFilters ? 'No exams match these filters' : 'No exams yet' %></p>
+      <p class="mt-1 max-w-md text-sm muted"><%= activeFilters ? 'Try different filters.' : 'Create an exam from your question bank, or let AI draft a complete certification-style exam for you to review.' %></p>
+    </div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>Exam</th><th>Questions</th><th>Settings</th><th>Status</th><th class="text-right">Attempts</th></tr></thead>
+      <tbody>
+      <% pager.rows.forEach(function (r) { const n = r.content_mode === 'blueprint' ? Number(r.rule_count) : Number(r.item_count); %>
+        <tr>
+          <td data-label="Exam" class="sm:max-w-md">
+            <a href="/admin/exams/<%= r.id %>/basics" class="block text-left font-medium hover:underline"><%= r.title %></a>
+            <div class="mt-1.5 flex flex-wrap justify-end gap-1 sm:justify-start">
+              <span class="<%= TYPE_BADGE[r.type] %>"><%= EXAM_TYPES[r.type] %></span>
+              <% if (r.exam_code) { %><span class="badge-gray"><%= r.exam_code %></span><% } %>
+              <% if (r.ai_generation_id) { %><span class="badge-blue" title="Drafted by the AI generator">AI</span><% } %>
+              <% if (r.category_name) { %><span class="text-xs muted self-center"><%= r.category_name %></span><% } %>
+            </div>
+          </td>
+          <td data-label="Questions" class="text-sm whitespace-nowrap"><%= n %> <span class="muted"><%= r.content_mode === 'blueprint' ? 'by blueprint' : 'fixed' %></span></td>
+          <td data-label="Settings" class="text-sm">
+            <p><%= r.duration_minutes ? r.duration_minutes + ' min' : 'Untimed' %><%= r.pass_mark !== null ? ' · pass ' + Number(r.pass_mark) + (r.pass_mark_type === 'raw' ? ' marks' : '%') : '' %></p>
+            <p class="text-xs muted"><%= r.is_paid ? fmt.money(r.price_kobo) : 'Free' %><%= r.certificate_enabled ? ' · certificate' : '' %></p>
+          </td>
+          <td data-label="Status" class="whitespace-nowrap"><span class="<%= STATUS_BADGE[r.status] %>"><%= r.status[0].toUpperCase() + r.status.slice(1) %></span><p class="mt-1 text-xs muted">v<%= r.version %> · <%= fmt.relative(r.updated_at) %></p></td>
+          <td data-label="Attempts" class="text-right text-sm"><%= fmt.number(r.attempt_count) %></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/exams', query: query }) %>
+</div>

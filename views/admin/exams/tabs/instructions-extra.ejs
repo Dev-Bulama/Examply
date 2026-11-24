@@ -1,0 +1,33 @@
+<section class="card" aria-labelledby="ins-h">
+  <div class="card-body">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="ins-h" class="h2">What candidates will read</h2>
+      <div class="flex gap-1 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800" role="group" aria-label="Preview as">
+        <a href="/admin/exams/<%= e.id %>/instructions" class="rounded-md px-3 py-1.5 <%= !preview ? 'bg-white font-semibold shadow-sm dark:bg-slate-900' : '' %>">Catalogue page</a>
+        <a href="/admin/exams/<%= e.id %>/instructions?extra=1" class="rounded-md px-3 py-1.5 <%= preview ? 'bg-white font-semibold shadow-sm dark:bg-slate-900' : '' %>">Candidate with 25% extra time</a>
+      </div>
+    </div>
+    <p class="mt-1 text-sm muted">Generated from the exam’s current settings — change a setting and these instructions change with it. Add your own notes in the Results tab.</p>
+  </div>
+  <div class="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:p-8">
+    <article class="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-card dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <p class="text-xs font-semibold uppercase tracking-wider text-primary-700 dark:text-primary-300">Instructions</p>
+      <h3 class="mt-1 text-xl font-bold"><%= instructions.title %></h3>
+      <p class="mt-3"><%= instructions.intro %></p>
+      <% if (instructions.customBefore) { %><div class="mt-4 rounded-lg border-l-4 border-primary-500 bg-primary-50 p-4 text-sm whitespace-pre-line dark:bg-primary-950/40"><%= instructions.customBefore %></div><% } %>
+      <% instructions.sections.forEach(function (sec) { %>
+      <section class="mt-6">
+        <h4 class="font-semibold"><%= sec.heading %></h4>
+        <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+          <% sec.items.forEach(function (it) { %><li><%= it %></li><% }) %>
+        </ul>
+      </section>
+      <% }) %>
+      <% if (instructions.customAfter) { %><div class="mt-6 rounded-lg bg-slate-50 p-4 text-sm whitespace-pre-line dark:bg-slate-800/60"><%= instructions.customAfter %></div><% } %>
+      <div class="mt-8 flex items-center gap-3 border-t border-slate-200 pt-5 dark:border-slate-800">
+        <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" disabled> I have read the instructions</label>
+        <span class="btn-primary ml-auto pointer-events-none opacity-60">Start exam</span>
+      </div>
+    </article>
+  </div>
+</section>

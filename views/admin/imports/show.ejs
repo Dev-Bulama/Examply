@@ -53,6 +53,18 @@
         <a href="?filter=<%= k[3] %>" class="card card-body <%= filter === k[3] ? 'ring-2 ring-primary-500' : '' %>"><p class="text-sm muted"><%= k[0] %> <%= k[1] %></p><p class="mt-1 text-2xl font-bold"><%= k[2] %></p></a>
       <% }) %>
     </div>
+    <% if (imp.options.exam_type) { const em = imp.options.exam_meta || {}; %>
+    <section class="card mb-6" aria-labelledby="aiexam-h">
+      <div class="card-body">
+        <p class="text-xs font-semibold uppercase tracking-wider text-primary-700 dark:text-primary-300">Complete exam · <%= { mock: 'Certification mock exam', pre_training: 'Pre-training diagnostic', post_training: 'Post-training assessment', practice: 'Practice test' }[imp.options.exam_type] %></p>
+        <h2 id="aiexam-h" class="h2 mt-1"><%= em.title || imp.options.exam_title %></h2>
+        <% if (em.short_description) { %><p class="mt-2"><%= em.short_description %></p><% } %>
+        <% if (em.description) { %><p class="mt-2 whitespace-pre-line text-sm muted"><%= em.description %></p><% } %>
+        <% if (examPlan && examPlan.notes.length) { %><ul class="mt-4 space-y-1 text-sm"><% examPlan.notes.forEach(function (n) { %><li class="flex gap-2"><span class="text-emerald-600"><%- include('../../partials/icon', { name: 'check', cls: 'h-4 w-4' }) %></span><%= n %></li><% }) %></ul><% } %>
+        <p class="mt-4 text-sm muted">Confirming creates the exam as a <strong>draft</strong> with these questions and settings. You review it in the exam builder and publish it when the checklist is green.</p>
+      </div>
+    </section>
+    <% } %>
     <% if (imp.last_error) { %><div class="alert-warning mb-4"><%- include('../../partials/icon', { name: 'info', cls: 'h-5 w-5 shrink-0' }) %><p class="whitespace-pre-line"><%= imp.last_error %></p></div><% } %>
     <section class="card card-body mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
       <div>
@@ -88,6 +100,7 @@
       </div>
       <div class="flex flex-wrap gap-2">
         <% if (imp.status === 'completed') { %><a href="/admin/questions?import=<%= imp.id %>" class="btn-secondary">View imported questions</a><% } %>
+        <% if (imp.status === 'completed' && exam && can('exams.view')) { %><a href="/admin/exams/<%= exam.id %>/basics" class="btn-primary">Review the exam and publish</a><% } %>
         <% if (imp.error_report_path) { %><a href="/admin/imports/<%= imp.id %>/error-report" class="btn-secondary"><%- include('../../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> Error report (.xlsx)</a><% } %>
         <% if (undoOpen) { %><form method="post" action="/admin/imports/<%= imp.id %>/undo" data-confirm="Undo import #<%= imp.id %>? Imported questions are removed (or retired if candidates already answered them) and overwritten questions are restored." data-confirm-label="Undo import"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-danger">Undo this import</button></form><% } %>
       </div>

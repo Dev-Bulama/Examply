@@ -15,8 +15,8 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 | 1. Foundation | Config/env validation, all migrations, logging, errors, sessions, security, layouts, Tailwind, installer, auth (register, verify, login, 2FA, reset, Google), RBAC, admin and candidate shells | ✅ Done |
 | 2. Catalogue & question bank | Hierarchical categories, certifications with weighted domains, training programmes with per-band courses; 11 question types with a rich editor, candidate preview (KaTeX, code highlighting), versioning, review workflow, tags, bulk actions, duplicate finder, report inbox, private image uploads | ✅ Done |
 | 3. Import / export + AI generation | Excel, CSV, JSON, Aiken, GIFT, Word and ZIP imports with dry-run preview, duplicate handling, background batches, error report and 24-hour undo; templates; export to xlsx/JSON/GIFT; **AI question generation with Claude or OpenAI**; marketing landing page with plans | ✅ Done |
-| 4. Exam builder + instruction generator (+ AI full-exam generation) | | Next |
-| 5. Exam engine, grading, results, certificates | | |
+| 4. Exam builder + instruction generator + SQL lab + AI exams | 11-tab exam builder with autosave (sections, fixed lists, blueprint rules with live availability, bands, access rules, extra attempts, pre-publish checklist, versioned publishing, duplicate); instructions generated from the settings; **SQL lab question type** (sandboxed SQLite in worker threads, result-set marking); **AI “generate a complete exam”** | ✅ Done |
+| 5. Exam engine, grading, results, certificates | | Next |
 | 6. Commerce (Paystack + bank transfer) | | |
 | 7. Organisations & cohorts | | |
 | 8. Live quiz | | |
@@ -56,6 +56,16 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 - **Versioning**: editing a question that has been live creates a new version; past attempts keep theirs. Every version can be viewed.
 - **Workflow**: Draft → In review → Published → Retired. Authors are limited to their assigned categories; sending a question back requires a note.
 - **Sample content**: `npm run seed` loads 13 categories, 3 certifications with weighted domains, a training programme and 25 original questions covering every type.
+
+## Phase 4 highlights
+
+- **Exam builder** (`/admin/exams`): Basics, Content, Timing, Attempts & access, Delivery, Scoring, Results, Integrity, Certificate, Instructions and Publish tabs. Every tab autosaves.
+- **Content**: sections with their own time limits and minimum scores; a fixed list picked from the bank (marks per exam, ordering, move between sections), or **blueprint rules** that draw a random set per candidate by certification, domain, category, tag, difficulty and type, with a live “N questions available” check.
+- **Pre-publish checklist** and **versioned publishing**: candidates always get the latest published snapshot.
+- **Instructions** are generated from the exam's real settings (timing, scoring, negative marking, attempts, navigation, tools, integrity rules, result release, accommodations such as extra time).
+- **SQL lab questions**: candidates write and run SQL against a sample database in the browser; answers are marked by comparing results with the model solution. Authors get a test bench (show tables, run the solution, verify).
+- **AI “generate a complete exam”**: questions across the certification's domains (including SQL lab tasks), catalogue copy, and timing/pass mark scaled from the official format.
+- `npm run seed` adds 6 SQL lab questions and three demo exams (a blueprint mock, a sectioned diagnostic, a draft practice test).
 
 ## Requirements
 

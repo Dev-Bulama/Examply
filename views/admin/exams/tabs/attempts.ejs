@@ -1,0 +1,24 @@
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'max_attempts', label: 'Attempts allowed', type: 'number', min: 1, max: 100, value: e.max_attempts, hint: 'Empty = unlimited.' }) %>
+  <%- include('../../../partials/field', { name: 'cooldown_minutes', label: 'Wait between attempts (minutes)', type: 'number', min: 0, value: e.cooldown_minutes, hint: '1440 = one day.' }) %>
+  <%- include('../../../partials/field', { name: 'score_policy', label: 'Which score counts', type: 'select', value: e.score_policy, options: [{ value: 'best', label: 'Best attempt' }, { value: 'latest', label: 'Latest attempt' }, { value: 'average', label: 'Average of attempts' }, { value: 'first', label: 'First attempt only' }] }) %>
+  <%- include('../../../partials/field', { name: 'prerequisite_exam_id', label: 'Must pass first', type: 'select', value: e.prerequisite_exam_id, options: [{ value: '', label: 'No prerequisite' }].concat(otherExams.map(function (x) { return { value: x.id, label: x.title }; })) }) %>
+</div>
+<h3 class="h3 pt-2">Who can take it</h3>
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'visibility', label: 'Visibility', type: 'select', value: e.visibility, options: [{ value: 'public', label: 'Public — listed in the catalogue' }, { value: 'unlisted', label: 'Unlisted — anyone with the link' }, { value: 'invite_code', label: 'Invite code required' }, { value: 'org_private', label: 'Organisation only' }] }) %>
+  <%- include('../../../partials/field', { name: 'invite_code', label: 'Invite code', value: e.invite_code, maxlength: 40, placeholder: 'e.g. ACME-2026', hint: 'Used when visibility is “Invite code required”.' }) %>
+  <div class="space-y-3 md:col-span-2">
+    <%- include('_cb', { name: 'require_verified_email', label: 'Require a verified email address', checked: e.require_verified_email }) %>
+    <%- include('_cb', { name: 'require_org', label: 'Require organisation membership', checked: e.require_org, hint: 'Combine with organisation access rules below.' }) %>
+  </div>
+</div>
+<h3 class="h3 pt-2">Price</h3>
+<div class="grid gap-5 md:grid-cols-3">
+  <div class="md:col-span-3"><%- include('_cb', { name: 'is_paid', label: 'This is a paid exam', checked: e.is_paid, hint: 'Candidates pay by card (Paystack) or bank transfer before starting.' }) %></div>
+  <%- include('../../../partials/field', { name: 'price', label: 'Price (' + site.currency + ')', value: major(e.price_kobo), inputmode: 'decimal', placeholder: '5000' }) %>
+  <%- include('../../../partials/field', { name: 'sale_price', label: 'Sale price', value: major(e.sale_price_kobo), inputmode: 'decimal' }) %>
+  <%- include('../../../partials/field', { name: 'access_days', label: 'Access period (days)', type: 'number', min: 1, value: e.access_days, hint: 'Empty = lifetime.' }) %>
+  <div class="md:col-span-2"><%- include('_cb', { name: 'allow_buy_attempts', label: 'Let candidates buy extra attempts', checked: e.allow_buy_attempts }) %></div>
+  <%- include('../../../partials/field', { name: 'extra_attempt_price', label: 'Price per extra attempt', value: major(e.extra_attempt_price_kobo), inputmode: 'decimal' }) %>
+</div>

@@ -24,7 +24,7 @@ One row per question. Row 1 is the header row. Header names are matched loosely 
 
 | Column | Required | Content |
 |---|---|---|
-| `type` | yes | `single_choice` (`mcq`), `multiple_response` (`multi`), `true_false` (`tf`), `fill_blank` (`blank`), `numeric`, `matching`, `ordering`, `hotspot`, `short_answer` (`short`), `essay`, `case_study` |
+| `type` | yes | `single_choice` (`mcq`), `multiple_response` (`multi`), `true_false` (`tf`), `fill_blank` (`blank`), `numeric`, `matching`, `ordering`, `hotspot`, `short_answer` (`short`), `essay`, `case_study`, `sql` |
 | `question` | yes | The question text: plain text, or simple HTML. Fill-in blanks are written `[[1]]`, `[[2]]` (or `___`, numbered in order) |
 | `option_a` … `option_l` | type-dependent | Choices A–L. **Matching:** `left => right`, and a line without `=>` is a distractor. **Ordering:** items in the *correct* order. **Hotspot:** `Label @ x,y,w,h` (percentages of the image) |
 | `answer` | type-dependent | See the table below |
@@ -44,6 +44,7 @@ One row per question. Row 1 is the header row. Header names are matched loosely 
 | `threshold` |  | Short answer: keyword score needed for full marks (default: the total weight) |
 | `min_words`, `max_words` |  | Essay word limits |
 | `image` |  | ZIP imports: a file name in `images/` (the hotspot image, or an image shown above the question) |
+| `sql_mode`, `schema_sql`, `seed_sql`, `starter_sql`, `check_sql`, `order_matters`, `column_names_matter`, `tolerance` |  | SQL lab questions (type `sql`): the dataset, the task mode (`query` or `modify`), the check query for modify tasks and the marking options. The `answer` column holds the model solution. Every SQL row is executed during the background check; a dataset or solution that fails is reported as an error |
 | `case_id` |  | Case studies: give the `case_study` row an id (e.g. `CS1`) and put the same id on each child question |
 
 ### The `answer` column
@@ -58,6 +59,7 @@ One row per question. Row 1 is the header row. Header names are matched loosely 
 | hotspot | `DB` or `B` | Label or letter of the correct region |
 | short_answer | `atomicity\|atomic=1; durability=2` | Keyword groups separated by `;`; synonyms by `\|`; weight after `=` |
 | essay | marking guide text | Shown to graders only |
+| sql | `SELECT name FROM hosts WHERE open_ports > 1` | The model solution (SQLite dialect) |
 | matching / ordering | (empty) | The answer comes from the options |
 
 **Example error messages:**

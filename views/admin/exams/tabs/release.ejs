@@ -1,0 +1,17 @@
+<fieldset>
+  <legend class="label">What candidates see after submitting</legend>
+  <div class="mt-2 grid gap-3">
+  <% [['full_review','Full review','Score, topic breakdown, every question with the correct answer and explanation.'],['score_breakdown','Score and topic breakdown','No individual questions — protects the item bank.'],['score_only','Score only','Just the overall score and pass/fail.'],['after_window','After the window closes','Everything is held until the closing date set in Timing.'],['manual','Manual release','An examiner releases results after review.']].forEach(function (o) { %>
+    <label class="flex cursor-pointer gap-3 rounded-lg border border-slate-200 p-3 text-sm has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:border-slate-700 dark:has-[:checked]:bg-primary-950/40">
+      <input type="radio" name="result_release" value="<%= o[0] %>" class="mt-0.5" <%= e.result_release === o[0] ? 'checked' : '' %>>
+      <span><span class="font-medium"><%= o[1] %></span><span class="block text-xs muted"><%= o[2] %></span></span>
+    </label>
+  <% }) %>
+  </div>
+</fieldset>
+<h3 class="h3 pt-2">Your own notes in the instructions</h3>
+<p class="text-sm muted">The instructions are generated from these settings, so they always match the exam. Add anything else here.</p>
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'custom_before', label: 'Shown before the generated instructions', type: 'textarea', rows: 4, value: s.instructions.custom_before, maxlength: 5000 }) %>
+  <%- include('../../../partials/field', { name: 'custom_after', label: 'Shown after them', type: 'textarea', rows: 4, value: s.instructions.custom_after, maxlength: 5000 }) %>
+</div>

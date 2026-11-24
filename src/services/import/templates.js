@@ -32,6 +32,23 @@ const EXAMPLES = {
     { a: { type: 'short_answer', stem_html: 'Name the four ACID properties.', keywords: [{ terms: ['atomicity'], weight: 1 }, { terms: ['consistency'], weight: 1 }, { terms: ['isolation'], weight: 1 }, { terms: ['durability'], weight: 1 }], threshold: 4, explanation_html: 'Atomicity, Consistency, Isolation, Durability.', marks: 2 }, m: meta() },
   ],
   Essay: [{ a: { type: 'essay', stem_html: 'Describe how you would sustain a process improvement for 12 months.', min_words: 100, max_words: 400, rubric_html: 'Metrics (2), control chart (3), owners and reaction plan (3), standard work (2).', explanation_html: 'A strong answer covers measurement, monitoring and ownership.', marks: 10 }, m: meta({ category: 'Quality > Lean Six Sigma', certification: 'LSSGB', domain: 'CTL' }) }],
+  'SQL lab': [
+    {
+      a: {
+        type: 'sql',
+        stem_html: 'List each department name with its number of employees, largest department first. Name the columns <code>department</code> and <code>headcount</code>.',
+        mode: 'query',
+        schema_sql: 'CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT NOT NULL);\nCREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT NOT NULL, department_id INTEGER REFERENCES departments(id), salary INTEGER);',
+        seed_sql: "INSERT INTO departments VALUES (1,'Engineering'),(2,'Sales'),(3,'Finance');\nINSERT INTO employees VALUES (1,'Ada',1,900000),(2,'Bayo',1,750000),(3,'Chi',2,500000),(4,'Dami',1,820000),(5,'Efe',3,610000),(6,'Funmi',2,480000);",
+        solution_sql: 'SELECT d.name AS department, COUNT(e.id) AS headcount FROM departments d JOIN employees e ON e.department_id = d.id GROUP BY d.name ORDER BY headcount DESC;',
+        order_matters: true,
+        column_names_matter: true,
+        explanation_html: 'Join employees to departments, GROUP BY the department and ORDER BY the count descending.',
+        marks: 2,
+      },
+      m: meta(),
+    },
+  ],
 };
 
 const CASE_EXAMPLE = [

@@ -11,8 +11,8 @@ The original 10 phases from `PROMPT.md`, extended with three product requests ma
 | 1. Foundation | Config, migrations, security, installer, auth, 2FA, RBAC, admin and candidate shells | ✅ |
 | 2. Catalogue & question bank | Categories, certifications, domains, programmes; 11 question types; versioning; review workflow | ✅ |
 | 3. Import / export **+ AI generation** | 7 import formats with dry run, undo and error report; export; **Claude / OpenAI generation into the same preview**; marketing landing page; plan records | ✅ |
-| 4. Exam builder + instruction generator | Every §3.5 setting, blueprints, sections, bands, pre-publish checklist. **AI: "generate a complete exam"** — questions + blueprint + settings in one step. Public catalogue pages | Next |
-| 5. Exam engine, grading, results, certificates | Candidate flow, server timer, autosave/offline, proctoring, the §4 grading engine, results, PDF slip, certificates and `/verify`. AI-generated exams issue certificates through the same flow | |
+| 4. Exam builder + instruction generator | Every §3.5 setting, blueprints, sections, bands, pre-publish checklist. **SQL lab question type.** **AI: "generate a complete exam"**. (Public catalogue pages move to Phase 5, with the candidate flow.) | ✅ |
+| 5. Exam engine, grading, results, certificates | Public catalogue pages, candidate flow, server timer, autosave/offline, proctoring, the §4 grading engine, results, PDF slip, certificates and `/verify`. AI-generated exams issue certificates through the same flow; SQL lab answers graded by result-set comparison | Next |
 | **5A. Cyber security labs** | Lab engine, lab question type, exam integration (details below) | |
 | 6. Commerce | Products, packs, bundles, coupons, Paystack and **bank transfer**, entitlements, invoices, **plan subscriptions for companies** (Paystack Plans) | |
 | 7. Organisations → **company workspaces** | Tenant-scoped bank, exams, labs and AI quota (`organisation_id` columns already exist); workspace admin portal; seats, cohorts, bulk invite, learning-gain reports; plan limits enforced | |

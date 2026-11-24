@@ -86,6 +86,43 @@ const stemHtml = v.type === 'fill_blank'
       <label class="label" for="<%= nm %>-sa">Your answer</label>
       <textarea id="<%= nm %>-sa" name="<%= nm %>[text]" rows="3" class="input" maxlength="2000" <%= disabled %>><%= resp.text || '' %></textarea>
     </div>
+  <% } else if (v.type === 'sql') { %>
+    <div class="mt-5 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700" x-data="sqlLab" data-run="<%= locals.sqlRunUrl || '' %>" data-check="<%= locals.sqlCheck ? '1' : '' %>">
+      <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/60">
+        <span class="flex items-center gap-1.5 text-sm font-semibold"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/></svg> SQL lab</span>
+        <span class="badge-gray"><%= v.settings.mode === 'modify' ? 'Change the data' : 'Write a query' %></span>
+        <span class="text-xs muted">SQLite · each run uses a fresh copy of the data</span>
+      </div>
+      <div class="grid lg:grid-cols-[13rem_minmax(0,1fr)]">
+        <div class="border-b border-slate-200 p-3 text-xs dark:border-slate-700 lg:border-b-0 lg:border-r">
+          <p class="font-semibold uppercase tracking-wide muted">Tables</p>
+          <p class="mt-1 muted" x-show="!tables.length" x-text="schemaNote()">Loading…</p>
+          <template x-for="tb in tables" :key="tb.name">
+            <details class="mt-2" open><summary class="cursor-pointer font-mono font-semibold" x-text="tb.name"></summary>
+              <ul class="ml-3 mt-1 space-y-0.5 font-mono muted"><template x-for="c in tb.columns" :key="c.name"><li><button type="button" class="hover:text-primary-600 hover:underline" @click="insertColumn" :data-col="c.name" x-text="c.name"></button> <span class="opacity-70" x-text="c.type"></span><span x-show="c.pk" title="Primary key"> 🔑</span></li></template></ul></details>
+          </template>
+          <details class="mt-3"><summary class="cursor-pointer muted">Schema (SQL)</summary><pre class="mt-1 whitespace-pre-wrap font-mono text-[11px]"><%= v.settings.schema_sql %></pre></details>
+        </div>
+        <div class="min-w-0 p-3">
+          <label class="sr-only" for="<%= nm %>-sql">Your SQL</label>
+          <textarea id="<%= nm %>-sql" name="<%= nm %>[sql]" rows="7" class="input code-input" spellcheck="false" autocapitalize="off" autocomplete="off" x-ref="editor" @keydown="keys" <%= disabled %>><%= resp.sql !== undefined ? resp.sql : (v.settings.starter_sql || '') %></textarea>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <button type="button" class="btn-primary btn-sm" @click="run" :disabled="busy" <%= disabled %>>▶ Run <span class="hidden text-xs opacity-75 sm:inline">(Ctrl+Enter)</span></button>
+            <button type="button" class="btn-secondary btn-sm" x-show="canCheck()" @click="check" :disabled="busy">Check answer</button>
+            <span class="text-xs muted" aria-live="polite" x-text="status()"></span>
+          </div>
+          <div class="mt-2 rounded-lg p-3 text-sm" x-show="verdict" :class="verdictClass()" x-text="verdict" role="status"></div>
+          <pre class="mt-2 whitespace-pre-wrap rounded bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-300" x-show="error" x-text="error"></pre>
+          <div class="mt-2 max-h-72 overflow-auto rounded border border-slate-200 dark:border-slate-700" x-show="cols.length">
+            <table class="w-full text-left font-mono text-xs">
+              <thead class="sticky top-0 bg-slate-100 dark:bg-slate-800"><tr><template x-for="c in cols" :key="c"><th class="px-2 py-1" x-text="c"></th></template></tr></thead>
+              <tbody><template x-for="(r, ri) in rows" :key="ri"><tr class="border-t border-slate-100 dark:border-slate-800"><template x-for="(val, vi) in r" :key="vi"><td class="px-2 py-1" x-text="cell(val)"></td></template></tr></template></tbody>
+            </table>
+          </div>
+          <p class="mt-2 text-xs muted"><%= v.settings.mode === 'modify' ? 'Write the INSERT, UPDATE or DELETE statements that complete the task. Your last submitted SQL is what gets marked.' : 'Write one query that returns the requested result. Your last submitted SQL is what gets marked — run it as often as you like.' %></p>
+        </div>
+      </div>
+    </div>
   <% } else if (v.type === 'essay') { %>
     <div class="mt-5" x-data="wordCount" data-min="<%= v.settings.min_words || '' %>" data-max="<%= v.settings.max_words || '' %>">
       <label class="label" for="<%= nm %>-es">Your answer</label>

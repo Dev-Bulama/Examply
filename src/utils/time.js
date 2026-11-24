@@ -99,6 +99,22 @@ function startOfMonth(timezone, date = new Date()) {
   return new Date(firstLocalAsUtc - tzOffsetMs(new Date(firstLocalAsUtc), timezone));
 }
 
+/** "2026-12-01T09:30" in `timezone` → UTC Date (null when empty/invalid). */
+function localInputToUtc(value, timezone = 'Africa/Lagos') {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(String(value || ''));
+  if (!m) return null;
+  const asUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const guess = new Date(asUtc - tzOffsetMs(new Date(asUtc), timezone));
+  return new Date(asUtc - tzOffsetMs(guess, timezone));
+}
+
+/** UTC Date → "2026-12-01T09:30" in `timezone`, for <input type="datetime-local">. */
+function utcToLocalInput(value, timezone = 'Africa/Lagos') {
+  if (!value) return '';
+  const d = toDate(value);
+  return new Date(d.getTime() + tzOffsetMs(d, timezone)).toISOString().slice(0, 16);
+}
+
 const addMinutes = (date, minutes) => new Date(toDate(date).getTime() + minutes * 60000);
 
-module.exports = { isValidTimezone, TIMEZONES, formatDate, formatDateTime, relativeTime, addMinutes, toDate, tzOffsetMs, startOfDay, startOfMonth, DATE_FORMATS: Object.keys(FORMATS) };
+module.exports = { localInputToUtc, utcToLocalInput, isValidTimezone, TIMEZONES, formatDate, formatDateTime, relativeTime, addMinutes, toDate, tzOffsetMs, startOfDay, startOfMonth, DATE_FORMATS: Object.keys(FORMATS) };

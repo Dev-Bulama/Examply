@@ -1,0 +1,22 @@
+<% const rows = full.bands.length ? full.bands : []; const editable = can('exams.manage'); const shown = rows.concat([{ name: '', min_percent: '', max_percent: '', message: '', course_url: '', programme_id: null }]); %>
+<section class="card" aria-labelledby="bands-h">
+  <form method="post" action="/admin/exams/<%= e.id %>/bands" class="card-body" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2 id="bands-h" class="h2">Proficiency bands</h2>
+    <p class="mt-1 text-sm muted"><%= e.type === 'pre_training' ? 'Required for diagnostics: candidates are placed in a band and shown the recommended course.' : 'Optional: place candidates in a band and recommend a next step.' %> Ranges must cover 0–100% without overlapping. Leave the last row empty to add nothing.</p>
+    <div class="mt-4 space-y-3">
+      <% shown.forEach(function (b, i) { %>
+      <div class="grid gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800 md:grid-cols-12">
+        <div class="md:col-span-3"><label class="label" for="b<%= i %>n">Band <%= i + 1 %></label><input id="b<%= i %>n" name="bands[<%= i %>][name]" value="<%= b.name %>" class="input" maxlength="60" placeholder="e.g. Intermediate"></div>
+        <div class="md:col-span-2"><label class="label" for="b<%= i %>a">From %</label><input id="b<%= i %>a" name="bands[<%= i %>][min_percent]" value="<%= b.min_percent === '' ? '' : Number(b.min_percent) %>" class="input" inputmode="decimal"></div>
+        <div class="md:col-span-2"><label class="label" for="b<%= i %>b">To %</label><input id="b<%= i %>b" name="bands[<%= i %>][max_percent]" value="<%= b.max_percent === '' ? '' : Number(b.max_percent) %>" class="input" inputmode="decimal"></div>
+        <div class="md:col-span-5"><label class="label" for="b<%= i %>p">Recommended programme</label>
+          <select id="b<%= i %>p" name="bands[<%= i %>][programme_id]" class="input"><option value="">None</option><% programmes.forEach(function (p) { %><option value="<%= p.id %>" <%= b.programme_id === p.id ? 'selected' : '' %>><%= p.name %></option><% }) %></select></div>
+        <div class="md:col-span-7"><label class="label" for="b<%= i %>m">Message to the candidate</label><input id="b<%= i %>m" name="bands[<%= i %>][message]" value="<%= b.message || '' %>" class="input" maxlength="2000"></div>
+        <div class="md:col-span-5"><label class="label" for="b<%= i %>u">Course link</label><input id="b<%= i %>u" name="bands[<%= i %>][course_url]" value="<%= b.course_url || '' %>" class="input" placeholder="https://"></div>
+      </div>
+      <% }) %>
+    </div>
+    <% if (editable) { %><div class="mt-4 flex justify-end"><button class="btn-primary">Save bands</button></div><% } %>
+  </form>
+</section>

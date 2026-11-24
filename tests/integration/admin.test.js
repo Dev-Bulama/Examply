@@ -27,6 +27,7 @@ function adminRoutes() {
         .replace(/:[a-z_]+\(\\\\d\+\)/g, '1')
         .replace(/:[a-z_]+\(\\d\+\)/g, '1')
         .replace(/:([a-z_]+)\(([a-z_-]+)[|)][^)]*\)?/g, '$2')
+        .replace(/:[a-z_]+\(\[a-z\]\+\)/g, 'basics')
         .replace(/:section/, 'general')
         .replace(/:key/, 'general.logo_path'),
     }));

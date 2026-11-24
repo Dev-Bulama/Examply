@@ -184,6 +184,8 @@
           <div><label class="label" for="es-max">Maximum words</label><input id="es-max" type="number" min="1" class="input" x-model="m.max_words" placeholder="none"></div>
         </div>
         <div class="mt-5"><%- include('_rich', { name: 'rubric_html', label: 'Marking guide for graders (never shown to candidates)', value: authoring.rubric_html }) %></div>
+      <% } else if (t === 'sql') { %>
+        <%- include('_sql-editor') %>
       <% } %>
     </section>
     <% } %>

@@ -1,0 +1,208 @@
+<%
+  const editable = can('exams.manage');
+  const strip = function (s, n) { s = s || ''; return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+  const secName = function (id) { const x = full.sections.find(function (s) { return s.id === id; }); return x ? x.title : 'General'; };
+  const QSTATUS = { draft: 'badge-gray', in_review: 'badge-amber', published: 'badge-green', retired: 'badge-red', deleted: 'badge-red' };
+  const certById = {}; certifications.forEach(function (c) { certById[c.id] = c; });
+%>
+<div class="alert-info text-sm"><p>
+  <% if (e.content_mode === 'fixed') { %>Everyone gets the questions listed below<%= s.delivery.deliver_count ? ' (each candidate gets a random ' + s.delivery.deliver_count + ')' : '' %>. To draw a different random set for each candidate, switch to <strong>Blueprint</strong> in Basics.<% } else { %>Each candidate gets a fresh random draw that follows the rules below — ideal for certification mocks with weighted domains. Only <strong>published</strong> questions are drawn.<% } %>
+</p></div>
+
+<!-- Sections -->
+<section class="card" aria-labelledby="sec-h">
+  <div class="card-body">
+    <div class="flex items-center justify-between gap-3"><h2 id="sec-h" class="h2">Sections</h2><span class="text-sm muted">Optional</span></div>
+    <p class="mt-1 text-sm muted">Group questions (e.g. “Part A — SQL”, “Part B — Administration”), each with its own instructions, time limit and minimum score.</p>
+    <% if (full.sections.length) { %>
+    <ul class="mt-4 space-y-2">
+      <% full.sections.forEach(function (sec) { const sc = summary.sections.find(function (x) { return x.id === sec.id; }); %>
+      <li class="rounded-lg border border-slate-200 dark:border-slate-800">
+        <details>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+            <span class="font-medium"><%= sec.title %></span>
+            <span class="text-sm muted"><%= sc ? sc.questionCount : 0 %> questions<%= sec.time_limit_minutes ? ' · ' + sec.time_limit_minutes + ' min' : '' %><%= sec.min_score_percent !== null ? ' · min ' + Number(sec.min_score_percent) + '%' : '' %></span>
+          </summary>
+          <% if (editable) { %>
+          <div class="border-t border-slate-200 p-4 dark:border-slate-800">
+            <form method="post" action="/admin/exams/<%= e.id %>/sections/<%= sec.id %>" class="grid gap-3 md:grid-cols-4">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="md:col-span-2"><label class="label" for="st<%= sec.id %>">Title</label><input id="st<%= sec.id %>" name="title" value="<%= sec.title %>" class="input" maxlength="200"></div>
+              <div><label class="label" for="sl<%= sec.id %>">Time limit (min)</label><input id="sl<%= sec.id %>" name="time_limit_minutes" type="number" min="1" value="<%= sec.time_limit_minutes || '' %>" class="input"></div>
+              <div><label class="label" for="sm<%= sec.id %>">Minimum score %</label><input id="sm<%= sec.id %>" name="min_score_percent" type="number" min="0" max="100" step="0.01" value="<%= sec.min_score_percent === null ? '' : Number(sec.min_score_percent) %>" class="input"></div>
+              <div class="md:col-span-4"><label class="label" for="si<%= sec.id %>">Section instructions</label><textarea id="si<%= sec.id %>" name="instructions_html" rows="2" class="input"><%= sec.instructions_html || '' %></textarea></div>
+              <div class="flex justify-end gap-2 md:col-span-4">
+                <button class="btn-primary btn-sm">Save section</button>
+              </div>
+            </form>
+            <form method="post" action="/admin/exams/<%= e.id %>/sections/<%= sec.id %>/delete" class="mt-2 flex justify-end" data-confirm="Remove this section? Its questions move to General." data-confirm-label="Remove"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600">Remove section</button></form>
+          </div>
+          <% } %>
+        </details>
+      </li>
+      <% }) %>
+    </ul>
+    <% } %>
+    <% if (editable) { %>
+    <form method="post" action="/admin/exams/<%= e.id %>/sections" class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="flex-1"><label class="label" for="new-sec">New section</label><input id="new-sec" name="title" class="input" maxlength="200" placeholder="e.g. Part A — SQL fundamentals"></div>
+      <div class="sm:w-40"><label class="label" for="new-sec-t">Time limit (min)</label><input id="new-sec-t" name="time_limit_minutes" type="number" min="1" class="input"></div>
+      <button class="btn-secondary">Add section</button>
+    </form>
+    <% } %>
+  </div>
+</section>
+
+<% if (e.content_mode === 'fixed') { %>
+<!-- Fixed list -->
+<section class="card" aria-labelledby="items-h">
+  <form method="post" action="/admin/exams/<%= e.id %>/items" x-data="examItems" data-exam="<%= e.id %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="card-body pb-0">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="items-h" class="h2">Questions in this exam <span class="text-base font-normal muted">(<%= full.items.length %>)</span></h2>
+        <% if (editable && full.items.length) { %>
+        <div class="flex flex-wrap items-center gap-2" x-show="count() > 0" x-cloak>
+          <span class="text-sm"><span x-text="count()"></span> selected</span>
+          <% if (full.sections.length) { %>
+          <label class="sr-only" for="move-sec">Move to section</label>
+          <select id="move-sec" name="section_id" class="input w-auto py-1.5"><option value="">General</option><% full.sections.forEach(function (sec) { %><option value="<%= sec.id %>"><%= sec.title %></option><% }) %></select>
+          <button name="action" value="move" class="btn-secondary btn-sm">Move</button>
+          <% } %>
+          <button name="action" value="remove" class="btn-danger btn-sm">Remove</button>
+        </div>
+        <% } %>
+      </div>
+      <p class="mt-1 text-sm muted">Marks default to each question’s own marks; change them here for this exam only. <span x-text="savedText()" aria-live="polite"></span></p>
+    </div>
+    <% if (!full.items.length) { %>
+      <p class="card-body text-sm muted">No questions yet. Add some from the bank below.</p>
+    <% } else { %>
+    <div class="overflow-x-auto p-2 sm:p-0 sm:pt-3">
+      <table class="table table-responsive">
+        <thead><tr><th class="w-10"><span class="sr-only">Select</span></th><th class="w-16">#</th><th>Question</th><% if (full.sections.length) { %><th>Section</th><% } %><th class="w-28">Marks</th><th class="w-24"><span class="sr-only">Order</span></th></tr></thead>
+        <tbody x-ref="rows">
+        <% full.items.forEach(function (it, i) { %>
+          <tr data-id="<%= it.id %>">
+            <td data-label="Select"><input type="checkbox" name="item_ids" value="<%= it.id %>" class="checkbox" @change="sync" aria-label="Select question <%= it.question_id %>"></td>
+            <td data-label="Position" class="font-mono text-xs muted" x-text="position($el)"><%= i + 1 %></td>
+            <td data-label="Question" class="sm:max-w-lg">
+              <a href="/admin/questions/<%= it.question_id %>" class="block text-left text-sm hover:underline"><span class="mr-1 font-mono text-xs muted">#<%= it.question_id %></span><%= strip(it.stem_text, 120) %></a>
+              <div class="mt-1 flex flex-wrap justify-end gap-1 sm:justify-start"><span class="badge-blue"><%= QTYPES[it.type].short %></span><% if (it.type === 'case_study') { %><span class="badge-gray"><%= it.child_count %> parts</span><% } %><% if (it.status !== 'published') { %><span class="<%= QSTATUS[it.status] %>"><%= it.status.replace('_', ' ') %></span><% } %></div>
+            </td>
+            <% if (full.sections.length) { %>
+            <td data-label="Section"><label class="sr-only" for="isec<%= it.id %>">Section</label>
+              <select id="isec<%= it.id %>" class="input py-1.5 text-sm" data-item="<%= it.id %>" @change="saveSection" <%= editable ? '' : 'disabled' %>><option value="">General</option><% full.sections.forEach(function (sec) { %><option value="<%= sec.id %>" <%= it.section_id === sec.id ? 'selected' : '' %>><%= sec.title %></option><% }) %></select></td>
+            <% } %>
+            <td data-label="Marks"><label class="sr-only" for="im<%= it.id %>">Marks</label>
+              <input id="im<%= it.id %>" class="input py-1.5 text-sm" inputmode="decimal" value="<%= it.marks_override !== null ? Number(it.marks_override) : '' %>" placeholder="<%= it.marks %>" data-item="<%= it.id %>" @change="saveMarks" <%= editable || it.type !== 'case_study' ? '' : 'disabled' %>></td>
+            <td data-label="Order" class="whitespace-nowrap text-right">
+              <% if (editable) { %>
+              <button type="button" class="btn-ghost btn-sm px-2" @click="up" aria-label="Move up"><%- include('../../../partials/icon', { name: 'chevron', cls: 'h-4 w-4 rotate-180' }) %></button>
+              <button type="button" class="btn-ghost btn-sm px-2" @click="down" aria-label="Move down"><%- include('../../../partials/icon', { name: 'chevron', cls: 'h-4 w-4' }) %></button>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </form>
+</section>
+
+<% if (editable) { %>
+<section class="card" aria-labelledby="bank-h" id="bank">
+  <div class="card-body">
+    <h2 id="bank-h" class="h2">Add from the question bank</h2>
+    <form method="get" action="/admin/exams/<%= e.id %>/content#bank" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5" role="search">
+      <div class="lg:col-span-2"><label class="sr-only" for="bq">Search</label><input id="bq" name="bq" value="<%= bank.q %>" class="input" placeholder="Search text or #ID"></div>
+      <div><label class="sr-only" for="btype">Type</label><select id="btype" name="btype" class="input"><option value="">Any type</option><% Object.entries(QTYPES).forEach(function (t) { %><option value="<%= t[0] %>" <%= bank.type === t[0] ? 'selected' : '' %>><%= t[1].label %></option><% }) %></select></div>
+      <div><label class="sr-only" for="bcert">Certification</label><select id="bcert" name="bcert" class="input"><option value="">Any certification</option><% certifications.forEach(function (c) { %><option value="<%= c.id %>" <%= bank.certification === c.id ? 'selected' : '' %>><%= c.exam_code || c.name %></option><% }) %></select></div>
+      <div class="flex gap-2"><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="bstatus" value="any" class="checkbox" <%= bank.status ? '' : 'checked' %>> Drafts too</label><button class="btn-secondary ml-auto">Search</button></div>
+    </form>
+  </div>
+  <form method="post" action="/admin/exams/<%= e.id %>/items/add" x-data="bulkSelect" data-box="question_ids">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="back" value="/admin/exams/<%= e.id %>/content">
+    <% if (!bankPager.rows.length) { %>
+      <p class="px-6 pb-6 text-sm muted">No matching questions that are not already in the exam.</p>
+    <% } else { %>
+    <div class="overflow-x-auto p-2 sm:p-0">
+      <table class="table table-responsive">
+        <thead><tr><th class="w-10"><label class="sr-only" for="bank-all">Select all</label><input id="bank-all" type="checkbox" class="checkbox" @change="toggleAll" :checked="allChecked()"></th><th>Question</th><th>Domain</th><th>Marks</th></tr></thead>
+        <tbody><% bankPager.rows.forEach(function (q) { %>
+          <tr>
+            <td data-label="Select"><input type="checkbox" name="question_ids" value="<%= q.id %>" class="checkbox" @change="sync" aria-label="Select question <%= q.id %>"></td>
+            <td data-label="Question" class="sm:max-w-lg"><span class="mr-1 font-mono text-xs muted">#<%= q.id %></span><span class="text-sm"><%= strip(q.stem_text, 130) %></span>
+              <div class="mt-1 flex flex-wrap justify-end gap-1 sm:justify-start"><span class="badge-blue"><%= QTYPES[q.type].short %></span><% if (q.status !== 'published') { %><span class="<%= QSTATUS[q.status] %>"><%= q.status.replace('_', ' ') %></span><% } %></div></td>
+            <td data-label="Domain" class="text-sm"><%= q.domain_code || q.domain_name || '—' %></td>
+            <td data-label="Marks" class="text-sm"><%= Number(q.default_marks) %></td>
+          </tr>
+        <% }) %></tbody>
+      </table>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+      <span class="text-sm muted"><%= bankPager.from %>–<%= bankPager.to %> of <%= bankPager.total %><% if (bankPager.pages > 1) { const qsBase = new URLSearchParams(Object.entries(query).filter(function (x) { return x[0] !== 'bpage' && x[1]; })); %> · <% if (bankPager.page > 1) { qsBase.set('bpage', bankPager.page - 1); %><a class="hover:underline" href="?<%= qsBase.toString() %>#bank">Previous</a><% } %> <% if (bankPager.page < bankPager.pages) { qsBase.set('bpage', bankPager.page + 1); %><a class="hover:underline" href="?<%= qsBase.toString() %>#bank">Next</a><% } %><% } %></span>
+      <div class="flex items-center gap-2">
+        <% if (full.sections.length) { %><label class="sr-only" for="add-sec">Into section</label><select id="add-sec" name="section_id" class="input w-auto py-1.5"><option value="">General</option><% full.sections.forEach(function (sec) { %><option value="<%= sec.id %>"><%= sec.title %></option><% }) %></select><% } %>
+        <button class="btn-primary" :disabled="count() === 0">Add <span x-text="count()"></span> selected</button>
+      </div>
+    </div>
+    <% } %>
+  </form>
+</section>
+<% } %>
+
+<% } else { %>
+<!-- Blueprint -->
+<section class="card" aria-labelledby="rules-h">
+  <div class="card-body">
+    <h2 id="rules-h" class="h2">Blueprint rules</h2>
+    <p class="mt-1 text-sm muted">Each rule draws a number of questions matching its filters. A question is never drawn twice in one attempt.</p>
+    <% if (full.rules.length) { %>
+    <div class="mt-4 overflow-x-auto"><table class="table table-responsive">
+      <thead><tr><th>Draw</th><th>From</th><% if (full.sections.length) { %><th>Section</th><% } %><th>Available</th><th><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody><% full.rules.forEach(function (r) { const ok = r.available >= r.question_count; const filters = [r.exam_code ? r.exam_code : r.certification_name, r.domain_name ? (r.domain_code ? r.domain_code + ' · ' : '') + r.domain_name : null, r.category_name, r.tag_name ? '#' + r.tag_name : null, r.difficulty_min || r.difficulty_max ? 'difficulty ' + (r.difficulty_min || 1) + '–' + (r.difficulty_max || 5) : null, r.question_types.length ? r.question_types.map(function (t) { return QTYPES[t].short; }).join(', ') : null].filter(Boolean); %>
+        <tr>
+          <td data-label="Draw" class="whitespace-nowrap font-semibold"><%= r.question_count %> question<%= r.question_count === 1 ? '' : 's' %><% if (r.marks !== null) { %><p class="text-xs font-normal muted"><%= Number(r.marks) %> marks each</p><% } %></td>
+          <td data-label="From" class="text-sm"><%= filters.length ? filters.join(' · ') : 'Any published question' %></td>
+          <% if (full.sections.length) { %><td data-label="Section" class="text-sm"><%= secName(r.section_id) %></td><% } %>
+          <td data-label="Available"><span class="whitespace-nowrap <%= ok ? 'badge-green' : 'badge-red' %>"><%= r.available %> available</span></td>
+          <td data-label="Actions" class="text-right"><% if (editable) { %><form method="post" action="/admin/exams/<%= e.id %>/rules/<%= r.id %>/delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600">Remove</button></form><% } %></td>
+        </tr>
+      <% }) %></tbody>
+      <tfoot><tr><td class="font-semibold"><%= summary.questionCount %> total</td><td colspan="4" class="text-sm muted">≈ <%= summary.totalMarks %> marks</td></tr></tfoot>
+    </table></div>
+    <% } %>
+
+    <% if (editable) { %>
+    <form method="post" action="/admin/exams/<%= e.id %>/rules" class="mt-6 rounded-lg border border-dashed border-slate-300 p-4 dark:border-slate-700" x-data="ruleForm" data-preview="/admin/exams/<%= e.id %>/rules/preview.json" @change="check" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h3 class="h3">Add a rule</h3>
+      <div class="mt-3 grid gap-3 md:grid-cols-6">
+        <div><label class="label" for="r-n">Questions</label><input id="r-n" name="question_count" type="number" min="1" max="500" value="10" class="input"></div>
+        <div class="md:col-span-2"><label class="label" for="r-cert">Certification</label>
+          <select id="r-cert" name="certification_id" class="input"><option value="">Any</option><% certifications.forEach(function (c) { %><option value="<%= c.id %>" <%= e.certification_id === c.id ? 'selected' : '' %>><%= c.exam_code ? c.exam_code + ' · ' : '' %><%= c.name %></option><% }) %></select></div>
+        <div class="md:col-span-3"><label class="label" for="r-dom">Domain</label>
+          <select id="r-dom" name="domain_id" class="input"><option value="">Any domain</option><% certifications.forEach(function (c) { if (!c.domains.length) return; %><optgroup label="<%= c.exam_code || c.name %>"><% c.domains.forEach(function (d) { %><option value="<%= d.id %>"><%= d.code ? d.code + ' · ' : '' %><%= d.name %><%= d.weight_percent ? ' (' + Number(d.weight_percent) + '%)' : '' %></option><% }) %></optgroup><% }) %></select></div>
+        <div class="md:col-span-3"><label class="label" for="r-cat">Category</label>
+          <select id="r-cat" name="category_id" class="input"><option value="">Any</option><% categories.forEach(function (c) { %><option value="<%= c.id %>"><%= c.path %></option><% }) %></select></div>
+        <div><label class="label" for="r-dmin">Difficulty from</label><select id="r-dmin" name="difficulty_min" class="input"><option value="">1</option><% [2,3,4,5].forEach(function (d) { %><option value="<%= d %>"><%= d %></option><% }) %></select></div>
+        <div><label class="label" for="r-dmax">to</label><select id="r-dmax" name="difficulty_max" class="input"><option value="">5</option><% [1,2,3,4].forEach(function (d) { %><option value="<%= d %>"><%= d %></option><% }) %></select></div>
+        <div><label class="label" for="r-tag">Tag</label><input id="r-tag" name="tag" class="input" list="tag-list" placeholder="any"><datalist id="tag-list"><% tags.forEach(function (t) { %><option value="<%= t.slug %>"><%= t.name %></option><% }) %></datalist></div>
+        <fieldset class="md:col-span-4"><legend class="label">Question types <span class="font-normal muted">(none ticked = any)</span></legend>
+          <div class="mt-1 flex flex-wrap gap-x-4 gap-y-2"><% Object.entries(QTYPES).filter(function (t) { return t[0] !== 'case_study'; }).forEach(function (t) { %><label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="question_types" value="<%= t[0] %>" class="checkbox"> <%= t[1].short %></label><% }) %></div></fieldset>
+        <div><label class="label" for="r-m">Marks each</label><input id="r-m" name="marks" class="input" inputmode="decimal" placeholder="own"></div>
+        <% if (full.sections.length) { %><div><label class="label" for="r-s">Section</label><select id="r-s" name="section_id" class="input"><option value="">General</option><% full.sections.forEach(function (sec) { %><option value="<%= sec.id %>"><%= sec.title %></option><% }) %></select></div><% } %>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm" aria-live="polite"><span :class="availableClass()" x-text="availableText()">Checking the bank…</span></p>
+        <button class="btn-primary">Add rule</button>
+      </div>
+    </form>
+    <% } %>
+  </div>
+</section>
+<% } %>

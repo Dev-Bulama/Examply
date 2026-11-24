@@ -34,4 +34,7 @@ const webhookLimiter = () => limiter({ windowMs: 60000, limit: 300, keyGenerator
 /** General protection for public forms (contact, join): 20 per 10 minutes. */
 const formLimiter = () => limiter({ windowMs: 10 * 60000, limit: 20, keyGenerator: ip });
 
-module.exports = { limiter, authLimiter, answerLimiter, uploadLimiter, webhookLimiter, formLimiter };
+/** SQL lab "Run": 60 per minute per user — each run occupies a worker thread for up to 3 seconds. */
+const sqlLimiter = () => limiter({ windowMs: 60000, limit: 60, keyGenerator: (req) => (req.user ? `u${req.user.id}` : ip(req)) });
+
+module.exports = { limiter, authLimiter, answerLimiter, uploadLimiter, webhookLimiter, formLimiter, sqlLimiter };

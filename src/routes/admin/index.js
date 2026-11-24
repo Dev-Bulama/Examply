@@ -14,7 +14,9 @@ const cat = require('../../controllers/admin/catalogueController');
 const qs = require('../../controllers/admin/questionsController');
 const imports = require('../../controllers/admin/importsController');
 const ai = require('../../controllers/admin/aiController');
-const { uploadLimiter } = require('../../middleware/rateLimit');
+const exams = require('../../controllers/admin/examsController');
+const sqlLab = require('../../controllers/admin/sqlLabController');
+const { uploadLimiter, sqlLimiter } = require('../../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -67,7 +69,8 @@ router.post('/imports/:id(\\d+)/confirm', can('questions.import'), h(imports.con
 router.post('/imports/:id(\\d+)/discard', can('questions.import'), h(imports.discard));
 router.post('/imports/:id(\\d+)/undo', can('questions.import'), h(imports.undo));
 router.get('/imports/:id(\\d+)/error-report', can('questions.import'), h(imports.errorReport));
-router.get('/ai/new', can('ai.generate'), h(ai.newForm));
+router.get('/ai/new', can('ai.generate'), h((req, res) => ai.newForm(req, res)));
+router.get('/ai/exam', canAny('ai.generate'), h(ai.examForm));
 router.post('/ai', can('ai.generate'), h(ai.create));
 router.get('/questions/export', can('questions.export'), h(imports.exportQuestions));
 
@@ -88,6 +91,33 @@ router.get('/questions/:id(\\d+)/versions/:vid(\\d+)', can('questions.view'), h(
 router.post('/questions/:id(\\d+)/transition/:action(submit|approve|reject|publish|retire|to_draft)', canAny('questions.create', 'questions.review', 'questions.publish', 'questions.edit_any'), h(qs.transition));
 router.post('/questions/:id(\\d+)/duplicate', can('questions.create'), h(qs.duplicateQuestion));
 router.post('/questions/:id(\\d+)/delete', can('questions.delete'), h(qs.destroy));
+// SQL lab (editor "Run" and preview)
+router.post('/sql/run', canAny('questions.create', 'questions.edit_any'), sqlLimiter(), h(sqlLab.runDraft));
+router.post('/questions/:id(\\d+)/sql/run', can('questions.view'), sqlLimiter(), h(sqlLab.runQuestion));
+
+// Exams
+router.get('/exams', can('exams.view'), h(exams.index));
+router.post('/exams', can('exams.manage'), h(exams.create));
+router.get('/exams/:id(\\d+)', can('exams.view'), (req, res) => res.redirect(`/admin/exams/${req.params.id}/basics`));
+router.get('/exams/:id(\\d+)/versions/:v(\\d+)', can('exams.view'), h(exams.versionShow));
+router.get('/exams/:id(\\d+)/rules/preview.json', can('exams.manage'), h(exams.rulePreview));
+router.get('/exams/:id(\\d+)/:tab([a-z]+)', can('exams.view'), h(exams.builder));
+router.post('/exams/:id(\\d+)/sections', can('exams.manage'), h(exams.sectionSave));
+router.post('/exams/:id(\\d+)/sections/:sid(\\d+)', can('exams.manage'), h(exams.sectionSave));
+router.post('/exams/:id(\\d+)/sections/:sid(\\d+)/delete', can('exams.manage'), h(exams.sectionDelete));
+router.post('/exams/:id(\\d+)/items/add', can('exams.manage'), h(exams.itemsAdd));
+router.post('/exams/:id(\\d+)/items', can('exams.manage'), h(exams.itemsUpdate));
+router.post('/exams/:id(\\d+)/rules', can('exams.manage'), h(exams.ruleSave));
+router.post('/exams/:id(\\d+)/rules/:rid(\\d+)', can('exams.manage'), h(exams.ruleSave));
+router.post('/exams/:id(\\d+)/rules/:rid(\\d+)/delete', can('exams.manage'), h(exams.ruleDelete));
+router.post('/exams/:id(\\d+)/bands', can('exams.manage'), h(exams.bandsSave));
+router.post('/exams/:id(\\d+)/access', can('exams.manage'), h(exams.accessAdd));
+router.post('/exams/:id(\\d+)/access/:rid(\\d+)/delete', can('exams.manage'), h(exams.accessRemove));
+router.post('/exams/:id(\\d+)/overrides', can('exams.grant_attempts'), h(exams.grantAttempts));
+router.post('/exams/:id(\\d+)/publish', can('exams.publish'), h(exams.publish));
+router.post('/exams/:id(\\d+)/:action(unpublish|archive)', can('exams.publish'), h(exams.lifecycle));
+router.post('/exams/:id(\\d+)/:action(duplicate|delete)', can('exams.manage'), h(exams.lifecycle));
+router.post('/exams/:id(\\d+)/tab/:tab([a-z]+)', can('exams.manage'), h(exams.saveTab));
 router.post('/users/:id(\\d+)/author-categories', can('users.manage'), h(qs.setAuthorCategories));
 
 // Roles

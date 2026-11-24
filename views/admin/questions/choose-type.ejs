@@ -14,8 +14,9 @@
       short_answer: 'A few words, marked by weighted keywords.',
       essay: 'Long answer, graded by a person.',
       case_study: 'A shared scenario with several child questions.',
+      sql: 'Write and run SQL against a sample database; marked by comparing results.',
     };
-    const icons = { single_choice: 'check', multiple_response: 'list', true_false: 'shield', fill_blank: 'clipboard', numeric: 'chart', matching: 'arrowRight', ordering: 'queue', hotspot: 'eye', short_answer: 'mail', essay: 'academic', case_study: 'flag' };
+    const icons = { single_choice: 'check', multiple_response: 'list', true_false: 'shield', fill_blank: 'clipboard', numeric: 'chart', matching: 'arrowRight', ordering: 'queue', hotspot: 'eye', short_answer: 'mail', essay: 'academic', case_study: 'flag', sql: 'database' };
   %>
   <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     <% Object.entries(TYPES).filter(function (t) { return !(parentId && t[0] === 'case_study'); }).forEach(function (t) { %>

@@ -1,0 +1,8 @@
+<% const c = s.certificate; %>
+<%- include('_cb', { name: 'certificate_enabled', label: 'Issue a certificate to candidates who pass', checked: e.certificate_enabled, hint: 'Each certificate has a unique ID and a QR code that links to a public verification page.' }) %>
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'certificate_template', label: 'Design', type: 'select', value: e.certificate_template || 'classic', options: [{ value: 'classic', label: 'Classic (landscape, border)' }, { value: 'modern', label: 'Modern (brand colour band)' }, { value: 'minimal', label: 'Minimal' }] }) %>
+  <%- include('../../../partials/field', { name: 'validity_months', label: 'Valid for (months)', type: 'number', min: 1, max: 240, value: c.validity_months, hint: 'Empty = does not expire.' }) %>
+  <%- include('../../../partials/field', { name: 'signatory_name', label: 'Signatory name', value: c.signatory_name, maxlength: 120 }) %>
+  <%- include('../../../partials/field', { name: 'signatory_title', label: 'Signatory title', value: c.signatory_title, maxlength: 120, placeholder: 'e.g. Head of Training' }) %>
+</div>

@@ -5,6 +5,7 @@ const { db } = require('../../config/db');
 const { parseJson, toJson } = require('../../utils/json');
 const { slugify } = require('../../utils/slug');
 const types = require('./types');
+const sqlLab = require('../sql/lab');
 
 class QuestionError extends Error {
   constructor(message, errors = []) {
@@ -168,6 +169,8 @@ async function saveQuestion({ id = null, meta, authoring, tags, user, changeNote
   const q = types.normalise(authoring);
   const errors = [...types.validate(q), ...(await validateMeta(meta, knex))];
   if (q.type === 'case_study' && meta.parent_id) errors.push({ field: 'type', message: 'A case study cannot be inside another case study.' });
+  // SQL lab: actually build the dataset and run the model solution, so a broken question never reaches candidates.
+  if (q.type === 'sql' && !errors.length) errors.push(...(await sqlLab.verify(q)));
   if (errors.length) throw new QuestionError('The question has errors.', errors);
   const stored = types.toStored(q);
   const hash = types.contentHash(q);

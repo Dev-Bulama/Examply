@@ -18,6 +18,7 @@ const { getLogger } = require('../../config/logger');
 const queue = require('../jobs/queue');
 const repo = require('../questions/repository');
 const types = require('../questions/types');
+const sqlLab = require('../sql/lab');
 const { sniff } = require('../uploads');
 const { parseFile, detectFormat, ImportFileError } = require('./parsers');
 const { toJson, parseJson } = require('../../utils/json');
@@ -198,6 +199,7 @@ async function storeRecords(imp, records, { fileErrors = [], images = new Map() 
         if (keyError && /correct option/i.test(e.message)) continue;
         if (!errors.includes(e.message)) errors.push(e.message);
       }
+      if (normalised.type === 'sql' && !errors.length) for (const e of await sqlLab.verify(normalised)) errors.push(e.message);
       hash = types.contentHash(normalised);
       if (seenHashes.has(hash)) warnings.push(`Duplicate of ${seenHashes.get(hash)} in this file.`);
       else seenHashes.set(hash, rec.rowRef);
@@ -301,27 +303,46 @@ async function setDuplicateDecision(importId, decision) {
   return db()('import_rows').where({ import_id: importId }).whereNotNull('duplicate_of_question_id').update({ decision });
 }
 
+async function createPlainExam(imp, options) {
+  const exams = require('../exams/repository');
+  return exams.createExam({ title: options.exam_title, type: 'practice', category_id: options.category_id, certification_id: options.certification_id, organisation_id: imp.organisation_id, user: imp.user_id ? { id: imp.user_id } : null });
+}
+
+/** "Generate a complete exam": type defaults + the certification's official format + AI catalogue copy. */
+async function createAiExam(imp, options) {
+  const exams = require('../exams/repository');
+  const examPlan = require('../ai/examPlan');
+  const { withDefaults } = require('../exams/settings');
+  const { sanitizeRich } = require('../../utils/html');
+  const k = db();
+  const gen = await k('ai_generations').where({ import_id: imp.id }).first('id');
+  const meta = options.exam_meta || {};
+  const examId = await exams.createExam({ title: meta.title || options.exam_title, type: options.exam_type, category_id: options.category_id, certification_id: options.certification_id, organisation_id: imp.organisation_id, user: imp.user_id ? { id: imp.user_id } : null, aiGenerationId: gen ? gen.id : null });
+  const cert = options.certification_id ? await k('certifications').where({ id: options.certification_id }).first() : null;
+  const plan = examPlan.planFromCertification(cert, { type: options.exam_type, count: options.exam_count || imp.valid_rows || 10 });
+  const exam = await k('exams').where({ id: examId }).first('settings');
+  const s = withDefaults(parseJson(exam.settings, {}));
+  if (plan.scaling) s.scaling = plan.scaling;
+  if (meta.instructions_note) s.instructions.custom_before = meta.instructions_note;
+  await k('exams')
+    .where({ id: examId })
+    .update({
+      ...plan.columns,
+      short_description: meta.short_description || null,
+      description_html: meta.description ? sanitizeRich(meta.description.split(/\n{2,}/).map((p) => `<p>${p.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c])}</p>`).join('')) : null,
+      settings: toJson(s),
+    });
+  if (gen) await k('ai_generations').where({ id: gen.id }).update({ exam_id: examId });
+  return examId;
+}
+
 async function confirmImport(importId) {
   const n = await db()('imports').where({ id: importId, status: 'parsed' }).update({ status: 'importing', progress: 0 });
   if (n !== 1) return false;
   const imp = await db()('imports').where({ id: importId }).first();
   const options = parseJson(imp.options, {});
   if (options.exam_mode === 'create' && options.exam_title) {
-    const { uniqueSlug } = require('../../utils/slug');
-    const [examId] = await db()('exams').insert({
-      uuid: crypto.randomUUID(),
-      title: String(options.exam_title).slice(0, 200),
-      slug: await uniqueSlug(db(), 'exams', options.exam_title),
-      type: 'practice',
-      category_id: options.category_id || null,
-      certification_id: options.certification_id || null,
-      organisation_id: imp.organisation_id,
-      status: 'draft',
-      content_mode: 'fixed',
-      duration_minutes: 60,
-      pass_mark: 70,
-      created_by: imp.user_id,
-    });
+    const examId = options.exam_type ? await createAiExam(imp, options) : await createPlainExam(imp, options);
     await db()('imports').where({ id: importId }).update({ created_exam_id: examId });
   }
   await queue.enqueue('import.run', { importId }, { maxAttempts: 3 });

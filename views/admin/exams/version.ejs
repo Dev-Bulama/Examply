@@ -1,0 +1,23 @@
+<% const snap = v.snapshot; const sum = snap.summary || {}; %>
+<div class="mb-6">
+  <p class="text-sm muted"><a class="hover:underline" href="/admin/exams/<%= exam.id %>/publish">← Back to the exam</a></p>
+  <h1 class="h1 mt-2"><%= exam.title %> — version <%= v.version_no %></h1>
+  <p class="mt-1 muted">Published <%= fmt.dateTime(v.created_at) %><%= v.note ? ' · ' + v.note : '' %>. This snapshot is read-only.</p>
+</div>
+<div class="grid gap-6 lg:grid-cols-2">
+  <section class="card card-body">
+    <h2 class="h2">Content</h2>
+    <dl class="mt-3 grid grid-cols-2 gap-2 text-sm">
+      <dt class="muted">Questions</dt><dd><%= sum.questionCount %> (<%= snap.rules && snap.rules.length && snap.exam.content_mode === 'blueprint' ? snap.rules.length + ' blueprint rules' : (snap.items || []).length + ' fixed' %>)</dd>
+      <dt class="muted">Total marks</dt><dd><%= sum.totalMarks %></dd>
+      <dt class="muted">Sections</dt><dd><%= (snap.sections || []).map(function (s) { return s.title; }).join(', ') || 'None' %></dd>
+      <dt class="muted">Duration</dt><dd><%= sum.durationMinutes ? sum.durationMinutes + ' min' : 'Untimed' %></dd>
+      <dt class="muted">Pass mark</dt><dd><%= sum.passMark !== null && sum.passMark !== undefined ? sum.passMark + (sum.passMarkType === 'raw' ? ' marks' : '%') : '—' %></dd>
+    </dl>
+    <% if (snap.items && snap.items.length) { %><p class="mt-4 text-sm muted">Question versions: <% snap.items.slice(0, 40).forEach(function (it, i) { %><%= i ? ', ' : '' %><a class="hover:underline" href="/admin/questions/<%= it.question_id %>/versions/<%= it.version_id %>">#<%= it.question_id %></a><% }) %><%= snap.items.length > 40 ? '…' : '' %></p><% } %>
+  </section>
+  <section class="card card-body">
+    <h2 class="h2">Instructions in this version</h2>
+    <% instructions.sections.forEach(function (sec) { %><h3 class="mt-4 font-semibold"><%= sec.heading %></h3><ul class="mt-1 list-disc space-y-1 pl-5 text-sm"><% sec.items.forEach(function (it) { %><li><%= it %></li><% }) %></ul><% }) %>
+  </section>
+</div>

@@ -112,6 +112,7 @@ async function show(req, res) {
     filter,
     counts,
     exam,
+    examPlan: await aiExamPlan(imp),
     generation,
     query: req.query,
     TYPES: types.TYPES,
@@ -229,6 +230,13 @@ async function exportQuestions(req, res) {
   }
   res.set('Content-Disposition', `attachment; filename="questions-${stamp}.xlsx"`);
   return res.type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').send(await exporter.toXlsx(items));
+}
+
+async function aiExamPlan(imp) {
+  const o = imp.options || {};
+  if (!o.exam_type) return null;
+  const cert = o.certification_id ? await db()('certifications').where({ id: o.certification_id }).first() : null;
+  return require('../../services/ai/examPlan').planFromCertification(cert, { type: o.exam_type, count: o.exam_count || imp.valid_rows || 10 });
 }
 
 module.exports = { index, newForm, create, show, status, decisions, confirm, discard, undo, errorReport, template, exportQuestions, FORMATS };

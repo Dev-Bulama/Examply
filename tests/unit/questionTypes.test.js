@@ -14,10 +14,25 @@ const SAMPLES = {
   short_answer: { stem_html: '<p>Name the ACID properties.</p>', keywords: [{ terms: ['atomicity'], weight: 1 }, { terms: ['consistency'], weight: 1 }, { terms: ['isolation'], weight: 1 }, { terms: ['durability'], weight: 1 }], threshold: 4 },
   essay: { stem_html: '<p>Discuss risk responses.</p>', marks: 10, min_words: 100, max_words: 500, rubric_html: '<p>Avoid, mitigate, transfer, accept.</p>' },
   case_study: { stem_html: '<p>Read the scenario about Acme Ltd.</p>' },
+  sql: { stem_html: '<p>Count employees per department.</p>', marks: 2, mode: 'query', schema_sql: 'CREATE TABLE e (id INTEGER, dept TEXT);', seed_sql: "INSERT INTO e VALUES (1,'A');", solution_sql: 'SELECT dept, COUNT(*) FROM e GROUP BY dept;', order_matters: false },
 };
 
 describe('question type registry', () => {
-  test('covers all 11 types', () => expect(T.TYPE_KEYS).toHaveLength(11));
+  test('covers all 12 types', () => expect(T.TYPE_KEYS).toHaveLength(12));
+
+  test('sql candidate view never includes the solution, check query or seed data', () => {
+    const stored = T.toStored(T.normalise({ type: 'sql', ...SAMPLES.sql, check_sql: 'SELECT 1' }));
+    const view = T.candidateView({ type: 'sql', stem_html: stored.stem_html, marks: stored.marks }, stored.options, stored.settings);
+    const json = JSON.stringify(view);
+    expect(json).not.toMatch(/GROUP BY dept/);
+    expect(json).not.toMatch(/INSERT INTO/);
+    expect(view.settings.schema_sql).toMatch(/CREATE TABLE e/);
+  });
+
+  test('sql validation', () => {
+    const errs = T.validate(T.normalise({ type: 'sql', stem_html: '<p>x</p>', mode: 'modify', schema_sql: '', solution_sql: '' })).map((e) => e.field);
+    expect(errs).toEqual(expect.arrayContaining(['schema_sql', 'solution_sql', 'check_sql']));
+  });
 
   test.each(Object.entries(SAMPLES))('%s: valid sample round-trips through storage', (type, sample) => {
     const q = T.normalise({ type, ...sample });

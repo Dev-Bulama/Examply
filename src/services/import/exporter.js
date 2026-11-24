@@ -50,6 +50,17 @@ function toRecord(a, meta) {
       r.threshold = a.threshold;
       r.case_sensitive = a.case_sensitive ? 'TRUE' : '';
       break;
+    case 'sql':
+      r.answer = a.solution_sql;
+      r.sql_mode = a.mode;
+      r.schema_sql = a.schema_sql;
+      r.seed_sql = a.seed_sql;
+      r.starter_sql = a.starter_sql || '';
+      r.check_sql = a.check_sql || '';
+      r.order_matters = a.order_matters ? 'TRUE' : '';
+      r.column_names_matter = a.column_names_matter ? 'TRUE' : '';
+      r.tolerance = a.numeric_tolerance || '';
+      break;
     case 'essay':
       r.answer = a.rubric_html || '';
       r.min_words = a.min_words ?? '';

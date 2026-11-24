@@ -1,0 +1,93 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">✨ Generate a complete exam with AI</h1>
+    <p class="mt-1 max-w-3xl muted">Pick a certification and describe the exam. The AI writes original questions across the official domains — including hands-on SQL lab tasks if you want them — plus the catalogue description. Timing and pass mark follow the certification’s official format. You review every question before anything is saved, then publish from the exam builder.</p>
+  </div>
+  <a href="/admin/ai/new" class="btn-secondary">Questions only</a>
+</div>
+
+<% if (!enabled || !available.length) { %>
+  <div class="card card-body flex flex-col items-start gap-3">
+    <h2 class="h2">Connect an AI provider first</h2>
+    <p class="text-sm muted">Exam generation needs a Claude (Anthropic) or OpenAI API key<%= enabled ? '' : ' and must be turned on' %>.</p>
+    <% if (can('settings.manage')) { %><a href="/admin/settings/ai" class="btn-primary">Open AI settings</a><% } %>
+  </div>
+<% } else { %>
+<form method="post" action="/admin/ai" class="grid gap-6 lg:grid-cols-3" x-data="aiForm" data-certs="<%= certJson %>" data-cert="<%= old.certification_id || '' %>" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <input type="hidden" name="kind" value="exam">
+  <input type="hidden" name="difficulty" value="mixed">
+  <div class="space-y-6 lg:col-span-2">
+    <section class="card card-body grid gap-5 sm:grid-cols-2">
+      <h2 class="h2 sm:col-span-2">1. The exam</h2>
+      <%- include('../../partials/field', { name: 'exam_title', label: 'Working title', required: true, maxlength: 200, value: old.exam_title, placeholder: 'e.g. Oracle 1Z0-082 Full Mock Exam 2', hint: 'The AI may polish it; you can change it in the builder.', wrapperClass: 'sm:col-span-2' }) %>
+      <%- include('../../partials/field', { name: 'exam_type', label: 'Kind of exam', type: 'select', value: old.exam_type || 'mock', options: Object.entries(EXAM_KINDS).map(function (k) { return { value: k[0], label: k[1] }; }) }) %>
+      <%- include('../../partials/field', { name: 'category_id', label: 'Category', type: 'select', required: true, value: old.category_id || '', options: [{ value: '', label: 'Choose…' }].concat(categories.map(function (c) { return { value: c.id, label: c.path }; })) }) %>
+      <div class="sm:col-span-2">
+        <label class="label" for="ai-cert">Certification</label>
+        <select id="ai-cert" name="certification_id" class="input" x-model="certId">
+          <option value="">— None (general topic) —</option>
+          <% certifications.forEach(function (c) { %><option value="<%= c.id %>" <%= String(old.certification_id) === String(c.id) ? 'selected' : '' %>><%= c.exam_code ? c.exam_code + ' · ' : '' %><%= c.name %><%= c.official_question_count ? ' — official: ' + c.official_question_count + ' Q / ' + c.official_duration_minutes + ' min / pass ' + c.official_passing_score + (c.official_score_scale === '%' ? '%' : '') : '' %></option><% }) %>
+        </select>
+        <p class="hint">Questions follow its domain weighting; duration and pass mark are scaled from its official format.</p>
+      </div>
+      <fieldset class="sm:col-span-2" x-show="domains().length" x-cloak>
+        <legend class="label">Domains <span class="font-normal muted">(all unticked = the full blueprint)</span></legend>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <template x-for="d in domains()" :key="d.id">
+            <label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700"><input type="checkbox" name="domain_ids" :value="d.id" class="checkbox"> <span class="flex-1" x-text="d.label"></span> <span class="text-xs muted" x-text="d.weight + '%'"></span></label>
+          </template>
+        </div>
+      </fieldset>
+    </section>
+
+    <section class="card card-body space-y-5">
+      <h2 class="h2">2. The brief</h2>
+      <%- include('../../partials/field', { name: 'prompt', label: 'What should the exam test?', type: 'textarea', rows: 5, required: true, maxlength: 4000, value: old.prompt, placeholder: 'e.g. A realistic full mock for DBAs with 2–3 years of experience. Emphasise troubleshooting scenarios: listener failures, tablespace issues, privilege problems. SQL tasks should use joins, GROUP BY/HAVING and subqueries on an HR schema.' }) %>
+      <%- include('../../partials/field', { name: 'reference', label: 'Reference material (optional)', type: 'textarea', rows: 4, maxlength: 60000, value: old.reference, placeholder: 'Paste the syllabus or exam objectives to ground the questions.' }) %>
+    </section>
+
+    <section class="card card-body grid gap-5 sm:grid-cols-2">
+      <h2 class="h2 sm:col-span-2">3. Questions</h2>
+      <%- include('../../partials/field', { name: 'count', label: 'Number of questions', type: 'number', value: old.count || 30, min: 1, max: maxPerRun, hint: 'Up to ' + maxPerRun + ' per exam (Settings → AI).' }) %>
+      <%- include('../../partials/field', { name: 'level', label: 'Level', type: 'select', value: old.level || LEVELS[0], options: LEVELS.map(function (l) { return { value: l, label: l }; }) }) %>
+      <fieldset class="sm:col-span-2">
+        <legend class="label">Question types</legend>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <% const chosen = old.types ? [].concat(old.types) : ['single_choice','multiple_response','true_false']; GENERATABLE.forEach(function (t) { %>
+          <label class="flex items-center gap-2 text-sm <%= t === 'sql' ? 'font-semibold' : '' %>"><input type="checkbox" name="types" value="<%= t %>" class="checkbox" <%= chosen.includes(t) ? 'checked' : '' %>> <%= TYPES[t].label %></label>
+          <% }) %>
+        </div>
+        <p class="hint">SQL lab questions come with their own sample database; each one is run against its model solution before you see it, and any that fail are flagged.</p>
+        <% if (errors.types) { %><p class="field-error"><%= errors.types %></p><% } %>
+      </fieldset>
+      <%- include('../../partials/field', { name: 'language', label: 'Language', value: old.language || 'English', maxlength: 40 }) %>
+    </section>
+  </div>
+
+  <aside class="space-y-6">
+    <section class="card card-body space-y-4">
+      <h2 class="h3">Model</h2>
+      <%- include('../../partials/field', { name: 'provider', label: 'AI provider', type: 'select', value: old.provider || defaultProvider, options: available.map(function (p) { return { value: p.id, label: p.label + ' — ' + p.model }; }) }) %>
+      <fieldset>
+        <legend class="label">Questions are saved as</legend>
+        <div class="space-y-2 text-sm">
+          <% if (canPublish) { %><label class="flex items-center gap-2"><input type="radio" name="status" value="published" class="checkbox rounded-full" <%= (old.status || 'published') === 'published' ? 'checked' : '' %>> Published (ready for the exam)</label><% } %>
+          <label class="flex items-center gap-2"><input type="radio" name="status" value="draft" class="checkbox rounded-full" <%= (old.status || (canPublish ? 'published' : 'draft')) === 'draft' ? 'checked' : '' %>> Draft (review each first)</label>
+        </div>
+      </fieldset>
+      <div class="rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
+        <p class="font-semibold">What happens next</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-4 muted">
+          <li>The AI writes the questions in batches (you can leave the page).</li>
+          <li>You review them in the preview — errors and duplicates are flagged.</li>
+          <li>Confirm: the exam is created as a draft with every setting filled in.</li>
+          <li>Check it in the builder and publish. Candidates who pass get a verifiable certificate.</li>
+        </ol>
+      </div>
+      <button type="submit" class="btn-primary w-full">✨ Generate the exam</button>
+      <p class="text-xs muted">Original questions only — never real exam content.</p>
+    </section>
+  </aside>
+</form>
+<% } %>

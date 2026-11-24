@@ -1,0 +1,13 @@
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'title', label: 'Title', value: e.title, required: true, maxlength: 200, wrapperClass: 'md:col-span-2' }) %>
+  <%- include('../../../partials/field', { name: 'slug', label: 'Web address', value: e.slug, hint: '/exams/' + e.slug, maxlength: 200 }) %>
+  <%- include('../../../partials/field', { name: 'type', label: 'Exam type', type: 'select', value: e.type, options: Object.entries(EXAM_TYPES).map(function (t) { return { value: t[0], label: t[1] }; }) }) %>
+  <%- include('../../../partials/field', { name: 'content_mode', label: 'How questions are chosen', type: 'select', value: e.content_mode, options: [{ value: 'fixed', label: 'A fixed list (same questions for everyone)' }, { value: 'blueprint', label: 'Blueprint (random draw per candidate)' }], hint: 'Switching keeps both the list and the rules; only the selected one is used.' }) %>
+  <%- include('../../../partials/field', { name: 'certification_id', label: 'Certification', type: 'select', value: e.certification_id, options: [{ value: '', label: 'None' }].concat(certifications.map(function (c) { return { value: c.id, label: (c.exam_code ? c.exam_code + ' · ' : '') + c.name }; })) }) %>
+  <%- include('../../../partials/field', { name: 'category_id', label: 'Category', type: 'select', value: e.category_id, options: [{ value: '', label: 'None' }].concat(categories.map(function (c) { return { value: c.id, label: c.path }; })) }) %>
+  <%- include('../../../partials/field', { name: 'programme_id', label: 'Training programme', type: 'select', value: e.programme_id, options: [{ value: '', label: 'None' }].concat(programmes.map(function (p) { return { value: p.id, label: p.name }; })), hint: 'Links pre/post-training exams for learning-gain reports.' }) %>
+  <%- include('../../../partials/field', { name: 'difficulty_label', label: 'Level shown in the catalogue', value: e.difficulty_label, placeholder: 'e.g. Associate', maxlength: 40 }) %>
+  <%- include('../../../partials/field', { name: 'language', label: 'Language', type: 'select', value: e.language, options: [{ value: 'en', label: 'English' }, { value: 'fr', label: 'French' }] }) %>
+  <%- include('../../../partials/field', { name: 'short_description', label: 'Short description', type: 'textarea', rows: 2, value: e.short_description, maxlength: 300, hint: 'One or two sentences for the catalogue card (300 characters).', wrapperClass: 'md:col-span-2' }) %>
+  <div class="md:col-span-2"><%- include('../../questions/_rich', { name: 'description_html', label: 'Full description', value: e.description_html || '', errorMap: errors, hint: 'What the exam covers, who it is for and how to prepare.' }) %></div>
+</div>

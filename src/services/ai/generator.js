@@ -14,13 +14,14 @@ const { getLogger } = require('../../config/logger');
 const queue = require('../jobs/queue');
 const settings = require('../settings');
 const providers = require('./providers');
+const examPlan = require('./examPlan');
 const pipeline = require('../import/pipeline');
 const { textToHtml } = require('../import/rowMapper');
 const { toJson, parseJson } = require('../../utils/json');
 const { toPlainText } = require('../../utils/html');
 
 const BATCH_SIZE = 20;
-const GENERATABLE = ['single_choice', 'multiple_response', 'true_false', 'fill_blank', 'numeric', 'matching', 'ordering', 'short_answer', 'essay'];
+const GENERATABLE = ['single_choice', 'multiple_response', 'true_false', 'fill_blank', 'numeric', 'matching', 'ordering', 'short_answer', 'essay', 'sql'];
 const BLOOM = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
 
 const nullable = (schema) => ({ anyOf: [schema, { type: 'null' }] });
@@ -45,6 +46,18 @@ function batchSchema() {
         keywords: { type: 'array', items: obj({ terms: { type: 'array', items: str }, weight: { type: 'number' } }) },
         threshold: nullable({ type: 'number' }),
         rubric: nullable(str),
+        sql: nullable(
+          obj({
+            mode: { type: 'string', enum: ['query', 'modify'] },
+            schema_sql: str,
+            seed_sql: str,
+            starter_sql: str,
+            solution_sql: str,
+            check_sql: str,
+            order_matters: { type: 'boolean' },
+            column_names_matter: { type: 'boolean' },
+          }),
+        ),
         explanation: str,
         reference: nullable(str),
         difficulty: { type: 'integer', enum: [1, 2, 3, 4, 5] },
@@ -77,6 +90,7 @@ Format rules per type (fields not used by a type must be empty arrays or null):
 - ordering: options listed in the CORRECT order (correct=true for all).
 - short_answer: keywords with weights; threshold = score needed for full marks.
 - essay: rubric = marking guide with marks per criterion.
+- sql (SQL lab — the candidate writes SQL that runs against a real SQLite database): sql.schema_sql = CREATE TABLE statements for a small realistic dataset (2–4 tables); sql.seed_sql = INSERT statements with 5–15 rows per table, including edge cases (NULLs, ties, rows that must be filtered out); sql.solution_sql = a correct model answer in portable SQL that SQLite runs; for mode "query" the solution is one SELECT; for mode "modify" the task changes data (INSERT/UPDATE/DELETE) and sql.check_sql is a SELECT that reads the changed rows ordered deterministically; set order_matters=true only if the stem asks for a sort order, column_names_matter=true only if the stem names the output columns; starter_sql may be an empty string. The stem must state exactly which columns to return. For every other type sql is null.
 - domain: copy the exact domain code you were asked to cover (or null if none were given).
 - stem and explanation are plain text; wrap code, commands and identifiers in backticks; use \\( … \\) for maths.
 Return only the JSON object.`;
@@ -162,6 +176,11 @@ function toRecord(q, n, domainsByCode) {
     case 'short_answer':
       question = { ...base, keywords: q.keywords || [], threshold: q.threshold, case_sensitive: false };
       break;
+    case 'sql': {
+      const x = q.sql || {};
+      question = { ...base, marks: 2, mode: x.mode === 'modify' ? 'modify' : 'query', schema_sql: x.schema_sql || '', seed_sql: x.seed_sql || '', starter_sql: x.starter_sql || '', solution_sql: x.solution_sql || '', check_sql: x.check_sql || '', order_matters: !!x.order_matters, column_names_matter: !!x.column_names_matter, numeric_tolerance: 0.01 };
+      break;
+    }
     case 'essay':
       question = { ...base, marks: 10, rubric_html: textToHtml(q.rubric || ''), min_words: null, max_words: null };
       break;
@@ -192,7 +211,7 @@ async function startGeneration({ user, spec, organisationId = null }) {
     format: 'ai',
     source: 'ai',
     status: 'uploaded',
-    options: toJson({ category_id: spec.category_id, certification_id: spec.certification_id, difficulty: 3, status: spec.status, duplicate_default: 'skip', exam_mode: spec.exam_mode, exam_id: spec.exam_id, exam_title: spec.exam_title }),
+    options: toJson({ category_id: spec.category_id, certification_id: spec.certification_id, difficulty: 3, status: spec.status, duplicate_default: 'skip', exam_mode: spec.exam_mode, exam_id: spec.exam_id, exam_title: spec.exam_title, exam_type: spec.exam_type || null, exam_count: spec.exam_type ? spec.count : null }),
     target_exam_id: spec.exam_mode === 'attach' ? spec.exam_id : null,
   });
   const [genId] = await db()('ai_generations').insert({
@@ -204,6 +223,7 @@ async function startGeneration({ user, spec, organisationId = null }) {
     prompt: spec.prompt,
     blueprint: toJson(spec),
     requested_count: spec.count,
+    kind: spec.exam_type ? 'exam' : 'questions',
   });
   await queue.enqueue('ai.generate', { generationId: genId }, { maxAttempts: 1 });
   pipeline.kick();
@@ -263,6 +283,17 @@ async function runGeneration(generationId) {
     await k('ai_generations').where({ id: gen.id }).update({ status: 'failed', completed_at: new Date(), last_error: lastError });
     await k('imports').where({ id: imp.id }).update({ status: 'failed', last_error: lastError || 'The AI returned no questions.' });
     return { failed: true };
+  }
+  if (spec.exam_type) {
+    // Complete exam: catalogue copy from the AI, settings from the certification's official format.
+    const meta = await examPlan.generateMeta(gen.provider, gen.model === 'default' ? null : gen.model, { brief: spec.prompt, cert, type: spec.exam_type, count: spec.count, title: spec.exam_title });
+    input += meta.usage.input;
+    output += meta.usage.output;
+    const opts = parseJson(imp.options, {});
+    opts.exam_meta = { title: meta.title, short_description: meta.short_description, description: meta.description, instructions_note: meta.instructions_note };
+    imp.options = toJson(opts);
+    await k('imports').where({ id: imp.id }).update({ options: imp.options });
+    await k('ai_generations').where({ id: gen.id }).update({ input_tokens: input, output_tokens: output });
   }
   await pipeline.storeRecords({ ...imp, options: imp.options }, records, { fileErrors: lastError ? [`Some batches failed: ${lastError}`] : [] });
   await k('ai_generations').where({ id: gen.id }).update({ status: 'completed', completed_at: new Date() });

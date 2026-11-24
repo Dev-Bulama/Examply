@@ -7,6 +7,7 @@ const catalogue = require('../../services/catalogue');
 const providers = require('../../services/ai/providers');
 const generator = require('../../services/ai/generator');
 const types = require('../../services/questions/types');
+const examPlan = require('../../services/ai/examPlan');
 
 const LEVELS = [
   'Professional certification exam level — scenario-based, applied',
@@ -17,7 +18,7 @@ const LEVELS = [
 ];
 const intOrNull = (v) => (v && /^\d+$/.test(String(v)) ? Number(v) : null);
 
-async function newForm(req, res) {
+async function newForm(req, res, view = 'admin/ai/new') {
   await settings.ensureLoaded();
   const enabled = settings.getSync('ai.enabled');
   const available = await providers.availableProviders();
@@ -27,8 +28,10 @@ async function newForm(req, res) {
     db()('exams').whereNull('deleted_at').whereIn('status', ['draft', 'published']).orderBy('title').select('id', 'title', 'status'),
     db()('ai_generations as g').leftJoin('imports as i', 'i.id', 'g.import_id').orderBy('g.id', 'desc').limit(8).select('g.*', 'i.status as import_status', 'i.id as import_id'),
   ]);
-  res.render('admin/ai/new', {
-    title: 'Generate questions with AI',
+  res.render(view, {
+    title: view === 'admin/ai/exam' ? 'Generate an exam with AI' : 'Generate questions with AI',
+    EXAM_KINDS: examPlan.EXAM_KINDS,
+    certFormats: JSON.stringify(certifications.map((c) => ({ id: c.id, duration: c.official_duration_minutes, count: c.official_question_count, pass: c.official_passing_score, scale: c.official_score_scale }))),
     layout: 'layouts/app',
     enabled,
     available,
@@ -43,12 +46,15 @@ async function newForm(req, res) {
     TYPES: types.TYPES,
     GENERATABLE: generator.GENERATABLE,
     canPublish: req.user.can('questions.publish'),
-    breadcrumbs: [{ label: 'Admin', href: '/admin' }, { label: 'AI generator' }],
+    breadcrumbs: [{ label: 'Admin', href: '/admin' }, view === 'admin/ai/exam' ? { label: 'Exams', href: '/admin/exams' } : null, { label: view === 'admin/ai/exam' ? 'Generate an exam with AI' : 'AI generator' }].filter(Boolean),
   });
 }
 
+const examForm = (req, res) => newForm(req, res, 'admin/ai/exam');
+
 async function create(req, res) {
-  const back = '/admin/ai/new';
+  const isExam = req.body.kind === 'exam';
+  const back = isExam ? '/admin/ai/exam' : '/admin/ai/new';
   const errors = {};
   const b = req.body;
   const available = (await providers.availableProviders()).map((p) => p.id);
@@ -67,7 +73,9 @@ async function create(req, res) {
   if (!categoryId || !(await db()('categories').where({ id: categoryId }).first())) errors.category_id = 'Choose the category the questions belong to.';
   const certificationId = intOrNull(b.certification_id);
   const domainIds = [].concat(b.domain_ids || []).map(Number).filter(Boolean);
-  const examMode = ['none', 'attach', 'create'].includes(b.exam_mode) ? b.exam_mode : 'none';
+  const examMode = isExam ? 'create' : ['none', 'attach', 'create'].includes(b.exam_mode) ? b.exam_mode : 'none';
+  const examType = isExam && examPlan.EXAM_KINDS[b.exam_type] ? b.exam_type : null;
+  if (isExam && !examType) errors.exam_type = 'Choose the kind of exam.';
   if (examMode === 'create' && !String(b.exam_title || '').trim()) errors.exam_title = 'Give the new exam a title.';
   if (examMode === 'attach' && !intOrNull(b.exam_id)) errors.exam_id = 'Choose an exam.';
   if (Object.keys(errors).length) {
@@ -92,6 +100,7 @@ async function create(req, res) {
     exam_mode: examMode,
     exam_id: intOrNull(b.exam_id),
     exam_title: String(b.exam_title || '').trim().slice(0, 200),
+    exam_type: examType,
   };
   try {
     const { importId } = await generator.startGeneration({ user: req.user, spec });
@@ -105,4 +114,4 @@ async function create(req, res) {
   }
 }
 
-module.exports = { newForm, create, LEVELS };
+module.exports = { newForm, examForm, create, LEVELS };

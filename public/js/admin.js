@@ -155,7 +155,7 @@
         selected: 0,
         action: '',
         boxes: function () {
-          return Array.prototype.slice.call(this.$root.querySelectorAll('input[name="ids"]'));
+          return Array.prototype.slice.call(this.$root.querySelectorAll('input[name="' + (this.$root.dataset.box || 'ids') + '"]'));
         },
         sync: function () {
           this.selected = this.boxes().filter(function (b) {
@@ -450,6 +450,78 @@
             r.correct = j === i;
           });
         },
+        /* ---- SQL lab ---- */
+        sqlOut: null,
+        sqlBusy: false,
+        sqlScratch: '',
+        sqlTables: [],
+        sqlModel: function () {
+          var m = this.m;
+          return { mode: m.mode, schema_sql: m.schema_sql, seed_sql: m.seed_sql, starter_sql: m.starter_sql, solution_sql: m.solution_sql, check_sql: m.check_sql, order_matters: !!m.order_matters, column_names_matter: !!m.column_names_matter, numeric_tolerance: m.numeric_tolerance };
+        },
+        isModify: function () {
+          return this.m.mode === 'modify';
+        },
+        sqlRun: function (target) {
+          var self = this;
+          var body = { question: this.sqlModel(), target: target, sql: target === 'scratch' ? this.sqlScratch : '' };
+          this.sqlBusy = true;
+          return window.App.api('/admin/sql/run', { method: 'POST', body: body })
+            .then(function (r) {
+              if (target === 'describe') {
+                self.sqlTables = (r.schema && r.schema.tables) || [];
+                self.sqlOut = r.schema && !r.schema.ok ? { ok: false, error: r.schema.error, label: 'Dataset' } : null;
+                return;
+              }
+              if (target === 'verify') {
+                self.sqlOut = { ok: !r.errors.length, error: r.errors.map(function (x) { return x.message; }).join(' '), label: 'Check', note: r.errors.length ? '' : 'The dataset builds and the model solution runs. Ready to save.' };
+                return;
+              }
+              var run = r.run;
+              self.sqlOut = { ok: run.ok, error: run.error, label: target === 'solution' ? 'Model solution' : target === 'check' ? 'Check query' : 'Your query', columns: run.result ? run.result.columns : [], rows: run.result ? run.result.rows : [], count: run.result ? run.result.rowCount : 0, truncated: run.result && run.result.truncated, changes: run.result ? run.result.changes : 0, ms: run.ms };
+            })
+            .catch(function (err) {
+              self.sqlOut = { ok: false, error: err.message, label: 'Error' };
+            })
+            .finally(function () {
+              self.sqlBusy = false;
+            });
+        },
+        runSolution: function () {
+          this.sqlRun('solution');
+        },
+        runScratch: function () {
+          this.sqlRun('scratch');
+        },
+        runVerify: function () {
+          this.sqlRun('verify');
+        },
+        loadSchema: function () {
+          this.sqlRun('describe');
+        },
+        outRows: function () {
+          return this.sqlOut && this.sqlOut.rows ? this.sqlOut.rows : [];
+        },
+        outCols: function () {
+          return this.sqlOut && this.sqlOut.columns ? this.sqlOut.columns : [];
+        },
+        cell: function (v) {
+          return v === null ? 'NULL' : String(v);
+        },
+        outSummary: function () {
+          var o = this.sqlOut;
+          if (!o) return '';
+          if (!o.ok) return o.label + ' failed';
+          if (o.note) return o.note;
+          if (!o.columns || !o.columns.length) return o.label + ': ' + o.changes + ' row(s) changed · ' + o.ms + ' ms';
+          return o.label + ': ' + o.count + ' row(s)' + (o.truncated ? ' (first 200 shown)' : '') + ' · ' + o.ms + ' ms';
+        },
+        outOk: function () {
+          return this.sqlOut && this.sqlOut.ok;
+        },
+        outError: function () {
+          return this.sqlOut && !this.sqlOut.ok;
+        },
         /* Serialise the clean authoring model into the hidden "payload" field. */
         serialize: function () {
           var m = this.m;
@@ -506,6 +578,7 @@
               case_sensitive: !!m.case_sensitive,
             });
           if (m.type === 'essay') Object.assign(out, { min_words: m.min_words, max_words: m.max_words });
+          if (m.type === 'sql') Object.assign(out, this.sqlModel());
           this.$refs.payload.value = JSON.stringify(out);
         },
       };
@@ -515,5 +588,220 @@
   // Render LaTeX inside rich editors' previews on load (read-only areas only).
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.q-render').forEach(renderMath);
+  });
+})();
+
+/* ---------------- Exam builder ---------------- */
+(function () {
+  'use strict';
+
+  function formBody(form) {
+    var params = new URLSearchParams();
+    new FormData(form).forEach(function (v, k) {
+      if (typeof v === 'string') params.append(k, v);
+    });
+    return params.toString();
+  }
+  function post(url, body) {
+    return window.App.api(url, { method: 'POST', body: body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+  }
+  function clock() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  document.addEventListener('alpine:init', function () {
+    var Alpine = window.Alpine;
+
+    /* Autosaves a builder tab 800 ms after the last change; the Save button still works without JavaScript. */
+    Alpine.data('autosave', function () {
+      return {
+        state: 'idle',
+        savedAt: '',
+        messages: [],
+        timer: null,
+        enabled: false,
+        init: function () {
+          var self = this;
+          this.enabled = !!this.$el.dataset.autosave;
+          if (!this.enabled) return;
+          var schedule = function () {
+            clearTimeout(self.timer);
+            self.state = 'pending';
+            self.timer = setTimeout(function () {
+              self.save();
+            }, 800);
+          };
+          this.$el.addEventListener('input', schedule);
+          this.$el.addEventListener('change', schedule);
+          this.$el.addEventListener('submit', function (e) {
+            e.preventDefault();
+            clearTimeout(self.timer);
+            self.save();
+          });
+        },
+        save: function () {
+          var self = this;
+          var form = this.$root;
+          this.state = 'saving';
+          post(form.getAttribute('action'), formBody(form))
+            .then(function () {
+              self.state = 'saved';
+              self.savedAt = clock();
+              self.messages = [];
+              self.mark([]);
+            })
+            .catch(function (err) {
+              self.state = 'error';
+              var errs = (err.data && err.data.errors) || [];
+              self.messages = errs.length
+                ? errs.map(function (x) {
+                    return x.message;
+                  })
+                : [err.message];
+              self.mark(errs);
+            });
+        },
+        mark: function (errs) {
+          var form = this.$root;
+          Array.prototype.forEach.call(form.querySelectorAll('[aria-invalid="true"]'), function (el) {
+            el.removeAttribute('aria-invalid');
+            el.classList.remove('input-error');
+          });
+          errs.forEach(function (x) {
+            var name = String(x.field || '').replace(/\.(\w+)/g, '[$1]');
+            var el = form.querySelector('[name="' + name + '"]');
+            if (el) {
+              el.setAttribute('aria-invalid', 'true');
+              el.classList.add('input-error');
+            }
+          });
+        },
+        hasErrors: function () {
+          return this.messages.length > 0;
+        },
+        statusText: function () {
+          if (this.state === 'pending') return 'Unsaved changes…';
+          if (this.state === 'saving') return 'Saving…';
+          if (this.state === 'saved') return 'All changes saved at ' + this.savedAt;
+          if (this.state === 'error') return 'Not saved — please fix the errors';
+          return this.enabled ? 'Changes save automatically' : 'Read only';
+        },
+      };
+    });
+
+    /* Fixed question list: selection, per-item marks/section, up/down ordering. */
+    Alpine.data('examItems', function () {
+      return {
+        selected: 0,
+        saved: '',
+        base: function () {
+          return '/admin/exams/' + this.$root.dataset.exam + '/items';
+        },
+        boxes: function () {
+          return Array.prototype.slice.call(this.$root.querySelectorAll('input[name="item_ids"]'));
+        },
+        sync: function () {
+          this.selected = this.boxes().filter(function (b) {
+            return b.checked;
+          }).length;
+        },
+        count: function () {
+          return this.selected;
+        },
+        savedText: function () {
+          return this.saved;
+        },
+        position: function (el) {
+          var tr = el.closest('tr');
+          return Array.prototype.indexOf.call(tr.parentNode.children, tr) + 1;
+        },
+        report: function (p) {
+          var self = this;
+          p.then(function () {
+            self.saved = 'Saved at ' + clock() + '.';
+          }).catch(function (err) {
+            self.saved = '';
+            window.App.toast(err.message, 'error');
+          });
+        },
+        saveMarks: function (e) {
+          var b = new URLSearchParams({ item_id: e.target.dataset.item, marks: e.target.value });
+          this.report(post(this.base(), b.toString()));
+        },
+        saveSection: function (e) {
+          var b = new URLSearchParams({ item_id: e.target.dataset.item, section_id: e.target.value });
+          this.report(post(this.base(), b.toString()));
+        },
+        move: function (e, dir) {
+          var tr = e.target.closest('tr');
+          var sib = dir < 0 ? tr.previousElementSibling : tr.nextElementSibling;
+          if (!sib) return;
+          if (dir < 0) tr.parentNode.insertBefore(tr, sib);
+          else tr.parentNode.insertBefore(sib, tr);
+          Array.prototype.forEach.call(tr.parentNode.children, function (row, i) {
+            var cell = row.querySelector('[data-label="Position"]');
+            if (cell) cell.textContent = String(i + 1);
+          });
+          e.target.closest('button').focus();
+          var b = new URLSearchParams({ action: 'reorder' });
+          Array.prototype.forEach.call(tr.parentNode.children, function (row) {
+            b.append('order', row.dataset.id);
+          });
+          this.report(post(this.base(), b.toString()));
+        },
+        up: function (e) {
+          this.move(e, -1);
+        },
+        down: function (e) {
+          this.move(e, 1);
+        },
+      };
+    });
+
+    /* Blueprint rule form: live "N questions available" from the bank. */
+    Alpine.data('ruleForm', function () {
+      return {
+        available: null,
+        wanted: 0,
+        error: '',
+        timer: null,
+        init: function () {
+          var self = this;
+          this.check();
+          this.$el.addEventListener('input', function () {
+            clearTimeout(self.timer);
+            self.timer = setTimeout(function () {
+              self.check();
+            }, 400);
+          });
+        },
+        check: function () {
+          var self = this;
+          var params = new URLSearchParams(formBody(this.$root));
+          params.delete('_csrf');
+          this.wanted = Number(params.get('question_count')) || 0;
+          window.App.api(this.$root.dataset.preview + '?' + params.toString())
+            .then(function (r) {
+              self.error = '';
+              self.available = r.available;
+            })
+            .catch(function (err) {
+              self.available = null;
+              self.error = (err.data && err.data.errors && err.data.errors[0] && err.data.errors[0].message) || err.message;
+            });
+        },
+        availableText: function () {
+          if (this.error) return this.error;
+          if (this.available === null) return 'Checking the bank…';
+          if (this.available >= this.wanted) return this.available + ' published questions match — enough for this rule.';
+          return 'Only ' + this.available + ' published questions match; this rule asks for ' + this.wanted + '.';
+        },
+        availableClass: function () {
+          if (this.error || (this.available !== null && this.available < this.wanted)) return 'text-red-600 dark:text-red-400';
+          return this.available === null ? 'muted' : 'text-emerald-700 dark:text-emerald-400';
+        },
+      };
+    });
   });
 })();

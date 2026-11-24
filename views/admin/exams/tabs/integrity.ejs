@@ -1,0 +1,14 @@
+<% const g = s.integrity; %>
+<div class="grid gap-3 md:grid-cols-2">
+  <%- include('_cb', { name: 'fullscreen', label: 'Require full screen', checked: g.fullscreen }) %>
+  <%- include('_cb', { name: 'record_tab_switches', label: 'Record tab and window switches', checked: g.record_tab_switches }) %>
+  <%- include('_cb', { name: 'disable_copy', label: 'Disable copy, paste and right-click', checked: g.disable_copy }) %>
+  <%- include('_cb', { name: 'single_session', label: 'One browser session at a time', checked: g.single_session }) %>
+  <%- include('_cb', { name: 'webcam', label: 'Webcam snapshots (with consent)', checked: g.webcam, hint: 'Stored privately; visible to examiners only.' }) %>
+  <%- include('_cb', { name: 'watermark', label: 'Watermark with the candidate’s name and email', checked: g.watermark }) %>
+</div>
+<div class="grid gap-5 md:grid-cols-2">
+  <%- include('../../../partials/field', { name: 'tab_switch_limit', label: 'Tab switches allowed', type: 'number', min: 1, max: 100, value: g.tab_switch_limit, hint: 'Empty = record only.' }) %>
+  <div class="flex items-end"><%- include('_cb', { name: 'auto_submit_on_limit', label: 'Submit automatically when the limit is reached', checked: g.auto_submit_on_limit }) %></div>
+</div>
+<p class="text-sm muted">IP address restrictions are under Attempts &amp; access.</p>
