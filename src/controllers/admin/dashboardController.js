@@ -7,6 +7,7 @@ const { startOfDay, startOfMonth } = require('../../utils/time');
 const num = async (q) => Number((await q)?.n || 0);
 
 async function index(req, res) {
+  if (req.workspace) return res.redirect('/org');
   const k = db();
   const tz = settings.getSync('general.timezone');
   const today = startOfDay(tz);

@@ -1,0 +1,58 @@
+<% const L = w.limits || {}; const per = { monthly: 'month', quarterly: 'quarter', biannually: '6 months', annually: 'year' }; %>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-sm muted">Company workspace · you are <%= w.role === 'manager' ? 'a manager' : 'an author' %></p>
+    <h1 class="h1 mt-1"><%= w.name %></h1>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (w.all && w.all.length > 1) { %>
+    <form method="post" action="/org/switch" class="flex gap-2"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><label class="sr-only" for="sw">Workspace</label><select id="sw" name="workspace_id" class="input" data-autosubmit><% w.all.forEach(function (x) { %><option value="<%= x.id %>" <%= x.id === w.id ? 'selected' : '' %>><%= x.name %></option><% }) %></select></form>
+    <% } %>
+    <% if (w.active) { %><a href="/admin/exams" class="btn-secondary">Exams</a><% if (can('ai.generate')) { %><a href="/admin/ai/exam" class="btn-primary">✨ Generate an exam with AI</a><% } %><% } %>
+  </div>
+</div>
+
+<% if (!w.active) { %>
+<section class="card card-body mb-6 border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+  <h2 class="h2">Your company plan is not active</h2>
+  <p class="mt-1">Your questions, exams and results are safe. Renew to keep building exams and inviting people.</p>
+  <div class="mt-4 flex flex-wrap gap-2"><% plans.forEach(function (p) { %><a class="btn-secondary" href="/checkout/<%= p.slug %>"><%= p.name %> · <%= fmt.money(p.price_kobo) %>/<%= per[p.plan_interval] || 'month' %></a><% }) %></div>
+</section>
+<% } else { %>
+<div class="grid gap-6 lg:grid-cols-3">
+  <section class="card card-body lg:col-span-2">
+    <div class="flex flex-wrap items-center justify-between gap-2"><h2 class="h2"><%= w.plan.name %> plan</h2><span class="text-sm muted"><%= w.plan.status === 'non_renewing' ? 'Ends' : 'Renews' %> <%= fmt.date(w.plan.current_period_end) %></span></div>
+    <div class="mt-5 grid gap-5 sm:grid-cols-2">
+      <%- include('_bar', { label: 'Candidates', used: u.candidates, limit: L.candidates, zeroMeansNone: false }) %>
+      <%- include('_bar', { label: 'Staff seats', used: u.staff, limit: L.staff_seats, zeroMeansNone: false }) %>
+      <%- include('_bar', { label: 'Published exams', used: u.publishedExams, limit: L.exams, zeroMeansNone: false }) %>
+      <%- include('_bar', { label: 'AI questions this month', used: u.aiThisMonth, limit: L.ai_questions_per_month, zeroMeansNone: true }) %>
+    </div>
+    <p class="mt-5 text-sm muted"><%= u.questions %> questions in your bank · <%= u.pendingMembers + u.pendingStaff %> invitations pending<%= L.labs ? ' · SQL & cyber labs included' : '' %><%= L.custom_branding ? ' · custom branding' : '' %></p>
+    <div class="mt-4 flex flex-wrap gap-2"><% plans.filter(function (p) { return p.price_kobo > (w.plan.price_kobo || 0) && p.id !== w.plan.product_id; }).slice(0, 2).forEach(function (p) { %><a class="btn-secondary btn-sm" href="/checkout/<%= p.slug %>">Upgrade to <%= p.name %></a><% }) %></div>
+  </section>
+  <section class="card card-body">
+    <h2 class="h3">Get started</h2>
+    <ol class="mt-3 space-y-3 text-sm">
+      <li class="flex gap-3"><span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-600 text-xs font-bold text-on-primary">1</span><span><a class="link" href="/admin/questions">Add questions</a> — write, <a class="link" href="/admin/imports/new">import a spreadsheet</a><% if (can('ai.generate')) { %>, or <a class="link" href="/admin/ai/new">generate with AI</a><% } %>.</span></li>
+      <li class="flex gap-3"><span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-600 text-xs font-bold text-on-primary">2</span><span><a class="link" href="/admin/exams">Build an exam</a> and publish it. It is private to your company.</span></li>
+      <% if (w.role === 'manager') { %>
+      <li class="flex gap-3"><span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-600 text-xs font-bold text-on-primary">3</span><span><a class="link" href="/org/members">Invite your people</a> and put them in a <a class="link" href="/org/cohorts">cohort</a>.</span></li>
+      <li class="flex gap-3"><span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-600 text-xs font-bold text-on-primary">4</span><span>Assign exams with due dates and follow progress in <a class="link" href="/org/reports">reports</a>.</span></li>
+      <% } %>
+    </ol>
+  </section>
+</div>
+<div class="mt-6 grid gap-6 lg:grid-cols-2">
+  <section class="card card-body">
+    <div class="flex items-center justify-between"><h2 class="h3">Your exams</h2><a class="text-sm link" href="/admin/exams">All exams</a></div>
+    <% if (!exams.length) { %><p class="mt-3 text-sm muted">No exams yet.</p><% } %>
+    <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800"><% exams.forEach(function (e) { %><li class="flex items-center justify-between py-2 text-sm"><a class="hover:underline" href="/admin/exams/<%= e.id %>/basics"><%= e.title %></a><span class="<%= e.status === 'published' ? 'badge-green' : 'badge-gray' %>"><%= e.status %></span></li><% }) %></ul>
+  </section>
+  <section class="card card-body">
+    <div class="flex items-center justify-between"><h2 class="h3">Latest results</h2><a class="text-sm link" href="/admin/attempts">All attempts</a></div>
+    <% if (!recent.length) { %><p class="mt-3 text-sm muted">No submissions yet.</p><% } %>
+    <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800"><% recent.forEach(function (r) { %><li class="flex items-center justify-between gap-2 py-2 text-sm"><a class="hover:underline" href="/admin/attempts/<%= r.id %>"><%= r.full_name %> <span class="muted">· <%= r.title %></span></a><span class="font-semibold"><%= r.percent === null ? '—' : Number(r.percent) + '%' %></span></li><% }) %></ul>
+  </section>
+</div>
+<% } %>

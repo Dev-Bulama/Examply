@@ -1,5 +1,7 @@
 'use strict';
 
+const { scopeOrg } = require('../../middleware/workspace');
+
 const path = require('path');
 const { db } = require('../../config/db');
 const audit = require('../../services/audit');
@@ -20,7 +22,7 @@ const STATUS_BADGE = { uploaded: 'badge-gray', parsing: 'badge-blue', parsed: 'b
 const intOrNull = (v) => (v && /^\d+$/.test(String(v)) ? Number(v) : null);
 
 async function index(req, res) {
-  const q = db()('imports as i').leftJoin('users as u', 'u.id', 'i.user_id').orderBy('i.id', 'desc').select('i.*', 'u.full_name');
+  const q = db()('imports as i').leftJoin('users as u', 'u.id', 'i.user_id').where((w) => (scopeOrg(req) ? w.where('i.organisation_id', scopeOrg(req)) : w.whereNull('i.organisation_id'))).orderBy('i.id', 'desc').select('i.*', 'u.full_name');
   const pager = await paginate(q, { page: req.query.page, perPage: 20 });
   res.render('admin/imports/index', { title: 'Imports', layout: 'layouts/app', pager, query: req.query, STATUS_BADGE, FORMATS, breadcrumbs: [{ label: 'Admin', href: '/admin' }, { label: 'Imports' }] });
 }
@@ -29,7 +31,7 @@ async function newForm(req, res) {
   const [categories, certifications, exams] = await Promise.all([
     catalogue.categoryTree(),
     catalogue.certificationsWithDomains(),
-    db()('exams').whereNull('deleted_at').whereIn('status', ['draft', 'published']).orderBy('title').select('id', 'title', 'status'),
+    db()('exams').whereNull('deleted_at').where((w) => (scopeOrg(req) ? w.where('organisation_id', scopeOrg(req)) : w.whereNull('organisation_id'))).whereIn('status', ['draft', 'published']).orderBy('title').select('id', 'title', 'status'),
   ]);
   res.render('admin/imports/new', { title: 'Import questions', layout: 'layouts/app', categories, certifications, exams, FORMATS, TEMPLATES, canPublish: req.user.can('questions.publish'), breadcrumbs: crumbs({ label: 'New import' }) });
 }
@@ -52,11 +54,11 @@ async function create(req, res) {
     exam_id: intOrNull(req.body.exam_id),
     exam_title: String(req.body.exam_title || '').trim().slice(0, 200),
   };
-  if (options.exam_mode === 'attach' && !(options.exam_id && (await db()('exams').where({ id: options.exam_id }).whereNull('deleted_at').first()))) return fail('Choose the exam to attach the questions to.', { exam_id: 'Choose an exam.' });
+  if (options.exam_mode === 'attach' && !(options.exam_id && (await db()('exams').where({ id: options.exam_id, organisation_id: scopeOrg(req) }).whereNull('deleted_at').first()))) return fail('Choose the exam to attach the questions to.', { exam_id: 'Choose an exam.' });
   if (options.exam_mode === 'create' && !options.exam_title) return fail('Give the new exam a title.', { exam_title: 'Enter a title for the new exam.' });
   if (options.category_id && !(await db()('categories').where({ id: options.category_id }).first())) return fail('Choose a valid default category.');
   try {
-    const id = await pipeline.createImport({ user: req.user, buffer: req.file.buffer, originalName: req.file.originalname, format: FORMATS[req.body.format] ? req.body.format : 'auto', options });
+    const id = await pipeline.createImport({ user: req.user, buffer: req.file.buffer, originalName: req.file.originalname, format: FORMATS[req.body.format] ? req.body.format : 'auto', options, organisationId: scopeOrg(req) });
     await audit.record(req, 'import.upload', { entityType: 'import', entityId: id, after: { file: req.file.originalname, size: req.file.size, options } });
     return res.redirect(`/admin/imports/${id}`);
   } catch (err) {
@@ -202,6 +204,7 @@ async function exportQuestions(req, res) {
     status: ['draft', 'in_review', 'published', 'retired'].includes(req.query.status) ? req.query.status : '',
     difficulty: intOrNull(req.query.difficulty),
     tag: String(req.query.tag || ''),
+    organisation_id: scopeOrg(req),
   };
   const ids = await repo.filteredQuery(filters).orderBy('q.id').limit(10000).pluck('q.id');
   const cats = new Map((await catalogue.categoryTree()).map((c) => [c.id, c.path.replace(/ › /g, ' > ')]));

@@ -14,6 +14,23 @@
   <% }) %>
 </div>
 
+<% if (assigned.length) { %>
+<section class="card card-body mt-6" aria-labelledby="asg">
+  <h2 id="asg" class="h2">Assigned to you</h2>
+  <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
+    <% assigned.forEach(function (a) { const overdue = a.due_at && new Date(a.due_at) < new Date() && a.best === null; %>
+    <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+      <div class="min-w-0"><p class="font-medium"><%= a.title %></p><p class="text-xs muted"><%= a.organisation_name %> · <%= a.cohort_name %><%= a.kind === 'pre' ? ' · pre-training' : a.kind === 'post' ? ' · post-training' : '' %></p></div>
+      <div class="flex items-center gap-3">
+        <% if (a.best !== null) { %><span class="badge-green">Done · <%= Number(a.best) %>%</span><% } else if (a.due_at) { %><span class="<%= overdue ? 'badge-red' : 'badge-amber' %>"><%= overdue ? 'Overdue' : 'Due ' + fmt.dateTime(a.due_at) %></span><% } %>
+        <a class="<%= a.best === null ? 'btn-primary' : 'btn-secondary' %> btn-sm" href="/exams/<%= a.slug %>"><%= a.best === null ? 'Start' : 'Open' %></a>
+      </div>
+    </li>
+    <% }) %>
+  </ul>
+</section>
+<% } %>
+
 <div class="mt-6 grid gap-6 lg:grid-cols-3">
   <section class="card lg:col-span-2">
     <div class="card-body">
@@ -69,6 +86,11 @@
         <li class="flex items-center gap-2"><%- include('../partials/icon', { name: user.totp_enabled_at ? 'check' : 'info', cls: `h-4 w-4 ${user.totp_enabled_at ? 'text-emerald-600' : 'text-slate-400'}` }) %> Two-factor <%= user.totp_enabled_at ? 'on' : 'off' %></li>
       </ul>
       <a href="/account/security" class="mt-4 inline-block text-sm link">Manage security</a>
+    </section>
+    <section class="card card-body">
+      <h2 class="h3">Training with a company?</h2>
+      <p class="mt-1 text-sm muted">Got a join code from your employer or trainer?</p>
+      <a href="/join" class="btn-secondary btn-sm mt-3">Join an organisation</a>
     </section>
   </aside>
 </div>

@@ -400,10 +400,7 @@ async function startStudySet(user, exam, domainIds, { ip = null, now = new Date(
     .whereNull('q.deleted_at')
     .whereNull('q.parent_id')
     .whereNot('q.type', 'case_study')
-    .where((w) => {
-      w.whereNull('q.organisation_id');
-      if (exam.organisation_id) w.orWhere('q.organisation_id', exam.organisation_id);
-    })
+    .where((w) => (exam.organisation_id ? w.where('q.organisation_id', exam.organisation_id) : w.whereNull('q.organisation_id')))
     .orderByRaw('RAND()')
     .limit(15)
     .select('q.id', 'q.current_version_id', 'q.default_marks');

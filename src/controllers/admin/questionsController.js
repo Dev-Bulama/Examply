@@ -12,6 +12,7 @@ const types = require('../../services/questions/types');
 const { sniff } = require('../../services/uploads');
 const { paginate } = require('../../utils/paginate');
 const { notFound, forbidden, badRequest } = require('../../utils/errors');
+const { scopeOrg } = require('../../middleware/workspace');
 
 const crumbs = (...rest) => [{ label: 'Admin', href: '/admin' }, { label: 'Question bank', href: '/admin/questions' }, ...rest];
 const STATUS_BADGE = { draft: 'badge-gray', in_review: 'badge-amber', published: 'badge-green', retired: 'badge-red' };
@@ -50,6 +51,7 @@ async function index(req, res) {
     tag: f.tag,
     author_id: f.mine ? req.user.id : null,
     import_id: f.import,
+    organisation_id: scopeOrg(req),
   };
   const query = repo
     .filteredQuery(filters)
@@ -64,7 +66,7 @@ async function index(req, res) {
   const ids = pager.rows.map((r) => r.id);
   const tagRows = ids.length ? await db()('question_tags as qt').join('tags as t', 't.id', 'qt.tag_id').whereIn('qt.question_id', ids).select('qt.question_id', 't.name', 't.slug') : [];
   for (const r of pager.rows) r.tags = tagRows.filter((t) => t.question_id === r.id);
-  const counts = await db()('questions').whereNull('deleted_at').whereNull('parent_id').groupBy('status').select('status', db().raw('COUNT(*) as n'));
+  const counts = await db()('questions').whereNull('deleted_at').whereNull('parent_id').where((w) => (scopeOrg(req) ? w.where('organisation_id', scopeOrg(req)) : w.whereNull('organisation_id'))).groupBy('status').select('status', db().raw('COUNT(*) as n'));
   const opts = await formOptions();
   res.render('admin/questions/index', {
     title: 'Question bank',
@@ -193,7 +195,7 @@ async function create(req, res) {
   try {
     // Report every problem at once: catalogue/scope errors plus the type's own validation.
     if (errors.length) throw new repo.QuestionError('Invalid', [...errors, ...types.validate(types.normalise(authoring))]);
-    const saved = await repo.saveQuestion({ meta, authoring, tags, user: req.user, status: targetStatus(req, null) });
+    const saved = await repo.saveQuestion({ meta, authoring, tags, user: req.user, status: targetStatus(req, null), organisationId: scopeOrg(req) });
     await audit.record(req, 'question.create', { entityType: 'question', entityId: saved.id, after: { type, status: targetStatus(req, null), ...meta, tags } });
     req.flash('success', `Question #${saved.id} saved${targetStatus(req, null) === 'published' ? ' and published' : targetStatus(req, null) === 'in_review' ? ' and sent for review' : ' as a draft'}.`);
     if (req.body.save_action === 'save_new') return res.redirect(`/admin/questions/new?type=${type}${meta.parent_id ? `&parent=${meta.parent_id}` : ''}&category=${meta.category_id || ''}&certification=${meta.certification_id || ''}`);
@@ -403,7 +405,7 @@ async function bulk(req, res) {
 // ---------------------------------------------------------------- Duplicates
 
 async function duplicates(req, res) {
-  const groups = await repo.duplicateGroups();
+  const groups = await repo.duplicateGroups(undefined, scopeOrg(req));
   res.render('admin/questions/duplicates', { title: 'Duplicate finder', layout: 'layouts/app', groups, TYPES: types.TYPES, STATUS_BADGE, STATUS_LABEL, breadcrumbs: crumbs({ label: 'Duplicates' }) });
 }
 

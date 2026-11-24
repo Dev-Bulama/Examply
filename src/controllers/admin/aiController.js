@@ -1,5 +1,8 @@
 'use strict';
 
+const { scopeOrg } = require('../../middleware/workspace');
+const workspaces = require('../../services/workspaces');
+
 const { db } = require('../../config/db');
 const audit = require('../../services/audit');
 const settings = require('../../services/settings');
@@ -25,8 +28,8 @@ async function newForm(req, res, view = 'admin/ai/new') {
   const [categories, certifications, exams, recent] = await Promise.all([
     catalogue.categoryTree(),
     catalogue.certificationsWithDomains(),
-    db()('exams').whereNull('deleted_at').whereIn('status', ['draft', 'published']).orderBy('title').select('id', 'title', 'status'),
-    db()('ai_generations as g').leftJoin('imports as i', 'i.id', 'g.import_id').orderBy('g.id', 'desc').limit(8).select('g.*', 'i.status as import_status', 'i.id as import_id'),
+    db()('exams').whereNull('deleted_at').where((w) => (scopeOrg(req) ? w.where('organisation_id', scopeOrg(req)) : w.whereNull('organisation_id'))).whereIn('status', ['draft', 'published']).orderBy('title').select('id', 'title', 'status'),
+    db()('ai_generations as g').leftJoin('imports as i', 'i.id', 'g.import_id').where((w) => (scopeOrg(req) ? w.where('g.organisation_id', scopeOrg(req)) : w.whereNull('g.organisation_id'))).orderBy('g.id', 'desc').limit(8).select('g.*', 'i.status as import_status', 'i.id as import_id'),
   ]);
   res.render(view, {
     title: view === 'admin/ai/exam' ? 'Generate an exam with AI' : 'Generate questions with AI',
@@ -37,6 +40,7 @@ async function newForm(req, res, view = 'admin/ai/new') {
     available,
     defaultProvider: settings.getSync('ai.default_provider'),
     maxPerRun: settings.getSync('ai.max_questions_per_run'),
+    aiQuota: scopeOrg(req) ? { limit: Number(req.workspace.limits.ai_questions_per_month) || 0, used: (await workspaces.usage(scopeOrg(req))).aiThisMonth } : null,
     categories,
     certifications,
     certJson: JSON.stringify(certifications.map((c) => ({ id: c.id, domains: c.domains.map((d) => ({ id: d.id, label: `${d.code ? `${d.code} · ` : ''}${d.name}`, weight: Number(d.weight_percent) })) }))),
@@ -78,6 +82,7 @@ async function create(req, res) {
   if (isExam && !examType) errors.exam_type = 'Choose the kind of exam.';
   if (examMode === 'create' && !String(b.exam_title || '').trim()) errors.exam_title = 'Give the new exam a title.';
   if (examMode === 'attach' && !intOrNull(b.exam_id)) errors.exam_id = 'Choose an exam.';
+  else if (examMode === 'attach' && !(await db()('exams').where({ id: intOrNull(b.exam_id), organisation_id: scopeOrg(req) }).whereNull('deleted_at').first('id'))) errors.exam_id = 'Choose one of your exams.';
   if (Object.keys(errors).length) {
     req.setFormState(b, errors);
     req.flash('danger', errors._form || 'Please correct the highlighted fields.');
@@ -103,11 +108,12 @@ async function create(req, res) {
     exam_type: examType,
   };
   try {
-    const { importId } = await generator.startGeneration({ user: req.user, spec });
+    if (scopeOrg(req)) await workspaces.assertWithinLimit(scopeOrg(req), 'ai', spec.count);
+    const { importId } = await generator.startGeneration({ user: req.user, spec, organisationId: scopeOrg(req) });
     await audit.record(req, 'ai.generate', { entityType: 'import', entityId: importId, after: { ...spec, reference: spec.reference ? `${spec.reference.length} chars` : null } });
     return res.redirect(`/admin/imports/${importId}`);
   } catch (err) {
-    if (!(err instanceof providers.AiError)) throw err;
+    if (!(err instanceof providers.AiError) && !(err instanceof workspaces.WorkspaceError)) throw err;
     req.setFormState(b, {});
     req.flash('danger', err.message);
     return res.redirect(back);

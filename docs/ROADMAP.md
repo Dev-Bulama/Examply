@@ -15,7 +15,7 @@ The original 10 phases from `PROMPT.md`, extended with three product requests ma
 | 5. Exam engine, grading, results, certificates | Public catalogue pages, candidate flow, server timer, autosave/offline, proctoring, the §4 grading engine, results, PDF slip, certificates and `/verify`. AI-generated exams issue certificates through the same flow; SQL lab answers graded by result-set comparison | ✅ |
 | **5A. Cyber security labs** | Lab engine, lab question type, exam integration (details below) | |
 | 6. Commerce | Products, packs, bundles, coupons, Paystack and **bank transfer**, entitlements, invoices, **plan subscriptions for companies** (Paystack Plans) | ✅ |
-| 7. Organisations → **company workspaces** | Tenant-scoped bank, exams, labs and AI quota (`organisation_id` columns already exist); workspace admin portal; seats, cohorts, bulk invite, learning-gain reports; plan limits enforced | |
+| 7. Organisations → **company workspaces** | Tenant-scoped bank, exams, labs and AI quota (`organisation_id` columns already exist); workspace admin portal; seats, cohorts, bulk invite, learning-gain reports; plan limits enforced | ✅ |
 | 8. Live quiz | Socket.IO sessions, PIN join, leaderboards, homework mode | |
 | 9. Analytics, notifications, CMS, support | Item analysis, KR-20, dashboards, email templates, announcements, homepage CMS, tickets | |
 | 10. Hardening & delivery | Full test pass, accessibility, performance, security review, 60+ seed questions, documentation | |

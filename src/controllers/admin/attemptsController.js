@@ -10,6 +10,10 @@ const { buildReview } = require('../examController');
 const { paginate } = require('../../utils/paginate');
 const { parseJson } = require('../../utils/json');
 const { notFound } = require('../../utils/errors');
+const { scopeOrg } = require('../../middleware/workspace');
+
+/** Workspace staff see only their workspace's attempts; platform staff see every attempt (support). */
+const orgWhere = (req, col) => (w) => (scopeOrg(req) ? w.where(col, scopeOrg(req)) : w);
 
 const STATUS = { in_progress: ['badge-blue', 'In progress'], submitted: ['badge-gray', 'Submitted'], expired: ['badge-gray', 'Timed out'], graded: ['badge-green', 'Graded'], pending_manual: ['badge-amber', 'Needs grading'] };
 const crumbs = (...rest) => [{ label: 'Admin', href: '/admin' }, { label: 'Attempts', href: '/admin/attempts' }, ...rest];
@@ -21,15 +25,15 @@ async function index(req, res) {
     q: String(req.query.q || '').slice(0, 120),
     integrity: req.query.integrity === 'low',
   };
-  const q = db()('attempts as a').join('users as u', 'u.id', 'a.user_id').join('exams as e', 'e.id', 'a.exam_id').leftJoin('results as r', 'r.attempt_id', 'a.id');
+  const q = db()('attempts as a').join('users as u', 'u.id', 'a.user_id').join('exams as e', 'e.id', 'a.exam_id').leftJoin('results as r', 'r.attempt_id', 'a.id').where(orgWhere(req, 'e.organisation_id'));
   if (f.exam) q.where('a.exam_id', f.exam);
   if (f.status) q.where('a.status', f.status);
   if (f.integrity) q.where('a.integrity_score', '<', 80);
   if (f.q) q.where((w) => w.where('u.email', 'like', `%${f.q.replace(/[%_\\]/g, '\\$&')}%`).orWhere('u.full_name', 'like', `%${f.q.replace(/[%_\\]/g, '\\$&')}%`));
   q.select('a.id', 'a.uuid', 'a.attempt_no', 'a.mode', 'a.status', 'a.started_at', 'a.submitted_at', 'a.integrity_score', 'a.tab_switches', 'a.percent', 'a.passed', 'a.band', 'u.full_name', 'u.email', 'e.title', 'e.id as exam_id', 'r.release_status').orderBy('a.id', 'desc');
   const pager = await paginate(q, { page: req.query.page });
-  const exams = await db()('exams').whereNull('deleted_at').orderBy('title').select('id', 'title');
-  const [{ n: pending }] = await db()('attempt_items').where('grading_status', 'pending_manual').count({ n: '*' });
+  const exams = await db()('exams').whereNull('deleted_at').where(orgWhere(req, 'organisation_id')).orderBy('title').select('id', 'title');
+  const [{ n: pending }] = await db()('attempt_items as ai').join('attempts as a', 'a.id', 'ai.attempt_id').join('exams as e', 'e.id', 'a.exam_id').where('ai.grading_status', 'pending_manual').where(orgWhere(req, 'e.organisation_id')).count({ n: '*' });
   res.render('admin/attempts/index', { title: 'Attempts', layout: 'layouts/app', pager, f, query: req.query, exams, STATUS, pending: Number(pending), breadcrumbs: [{ label: 'Admin', href: '/admin' }, { label: 'Attempts' }] });
 }
 
@@ -152,6 +156,7 @@ async function queue(req, res) {
     .join('question_versions as v', 'v.id', 'ai.question_version_id')
     .leftJoin('question_answers as qa', 'qa.question_version_id', 'v.id')
     .where('ai.grading_status', 'pending_manual')
+    .where(orgWhere(req, 'e.organisation_id'))
     .orderBy('a.submitted_at')
     .select('ai.id', 'ai.attempt_id', 'ai.marks_possible', 'ai.response', 'v.type', 'v.stem_html', 'v.settings', 'qa.answer', 'a.submitted_at', 'u.full_name', 'e.title');
   const pager = await paginate(q, { page: req.query.page, perPage: 10 });

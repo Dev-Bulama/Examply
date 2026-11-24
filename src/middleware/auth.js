@@ -37,6 +37,20 @@ async function loadUser(req, res, next) {
 
     const access = await rbac.loadUserAccess(user.id);
     const roleSlugs = access.roles.map((r) => r.slug);
+    // Company workspace staff (not platform staff) get workspace-scoped permissions; see middleware/workspace.js.
+    req.workspace = null;
+    if (!access.permissions.has('admin.access')) {
+      const ws = require('../services/workspaces');
+      const list = await ws.staffWorkspaces(user.id);
+      const chosen = list.find((w) => w.id === s.workspaceId) || list[0];
+      if (chosen) {
+        req.workspace = ws.contextFor(chosen);
+        req.workspace.all = list.map((w) => ({ id: w.id, name: w.name, role: w.role }));
+        if (req.workspace.active) for (const k of req.workspace.permissions) access.permissions.add(k);
+        else if (chosen.role === 'manager') access.permissions.add('org.manage_own');
+      }
+    }
+    res.locals.workspace = req.workspace;
     req.user = {
       ...user,
       roles: access.roles,

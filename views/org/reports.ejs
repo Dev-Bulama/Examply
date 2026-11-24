@@ -1,0 +1,20 @@
+<div class="mb-6"><h1 class="h1">Reports</h1><p class="mt-1 muted">How your people are doing on your exams.</p></div>
+<section class="card overflow-hidden">
+  <div class="card-body pb-0"><h2 class="h2">Exams</h2></div>
+  <% if (!exams.length) { %><p class="card-body text-sm muted">No exams yet.</p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0 sm:pt-3"><table class="table table-responsive">
+    <thead><tr><th>Exam</th><th>Taken</th><th>Average</th><th>Pass rate</th><th><span class="sr-only">Open</span></th></tr></thead>
+    <tbody><% exams.forEach(function (e) { %>
+      <tr><td data-label="Exam"><%= e.title %> <span class="<%= e.status === 'published' ? 'badge-green' : 'badge-gray' %>"><%= e.status %></span></td><td data-label="Taken"><%= e.taken %></td><td data-label="Average"><%= e.avg === null ? '—' : Number(e.avg) + '%' %></td><td data-label="Pass rate"><%= Number(e.decided) ? Math.round((Number(e.passed) / Number(e.decided)) * 100) + '%' : '—' %></td><td data-label="Open" class="text-right"><a class="btn-secondary btn-sm" href="/admin/attempts?exam=<%= e.id %>">Attempts</a></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</section>
+<section class="card card-body mt-6">
+  <h2 class="h2">Learning gain by cohort</h2>
+  <% if (!gains.length) { %><p class="mt-2 text-sm muted">Assign a pre-training and a post-training exam to a cohort to measure learning gain.</p><% } %>
+  <div class="mt-4 space-y-4"><% gains.forEach(function (g) { %>
+    <div class="rounded-xl border border-slate-200 p-4 dark:border-slate-700"><div class="flex flex-wrap items-center justify-between gap-2"><a class="font-semibold hover:underline" href="/org/cohorts/<%= g.cohort.id %>"><%= g.cohort.name %></a><span class="text-sm"><%= g.gain.avgPre %>% → <%= g.gain.avgPost %>% <strong class="<%= g.gain.avgGain >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600' %>">(<%= g.gain.avgGain >= 0 ? '+' : '' %><%= g.gain.avgGain %> pts)</strong></span></div>
+    <p class="mt-1 text-xs muted"><%= g.gain.pre %> → <%= g.gain.post %> · <%= g.gain.pairs.length %> people</p></div>
+  <% }) %></div>
+</section>

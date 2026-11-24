@@ -22,9 +22,13 @@ const sqlLab = require('../../controllers/admin/sqlLabController');
 const { uploadLimiter, sqlLimiter } = require('../../middleware/rateLimit');
 
 const router = express.Router();
+const workspace = require('../../middleware/workspace');
+router.param('id', workspace.ownsParam);
+router.param('examId', workspace.ownsParam);
+router.param('certId', workspace.ownsParam);
 
 // Every admin route: signed in + admin.access + the specific permission below.
-router.use(requireAuth, can('admin.access'), appNav('admin'));
+router.use(requireAuth, can('admin.access'), workspace.guard, appNav('admin'));
 
 router.get('/', h(dashboard.index));
 

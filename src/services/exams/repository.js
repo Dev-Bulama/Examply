@@ -94,12 +94,10 @@ async function getExam(id, knex = db()) {
   return exam;
 }
 
-/** Scope of questions an exam may use: platform questions, plus the exam's own workspace questions. */
+/** Questions an exam may use: a workspace exam uses only its workspace's questions; a platform exam only platform questions. */
 function scopeQuestions(q, exam) {
-  q.where((w) => {
-    w.whereNull('q.organisation_id');
-    if (exam.organisation_id) w.orWhere('q.organisation_id', exam.organisation_id);
-  });
+  if (exam.organisation_id) q.where('q.organisation_id', exam.organisation_id);
+  else q.whereNull('q.organisation_id');
 }
 
 /**
@@ -255,6 +253,12 @@ async function saveTab(id, tab, input, user, { timezone = 'Africa/Lagos' } = {},
       patch.access_days = intOrNull(i.access_days);
       patch.allow_buy_attempts = bool(i.allow_buy_attempts);
       if (patch.allow_buy_attempts && !(patch.extra_attempt_price_kobo > 0)) add('extra_attempt_price', 'Set the price of an extra attempt.');
+      if (exam.organisation_id) {
+        // Workspace exams are never sold or listed publicly: members only, an invite code (e.g. job applicants) or a private link.
+        if (!['org_private', 'invite_code', 'unlisted'].includes(patch.visibility)) patch.visibility = 'org_private';
+        Object.assign(patch, { is_paid: false, price_kobo: 0, sale_price_kobo: null, allow_buy_attempts: false, extra_attempt_price_kobo: null });
+        errors.splice(0, errors.length, ...errors.filter((x) => !['price', 'extra_attempt_price', 'sale_price'].includes(x.field)));
+      }
       break;
     }
     case 'delivery':

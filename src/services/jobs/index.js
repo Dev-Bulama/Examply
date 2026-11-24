@@ -19,6 +19,7 @@ function registerAll() {
   scheduler.defineTask('cleanup', 60, maintenance.cleanup);
   const attempts = require('../attempts');
   scheduler.defineTask('attempts.sweep', 1, ({ knex }) => attempts.sweepExpired({ knex }));
+  scheduler.defineTask('assignments.remind', 60, ({ knex }) => require('../workspaces').sendDeadlineReminders({ knex }));
   scheduler.defineTask('orders.expire', 60, ({ knex }) => require('../commerce').expireStaleOrders({ knex }));
   scheduler.defineTask('results.release', 15, ({ knex }) => attempts.releaseClosedWindows({ knex }));
 }

@@ -245,7 +245,7 @@ async function expireStaleOrders({ knex = db(), now = new Date() } = {}) {
 
 /** Active company plan for an organisation (used by workspaces). */
 async function activePlanFor(organisationId, knex = db(), now = new Date()) {
-  const sub = await knex('subscriptions as s').join('products as p', 'p.id', 's.product_id').where('s.organisation_id', organisationId).whereIn('s.status', ['active', 'non_renewing']).where((w) => w.whereNull('s.current_period_end').orWhere('s.current_period_end', '>', now)).orderBy('s.id', 'desc').first('s.*', 'p.name', 'p.limits', 'p.slug as product_slug');
+  const sub = await knex('subscriptions as s').join('products as p', 'p.id', 's.product_id').where('s.organisation_id', organisationId).whereIn('s.status', ['active', 'non_renewing']).where((w) => w.whereNull('s.current_period_end').orWhere('s.current_period_end', '>', now)).orderBy('s.id', 'desc').first('s.*', 'p.name', 'p.limits', 'p.slug as product_slug', 'p.price_kobo');
   return sub ? { ...sub, limits: parseJson(sub.limits, {}) } : null;
 }
 

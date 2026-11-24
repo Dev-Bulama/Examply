@@ -1,0 +1,17 @@
+<div class="mb-6"><h1 class="h1">Cohorts</h1><p class="mt-1 muted">Group people (a class, a team, a hiring round), assign exams with due dates, and measure learning gain from a pre-training to a post-training exam.</p></div>
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+  <section class="card overflow-hidden">
+    <% if (!rows.length) { %><p class="p-10 text-center text-sm muted">No cohorts yet.</p><% } else { %>
+    <ul class="divide-y divide-slate-200 dark:divide-slate-800"><% rows.forEach(function (c) { %>
+      <li><a href="/org/cohorts/<%= c.id %>" class="flex items-center justify-between gap-3 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40"><span><span class="font-medium"><%= c.name %></span><span class="block text-sm muted"><%= c.members %> people · <%= c.assignments %> exam<%= c.assignments === 1 ? '' : 's' %><%= c.starts_on ? ' · from ' + fmt.date(c.starts_on) : '' %></span></span><span aria-hidden="true">→</span></a></li>
+    <% }) %></ul>
+    <% } %>
+  </section>
+  <form method="post" action="/org/cohorts" class="card card-body space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2 class="h3">New cohort</h2>
+    <div><label class="label" for="cn">Name</label><input id="cn" name="name" class="input" maxlength="150" required placeholder="e.g. DBA Bootcamp — January 2027"></div>
+    <div class="grid grid-cols-2 gap-3"><div><label class="label" for="cs">Starts</label><input id="cs" name="starts_on" type="date" class="input"></div><div><label class="label" for="ce">Ends</label><input id="ce" name="ends_on" type="date" class="input"></div></div>
+    <button class="btn-primary w-full">Create cohort</button>
+  </form>
+</div>

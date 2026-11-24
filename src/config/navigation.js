@@ -64,6 +64,31 @@ const CANDIDATE_NAV = [
   },
 ];
 
+/** Company workspace staff: their workspace pages plus the content screens (scoped to the workspace). */
+const WORKSPACE_NAV = [
+  {
+    heading: 'Workspace',
+    items: [
+      { label: 'Overview', href: '/org', icon: 'home', exact: true },
+      { label: 'People', href: '/org/members', icon: 'users', any: ['org.manage_own'] },
+      { label: 'Cohorts & assignments', href: '/org/cohorts', icon: 'list', any: ['org.manage_own'] },
+      { label: 'Reports', href: '/org/reports', icon: 'chart', any: ['org.manage_own'] },
+    ],
+  },
+  {
+    heading: 'Content',
+    items: [
+      { label: 'Exams', href: '/admin/exams', icon: 'document', any: ['exams.view'] },
+      { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'] },
+      { label: 'Grading queue', href: '/admin/grading', icon: 'clipboard', any: ['results.manage'] },
+      { label: 'Question bank', href: '/admin/questions', icon: 'clipboard', any: ['questions.view'] },
+      { label: 'AI generator', href: '/admin/ai/new', icon: 'academic', any: ['ai.generate'] },
+      { label: 'Import questions', href: '/admin/imports', icon: 'download', any: ['questions.import'] },
+    ],
+  },
+  { heading: null, items: [{ label: 'My own exams & results', href: '/dashboard', icon: 'user', exact: true }] },
+];
+
 function visible(nav, user) {
   return nav
     .map((section) => ({
@@ -73,4 +98,4 @@ function visible(nav, user) {
     .filter((s) => s.items.length);
 }
 
-module.exports = { ADMIN_NAV, CANDIDATE_NAV, visible };
+module.exports = { ADMIN_NAV, CANDIDATE_NAV, WORKSPACE_NAV, visible };

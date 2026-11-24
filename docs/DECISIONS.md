@@ -111,3 +111,15 @@ Decisions made where `PROMPT.md` leaves room, with the reason. Newest phase at t
 | 78 | **Refunds remove access** (entitlements revoked, purchased attempts removed, subscription cancelled); the money itself is returned in Paystack or by transfer. | Paystack refunds are initiated in its dashboard; we keep access and records consistent. |
 | 79 | **Admin grants** are ₦0 orders with method "admin" and a reason. | Scholarships and support fixes leave the same audit trail as purchases. |
 | 80 | **Invoices and receipts are PDFs** with business name, address, TIN and the VAT portion (prices include VAT). They write "NGN" because the built-in PDF fonts have no ₦ glyph. | Companies need receipts for expense claims. |
+
+## Phase 7 — Company workspaces
+
+| # | Decision | Why |
+|---|---|---|
+| 81 | **A workspace is an organisation with an active company plan.** Its managers and authors use the normal admin screens (question bank, imports, AI generator, exam builder, attempts, grading) in *workspace mode*; managers also get the `/org` portal (people, cohorts, reports, settings). Members are candidates. | One set of screens to maintain; companies get the full builder, including SQL lab questions and AI. |
+| 82 | **Isolation is enforced centrally**: in workspace mode only the content routes are reachable, and every `:id` in them is checked against the workspace before any controller runs (`router.param`). Lists and new content are scoped with `scopeOrg(req)`. A test walks the routes with another tenant's and platform ids and expects 404. | One place to get right, instead of a check in every handler. |
+| 83 | **Platform staff never enter workspace mode**; the platform bank and exam lists show platform content only, while attempts and grading show everything (support). | Keeps the commercial bank separate from tenant content without blinding support. |
+| 84 | **Workspace exams use only workspace questions**, are never public or paid (members only, an invite code — e.g. for job applicants — or a private link), and never appear in the catalogue. | Companies cannot repackage the paid platform bank; their content stays private. |
+| 85 | **Plan limits are enforced where they bite**: candidates and staff seats when inviting (pending invitations count), published exams when publishing, AI questions per month when generating (from `ai_generations`). A lapsed plan keeps all data and the overview but closes the builder. | Clear upgrade moments without losing anyone's work. |
+| 86 | **Joining is always by consent**: invitation links (bound to the invited email, 14-day expiry) or a join code the manager can rotate or turn off. | NDPR — nobody is added to an organisation silently. |
+| 87 | **Cohorts** hold people and assignments (pre-training, post-training or general, with optional due dates). The progress grid uses each person's best released result; learning gain = post − pre for people who took both. Reminders go 48 hours before the due date, once. | Brief §3.10 learning-gain reports. |

@@ -165,7 +165,7 @@ async function validateMeta(meta, knex) {
  *  - Current version has been published → a NEW version is created (past attempts keep theirs).
  * Returns { id, versionId, version, created, newVersion }.
  */
-async function saveQuestion({ id = null, meta, authoring, tags, user, changeNote = null, status = null, importId = null }, knex = db()) {
+async function saveQuestion({ id = null, meta, authoring, tags, user, changeNote = null, status = null, importId = null, organisationId = undefined }, knex = db()) {
   const q = types.normalise(authoring);
   const errors = [...types.validate(q), ...(await validateMeta(meta, knex))];
   if (q.type === 'case_study' && meta.parent_id) errors.push({ field: 'type', message: 'A case study cannot be inside another case study.' });
@@ -206,6 +206,7 @@ async function saveQuestion({ id = null, meta, authoring, tags, user, changeNote
         content_hash: hash,
         author_id: user ? user.id : null,
         import_id: importId,
+        ...(organisationId !== undefined ? { organisation_id: organisationId } : {}),
         version: 1,
       });
       [versionId] = await trx('question_versions').insert({ ...versionRow, question_id: questionId, version_no: 1, created_by: user ? user.id : null, change_note: changeNote });
@@ -307,6 +308,9 @@ async function transition(id, action, user, { note = null } = {}, knex = db()) {
 function filteredQuery(filters, knex = db()) {
   const q = knex('questions as q').whereNull('q.deleted_at');
   const f = filters || {};
+  // Tenant scope: undefined = no filter (internal use); null = platform content; number = that workspace.
+  if (f.organisation_id === null) q.whereNull('q.organisation_id');
+  else if (f.organisation_id !== undefined) q.where('q.organisation_id', f.organisation_id);
   if (f.parent_id) q.where('q.parent_id', f.parent_id);
   else if (!f.include_children) q.whereNull('q.parent_id');
   if (f.q) {
@@ -338,12 +342,13 @@ function filteredQuery(filters, knex = db()) {
 }
 
 /** Groups of questions with identical content hashes. */
-async function duplicateGroups(knex = db()) {
-  const hashes = await knex('questions').whereNull('deleted_at').whereNotNull('content_hash').groupBy('content_hash').havingRaw('COUNT(*) > 1').orderByRaw('COUNT(*) DESC').limit(200).select('content_hash', knex.raw('COUNT(*) as n'));
+async function duplicateGroups(knex = db(), organisationId = null) {
+  const hashes = await knex('questions').whereNull('deleted_at').where((w) => (organisationId ? w.where('organisation_id', organisationId) : w.whereNull('organisation_id'))).whereNotNull('content_hash').groupBy('content_hash').havingRaw('COUNT(*) > 1').orderByRaw('COUNT(*) DESC').limit(200).select('content_hash', knex.raw('COUNT(*) as n'));
   if (!hashes.length) return [];
   const rows = await knex('questions as q')
     .leftJoin('categories as c', 'c.id', 'q.category_id')
     .whereNull('q.deleted_at')
+    .where((w) => (organisationId ? w.where('q.organisation_id', organisationId) : w.whereNull('q.organisation_id')))
     .whereIn(
       'q.content_hash',
       hashes.map((h) => h.content_hash),

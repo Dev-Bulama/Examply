@@ -1,0 +1,60 @@
+<%
+  const KIND = { pre: 'Pre-training', post: 'Post-training', general: 'Assessment' };
+  const inCohort = p.members.map(function (m) { return m.id; });
+%>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div><h1 class="h1"><%= p.cohort.name %></h1><p class="mt-1 muted"><%= p.members.length %> people · <%= p.assignments.length %> assigned exam<%= p.assignments.length === 1 ? '' : 's' %></p></div>
+  <a class="btn-secondary" href="/org/cohorts/<%= p.cohort.id %>/export.csv">Export CSV</a>
+</div>
+
+<% if (p.gain) { %>
+<section class="card card-body mb-6">
+  <h2 class="h2">Learning gain</h2>
+  <p class="mt-1 text-sm muted"><%= p.gain.pre %> → <%= p.gain.post %>, for <%= p.gain.pairs.length %> people who took both</p>
+  <% if (p.gain.pairs.length) { %>
+  <div class="mt-4 grid gap-4 sm:grid-cols-3 text-center">
+    <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"><p class="text-sm muted">Average before</p><p class="text-3xl font-bold"><%= p.gain.avgPre %>%</p></div>
+    <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60"><p class="text-sm muted">Average after</p><p class="text-3xl font-bold"><%= p.gain.avgPost %>%</p></div>
+    <div class="rounded-xl bg-emerald-50 p-4 dark:bg-emerald-950/40"><p class="text-sm muted">Average gain</p><p class="text-3xl font-bold <%= p.gain.avgGain >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600' %>"><%= p.gain.avgGain >= 0 ? '+' : '' %><%= p.gain.avgGain %> pts</p></div>
+  </div>
+  <% } %>
+</section>
+<% } %>
+
+<section class="card mb-6 overflow-hidden">
+  <div class="card-body pb-0"><h2 class="h2">Progress</h2></div>
+  <% if (!p.members.length || !p.assignments.length) { %><p class="card-body text-sm muted">Add people and assign an exam to see progress here.</p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0 sm:pt-3"><table class="table">
+    <thead><tr><th>Person</th><% p.assignments.forEach(function (a) { %><th class="text-center"><span class="block"><%= a.title %></span><span class="text-xs font-normal normal-case muted"><%= KIND[a.kind] %><%= a.due_at ? ' · due ' + fmt.date(a.due_at) : '' %></span></th><% }) %></tr></thead>
+    <tbody><% p.grid.forEach(function (g) { %>
+      <tr><td><p class="font-medium"><%= g.full_name %></p><p class="text-xs muted"><%= g.email %></p></td>
+      <% g.cells.forEach(function (c) { %><td class="text-center text-sm"><% if (c.status === 'done') { %><span class="font-semibold <%= c.passed === false ? 'text-red-600' : c.passed ? 'text-emerald-700 dark:text-emerald-400' : '' %>"><%= c.percent %>%</span><span class="block text-xs muted"><%= c.passed === null ? (c.band || '') : c.passed ? 'pass' : 'fail' %></span><% } else if (c.status === 'in_progress') { %><span class="badge-blue">In progress</span><% } else { %><span class="muted">—</span><% } %></td><% }) %></tr>
+    <% }) %></tbody>
+    <tfoot><tr><td class="text-sm font-semibold">Completed</td><% p.completion.forEach(function (c) { %><td class="text-center text-sm"><%= c.done %>/<%= c.of %><span class="block text-xs muted"><%= c.avg === null ? '' : 'avg ' + c.avg + '%' %></span></td><% }) %></tr></tfoot>
+  </table></div>
+  <% } %>
+</section>
+
+<div class="grid gap-6 lg:grid-cols-2">
+  <form method="post" action="/org/cohorts/<%= p.cohort.id %>/assign" class="card card-body space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2 class="h2">Assign an exam</h2>
+    <div><label class="label" for="ex">Exam</label><select id="ex" name="exam_id" class="input" required><% exams.forEach(function (e) { %><option value="<%= e.id %>"><%= e.organisation_id ? '' : '[Platform] ' %><%= e.title %></option><% }) %></select><% if (!exams.length) { %><p class="hint">Publish an exam first.</p><% } %></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="label" for="kd">Purpose</label><select id="kd" name="kind" class="input"><option value="general">Assessment</option><option value="pre">Pre-training (baseline)</option><option value="post">Post-training</option></select></div>
+      <div><label class="label" for="du">Due</label><input id="du" name="due_at" type="datetime-local" class="input"></div>
+    </div>
+    <p class="text-xs muted">Platform exams that are paid still need to be bought by each person. Members get a reminder 48 hours before the due date.</p>
+    <button class="btn-primary">Assign</button>
+    <% if (p.assignments.length) { %>
+    <ul class="divide-y divide-slate-200 border-t border-slate-200 pt-2 text-sm dark:divide-slate-800 dark:border-slate-800"><% p.assignments.forEach(function (a) { %><li class="flex items-center justify-between gap-2 py-2"><span><%= a.title %> <span class="muted">· <%= KIND[a.kind] %><%= a.due_at ? ' · due ' + fmt.dateTime(a.due_at) : '' %></span></span><button form="ua-<%= a.id %>" class="btn-ghost btn-sm text-red-600">Remove</button></li><% }) %></ul>
+    <% } %>
+  </form>
+  <% p.assignments.forEach(function (a) { %><form id="ua-<%= a.id %>" method="post" action="/org/cohorts/<%= p.cohort.id %>/assignments/<%= a.id %>/delete" class="hidden"><input type="hidden" name="_csrf" value="<%= csrfToken %>"></form><% }) %>
+  <form method="post" action="/org/cohorts/<%= p.cohort.id %>/members" class="card card-body" x-data="bulkSelect" data-box="user_ids">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="flex items-center justify-between"><h2 class="h2">People in this cohort</h2><label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" @change="toggleAll" :checked="allChecked()"> All</label></div>
+    <div class="mt-3 max-h-80 space-y-1 overflow-y-auto"><% people.forEach(function (m) { %><label class="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/40"><input type="checkbox" name="user_ids" value="<%= m.id %>" class="checkbox" @change="sync" <%= inCohort.includes(m.id) ? 'checked' : '' %>> <span class="flex-1"><%= m.full_name %> <span class="muted">· <%= m.email %></span></span><% if (m.role !== 'member') { %><span class="badge-gray"><%= m.role %></span><% } %></label><% }) %></div>
+    <div class="mt-4 flex justify-end"><button class="btn-primary">Save people</button></div>
+  </form>
+</div>

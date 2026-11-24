@@ -39,7 +39,9 @@ router.get(
       .limit(6)
       .select('a.uuid', 'a.status', 'a.mode', 'a.attempt_no', 'a.started_at', 'a.expires_at', 'e.title', 'r.percent', 'r.passed', 'r.band', 'r.release_status', 'r.has_pending_manual');
     const suggested = await db()('exams').where({ status: 'published', visibility: 'public' }).whereNull('deleted_at').whereNull('organisation_id').orderBy('published_at', 'desc').limit(3).select('slug', 'title', 'type', 'duration_minutes', 'is_paid');
+    const assigned = await require('../services/workspaces').assignmentsFor(u.id);
     res.render('candidate/dashboard', {
+      assigned,
       recent,
       suggested,
       title: 'Dashboard',

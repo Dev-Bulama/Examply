@@ -14,6 +14,8 @@ const { utcToLocalInput, formatDateTime } = require('../../utils/time');
 const { toMajor } = require('../../utils/money');
 const { notFound } = require('../../utils/errors');
 const { wantsJson } = require('../../middleware/auth');
+const { scopeOrg } = require('../../middleware/workspace');
+const workspaces = require('../../services/workspaces');
 
 const intOrNull = (v) => (v === undefined || v === null || v === '' || !/^\d+$/.test(String(v)) ? null : Number(v));
 const STATUS_BADGE = { draft: 'badge-gray', published: 'badge-green', archived: 'badge-red' };
@@ -36,6 +38,10 @@ const crumbs = (...rest) => [{ label: 'Admin', href: '/admin' }, { label: 'Exams
 
 /** Sends ExamError details back as JSON (autosave) or as a flash + redirect. */
 function handleError(req, res, err, back) {
+  if (err instanceof workspaces.WorkspaceError) {
+    req.flash('danger', err.message);
+    return res.redirect(back);
+  }
   if (!(err instanceof repo.ExamError)) throw err;
   if (err.status === 404) throw notFound(err.message);
   if (wantsJson(req)) return res.status(err.status).json({ ok: false, error: err.message, errors: err.errors });
@@ -60,6 +66,7 @@ async function index(req, res) {
     q: String(req.query.q || '').slice(0, 200),
     type: repo.EXAM_TYPES[req.query.type] ? req.query.type : '',
     status: STATUS_BADGE[req.query.status] ? req.query.status : '',
+    organisation_id: scopeOrg(req),
   };
   const query = repo
     .listQuery(f)
@@ -73,7 +80,7 @@ async function index(req, res) {
     )
     .orderBy('e.updated_at', 'desc');
   const pager = await paginate(query, { page: req.query.page });
-  const counts = await db()('exams').whereNull('deleted_at').groupBy('status').select('status', db().raw('COUNT(*) as n'));
+  const counts = await db()('exams').whereNull('deleted_at').where((w) => (scopeOrg(req) ? w.where('organisation_id', scopeOrg(req)) : w.whereNull('organisation_id'))).groupBy('status').select('status', db().raw('COUNT(*) as n'));
   res.render('admin/exams/index', {
     title: 'Exams',
     layout: 'layouts/app',
@@ -91,7 +98,7 @@ async function index(req, res) {
 
 async function create(req, res) {
   try {
-    const id = await repo.createExam({ ...req.body, user: req.user });
+    const id = await repo.createExam({ ...req.body, organisation_id: scopeOrg(req), user: req.user });
     await audit.record(req, 'exam.create', { entityType: 'exam', entityId: id, after: { title: req.body.title, type: req.body.type } });
     req.flash('success', 'Exam created. Work through the tabs, then publish when the checklist is green.');
     return res.redirect(`/admin/exams/${id}/content`);
@@ -151,10 +158,7 @@ async function builder(req, res) {
     if (full.exam.content_mode === 'fixed') {
       const query = questionRepo
         .filteredQuery({ q: b.q, type: b.type, status: b.status, certification_id: b.certification, category_ids: b.category ? await catalogue.descendantIds(b.category) : null })
-        .where((w) => {
-          w.whereNull('q.organisation_id');
-          if (full.exam.organisation_id) w.orWhere('q.organisation_id', full.exam.organisation_id);
-        })
+        .where((w) => (full.exam.organisation_id ? w.where('q.organisation_id', full.exam.organisation_id) : w.whereNull('q.organisation_id')))
         .whereNotIn('q.id', full.items.map((i) => i.question_id).concat([0]))
         .leftJoin('certification_domains as d', 'd.id', 'q.domain_id')
         .select('q.id', 'q.type', 'q.status', 'q.stem_text', 'q.difficulty', 'q.default_marks', 'd.code as domain_code', 'd.name as domain_name')
@@ -166,8 +170,8 @@ async function builder(req, res) {
   if (tab === 'scoring') data.programmes = await db()('training_programmes').orderBy('name').select('id', 'name');
   if (tab === 'attempts') {
     data.overrides = await repo.listOverrides(id);
-    data.organisations = await db()('organisations').orderBy('name').limit(500).select('id', 'name');
-    data.otherExams = await db()('exams').whereNull('deleted_at').whereNot({ id }).orderBy('title').select('id', 'title');
+    data.organisations = await db()('organisations').where((w) => (scopeOrg(req) ? w.where('id', scopeOrg(req)) : w)).orderBy('name').limit(500).select('id', 'name');
+    data.otherExams = await db()('exams').whereNull('deleted_at').where((w) => (scopeOrg(req) ? w.where('organisation_id', scopeOrg(req)) : w.whereNull('organisation_id'))).whereNot({ id }).orderBy('title').select('id', 'title');
   }
   if (tab === 'instructions') {
     const sample = { full_name: req.user.full_name, accommodations: req.query.extra ? { extra_time_percent: 25 } : null };
@@ -344,6 +348,8 @@ async function grantAttempts(req, res) {
 async function publish(req, res) {
   const id = Number(req.params.id);
   try {
+    const current = await repo.getExam(id);
+    if (current.organisation_id && current.status !== 'published') await workspaces.assertWithinLimit(current.organisation_id, 'exams', 1);
     const v = await repo.publish(id, req.user, req.body.note);
     await audit.record(req, 'exam.publish', { entityType: 'exam', entityId: id, after: { version: v, note: req.body.note || null } });
     req.flash('success', `Published as version ${v}. Candidates now get this version; attempts already in progress keep theirs.`);

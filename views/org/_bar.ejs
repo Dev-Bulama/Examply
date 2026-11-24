@@ -1,0 +1,5 @@
+<% const lim = (limit === null || limit === undefined || limit === '' || Number(limit) <= 0) ? null : Number(limit); const pct = lim ? Math.min(100, Math.round((used / lim) * 100)) : 0; %>
+<div>
+  <div class="flex justify-between text-sm"><span><%= label %></span><span class="font-semibold"><%= used %><span class="font-normal muted"> / <%= lim === null ? (zeroMeansNone && Number(limit) === 0 ? 'not included' : 'unlimited') : lim %></span></span></div>
+  <div class="mt-1.5 h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div class="h-2 rounded-full <%= pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-primary-600' %>" style="width:<%= lim === null ? 0 : pct %>%"></div></div>
+</div>

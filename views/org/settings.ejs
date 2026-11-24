@@ -1,0 +1,8 @@
+<div class="mb-6"><h1 class="h1">Workspace settings</h1></div>
+<form method="post" action="/org/settings" class="card card-body grid max-w-2xl gap-5" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <%- include('../partials/field', { name: 'name', label: 'Company name', value: org.name, required: true, maxlength: 150, hint: 'Shown to your people and on certificates for your exams.' }) %>
+  <%- include('../partials/field', { name: 'contact_email', label: 'Contact email', type: 'email', value: org.contact_email }) %>
+  <% if (w.limits.custom_branding) { %><%- include('../partials/field', { name: 'primary_color', label: 'Brand colour', value: org.primary_color, placeholder: '#1f4fd1', hint: 'Used on certificates for your exams.' }) %><% } else { %><p class="text-sm muted">Custom branding is available on higher plans.</p><% } %>
+  <div class="flex justify-end"><button class="btn-primary">Save</button></div>
+</form>

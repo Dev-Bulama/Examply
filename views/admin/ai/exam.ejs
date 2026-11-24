@@ -6,6 +6,7 @@
   <a href="/admin/ai/new" class="btn-secondary">Questions only</a>
 </div>
 
+<% if (aiQuota) { %><div class="alert-info mb-6"><p>Your plan includes <strong><%= aiQuota.limit %></strong> AI-generated questions a month. <strong><%= Math.max(0, aiQuota.limit - aiQuota.used) %></strong> remain this month.</p></div><% } %>
 <% if (!enabled || !available.length) { %>
   <div class="card card-body flex flex-col items-start gap-3">
     <h2 class="h2">Connect an AI provider first</h2>
