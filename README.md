@@ -11,8 +11,8 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 | Phase | Scope | Status |
 |---|---|---|
 | 1. Foundation | Config/env validation, all migrations, logging, errors, sessions, security, layouts, Tailwind, installer, auth (register, verify, login, 2FA, reset, Google), RBAC, admin and candidate shells | ✅ Done |
-| 2. Catalogue & question bank | | Next |
-| 3. Import / export | | |
+| 2. Catalogue & question bank | Hierarchical categories, certifications with weighted domains, training programmes with per-band courses; 11 question types with a rich editor, candidate preview (KaTeX, code highlighting), versioning, review workflow, tags, bulk actions, duplicate finder, report inbox, private image uploads | ✅ Done |
+| 3. Import / export | | Next |
 | 4. Exam builder + instruction generator | | |
 | 5. Exam engine, grading, results, certificates | | |
 | 6. Commerce (Paystack + bank transfer) | | |
@@ -47,6 +47,13 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
   - Rotating file logs in `storage/logs`.
   - Light and dark themes.
   - Mobile-first layouts: the sidebar becomes a drawer and tables become cards.
+
+## Phase 2 highlights
+
+- **Question types**: single choice, multiple response (optionally "select exactly N"), true/false, fill in the blank (several accepted variants, case and spacing options), numeric (± tolerance, units), matching (with distractors), ordering, hotspot (draw labelled regions on an image), short answer (weighted keywords and a threshold), essay (word limits and a marking guide), and case study (a scenario with child questions).
+- **Versioning**: editing a question that has been live creates a new version; past attempts keep theirs. Every version can be viewed.
+- **Workflow**: Draft → In review → Published → Retired. Authors are limited to their assigned categories; sending a question back requires a note.
+- **Sample content**: `npm run seed` loads 13 categories, 3 certifications with weighted domains, a training programme and 25 original questions covering every type.
 
 ## Requirements
 

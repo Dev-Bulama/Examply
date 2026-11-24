@@ -24,9 +24,9 @@ function adminRoutes() {
     .map((r) => ({
       ...r,
       url: r.path
-        .replace(/:id\(\\\\d\+\)/g, '1')
-        .replace(/:id\(\\d\+\)/g, '1')
-        .replace(/:action\([^)]*\)/, 'verify-email')
+        .replace(/:[a-z_]+\(\\\\d\+\)/g, '1')
+        .replace(/:[a-z_]+\(\\d\+\)/g, '1')
+        .replace(/:([a-z_]+)\(([a-z_-]+)[|)][^)]*\)?/g, '$2')
         .replace(/:section/, 'general')
         .replace(/:key/, 'general.logo_path'),
     }));

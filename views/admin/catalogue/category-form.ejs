@@ -1,0 +1,36 @@
+<div class="mx-auto max-w-3xl">
+  <h1 class="h1"><%= category.id ? `Edit ${category.name}` : 'New category' %></h1>
+  <form method="post" action="<%= category.id ? `/admin/catalogue/categories/${category.id}` : '/admin/catalogue/categories' %>?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="card mt-6" novalidate>
+    <div class="card-body grid gap-5 sm:grid-cols-2">
+      <%- include('../../partials/field', { name: 'name', label: 'Name', value: category.name, required: true, maxlength: 150 }) %>
+      <%- include('../../partials/field', { name: 'slug', label: 'URL slug', value: category.slug, maxlength: 160, hint: 'Leave blank to generate from the name.' }) %>
+      <%- include('../../partials/field', { name: 'parent_id', label: 'Parent category', type: 'select', value: category.parent_id || '', options: [{ value: '', label: '— None (top level) —' }].concat(parents.map(function (p) { return { value: p.id, label: p.path }; })) }) %>
+      <%- include('../../partials/field', { name: 'display_order', label: 'Display order', type: 'number', value: category.display_order, min: -9999, max: 9999, hint: 'Lower numbers appear first.' }) %>
+      <%- include('../../partials/field', { name: 'description', label: 'Description', type: 'textarea', rows: 3, value: category.description, maxlength: 2000, wrapperClass: 'sm:col-span-2' }) %>
+      <fieldset class="sm:col-span-2">
+        <legend class="label">Icon</legend>
+        <div class="flex flex-wrap gap-2">
+          <% icons.forEach(function (ic) { %>
+          <label class="cursor-pointer">
+            <input type="radio" name="icon" value="<%= ic %>" class="peer sr-only" <%= (old.icon || category.icon) === ic ? 'checked' : '' %>>
+            <span class="grid h-11 w-11 place-items-center rounded-lg border border-slate-200 text-slate-600 peer-checked:border-primary-600 peer-checked:bg-primary-50 peer-checked:text-primary-700 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500 dark:border-slate-700 dark:text-slate-300 dark:peer-checked:bg-primary-950 dark:peer-checked:text-primary-200" title="<%= ic %>"><%- include('../../partials/icon', { name: ic }) %><span class="sr-only"><%= ic %></span></span>
+          </label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <div class="sm:col-span-2">
+        <label class="label" for="image">Image (optional)</label>
+        <div class="flex items-center gap-4">
+          <% if (category.image_path) { %><img src="/media/branding/<%= category.image_path %>" alt="" class="h-12 w-12 rounded-lg object-cover"><% } %>
+          <input id="image" type="file" name="image" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-800 dark:file:bg-slate-800 dark:file:text-slate-100">
+        </div>
+        <p class="hint">Used on catalogue cards. PNG, JPG, WebP or SVG up to 1 MB. Replaces the icon when set.</p>
+      </div>
+      <%- include('../../partials/field', { name: 'is_active', label: 'Active (visible in the public catalogue)', type: 'checkbox', value: category.is_active, wrapperClass: 'sm:col-span-2' }) %>
+    </div>
+    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4 dark:border-slate-800">
+      <a href="/admin/catalogue/categories" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary" data-loading-text="Saving…">Save category</button>
+    </div>
+  </form>
+</div>

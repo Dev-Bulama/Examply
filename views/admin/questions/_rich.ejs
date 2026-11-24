@@ -1,0 +1,36 @@
+<%
+/* Rich-text field. Locals: name, label, value, hint, blanks (bool: show "Insert blank"), minHeight, required */
+const fid = `rt-${name}`;
+const err = (typeof errorMap !== 'undefined' && errorMap[name]) || null;
+%>
+<div x-data="richEditor" data-name="<%= name %>" data-upload="/admin/questions/media" class="rich-editor">
+  <label class="label" :for="'<%= fid %>'" id="<%= fid %>-label" @click="focus"><%= label %><% if (locals.required) { %> <span class="text-red-600" aria-hidden="true">*</span><% } %></label>
+  <div class="overflow-hidden rounded-lg border <%= err ? 'border-red-500' : 'border-slate-300 dark:border-slate-700' %> bg-white focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500 dark:bg-slate-900">
+    <div class="flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-slate-50 px-1.5 py-1 dark:border-slate-700 dark:bg-slate-800/60" role="toolbar" aria-label="<%= label %> formatting" x-show="!source">
+      <% [['bold','B','Bold (Ctrl+B)','font-bold'],['italic','I','Italic (Ctrl+I)','italic'],['underline','U','Underline','underline'],['superscript','x²','Superscript',''],['subscript','x₂','Subscript','']].forEach(function (b) { %>
+        <button type="button" class="rounded px-2 py-1 text-sm <%= b[3] %> hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="cmd('<%= b[0] %>')" title="<%= b[2] %>" aria-label="<%= b[2] %>"><%= b[1] %></button>
+      <% }) %>
+      <span class="mx-1 h-5 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true"></span>
+      <button type="button" class="rounded px-2 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="cmd('insertUnorderedList')" title="Bulleted list" aria-label="Bulleted list">• List</button>
+      <button type="button" class="rounded px-2 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="cmd('insertOrderedList')" title="Numbered list" aria-label="Numbered list">1. List</button>
+      <button type="button" class="rounded px-2 py-1 font-mono text-xs hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="inlineCode" title="Inline code" aria-label="Inline code">&lt;/&gt;</button>
+      <button type="button" class="rounded px-2 py-1 font-mono text-xs hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="codeBlock" title="Code block" aria-label="Code block">{ }</button>
+      <button type="button" class="rounded px-2 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="math" title="Maths (LaTeX)" aria-label="Insert maths">∑</button>
+      <button type="button" class="rounded px-2 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="table" title="Insert table" aria-label="Insert table">▦</button>
+      <button type="button" class="rounded px-2 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="link" title="Link" aria-label="Insert link">🔗</button>
+      <label class="cursor-pointer rounded px-2 py-1 text-sm hover:bg-slate-200 dark:hover:bg-slate-700" title="Insert image"><span aria-hidden="true">🖼</span><span class="sr-only">Insert image</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="sr-only" @change="image"></label>
+      <% if (locals.blanks) { %><button type="button" class="ml-1 rounded bg-primary-50 px-2 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-950 dark:text-primary-200" @mousedown.prevent @click="blank" title="Insert the next blank, e.g. [[1]]">+ Blank</button><% } %>
+      <button type="button" class="rounded px-2 py-1 text-xs hover:bg-slate-200 dark:hover:bg-slate-700" @mousedown.prevent @click="cmd('removeFormat')" title="Clear formatting" aria-label="Clear formatting">Tx</button>
+      <span class="flex-1"></span>
+      <span class="px-1 text-xs muted" x-show="uploading" x-cloak>Uploading…</span>
+    </div>
+    <div id="<%= fid %>" x-ref="area" x-show="!source" contenteditable="true" role="textbox" aria-multiline="true" aria-labelledby="<%= fid %>-label" <% if (locals.hint) { %>aria-describedby="<%= fid %>-hint"<% } %> class="q-content prose-content max-w-none px-3 py-2.5 text-sm outline-none <%= locals.minHeight || 'min-h-[7rem]' %>" @input="sync" @blur="sync" @paste="paste"></div>
+    <textarea x-ref="src" x-show="source" x-cloak class="block w-full border-0 bg-slate-900 px-3 py-2.5 font-mono text-xs text-slate-100 focus:ring-0 <%= locals.minHeight || 'min-h-[7rem]' %>" @input="fromSource" aria-label="<%= label %> HTML source"></textarea>
+    <textarea name="<%= name %>" x-ref="field" class="hidden" aria-hidden="true" tabindex="-1"><%= locals.value || '' %></textarea>
+  </div>
+  <div class="mt-1 flex items-center justify-between gap-2">
+    <% if (locals.hint) { %><p id="<%= fid %>-hint" class="hint mt-0"><%= hint %></p><% } else { %><span></span><% } %>
+    <button type="button" class="shrink-0 text-xs link" @click="toggleSource" x-text="source ? 'Visual editor' : 'Edit HTML'">Edit HTML</button>
+  </div>
+  <% if (err) { %><p class="field-error"><%= err %></p><% } %>
+</div>

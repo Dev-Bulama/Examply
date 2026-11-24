@@ -1,0 +1,60 @@
+<div class="mx-auto max-w-4xl">
+  <h1 class="h1"><%= cert.id ? `Edit ${cert.name}` : 'New certification' %></h1>
+  <form method="post" action="<%= cert.id ? `/admin/catalogue/certifications/${cert.id}` : '/admin/catalogue/certifications' %>" class="mt-6 space-y-6" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <section class="card card-body grid gap-5 sm:grid-cols-2">
+      <h2 class="h2 sm:col-span-2">Details</h2>
+      <%- include('../../partials/field', { name: 'name', label: 'Name', value: cert.name, required: true, maxlength: 180, wrapperClass: 'sm:col-span-2', placeholder: 'Oracle Database Administration I' }) %>
+      <%- include('../../partials/field', { name: 'category_id', label: 'Category', type: 'select', required: true, value: cert.category_id || '', options: [{ value: '', label: 'Choose…' }].concat(categories.map(function (c) { return { value: c.id, label: c.path }; })) }) %>
+      <%- include('../../partials/field', { name: 'issuing_body', label: 'Issuing body', value: cert.issuing_body, maxlength: 150, placeholder: 'Oracle University' }) %>
+      <%- include('../../partials/field', { name: 'exam_code', label: 'Exam code', value: cert.exam_code, maxlength: 60, placeholder: '1Z0-082' }) %>
+      <%- include('../../partials/field', { name: 'external_url', label: 'Official page', type: 'url', value: cert.external_url, placeholder: 'https://…' }) %>
+      <%- include('../../partials/field', { name: 'description', label: 'Description', type: 'textarea', rows: 3, value: cert.description, maxlength: 5000, wrapperClass: 'sm:col-span-2' }) %>
+    </section>
+    <section class="card card-body grid gap-5 sm:grid-cols-4">
+      <h2 class="h2 sm:col-span-4">Official exam format</h2>
+      <%- include('../../partials/field', { name: 'official_passing_score', label: 'Passing score', type: 'number', value: cert.official_passing_score, step: 'any', min: 0 }) %>
+      <%- include('../../partials/field', { name: 'official_score_scale', label: 'Scale', value: cert.official_score_scale, maxlength: 40, hint: '“%” or e.g. “100–1000”' }) %>
+      <%- include('../../partials/field', { name: 'official_duration_minutes', label: 'Duration (minutes)', type: 'number', value: cert.official_duration_minutes, min: 1, max: 1440 }) %>
+      <%- include('../../partials/field', { name: 'official_question_count', label: 'Number of questions', type: 'number', value: cert.official_question_count, min: 1, max: 2000 }) %>
+    </section>
+    <section class="card" x-data="domainEditor" data-domains="<%= domainsJson %>">
+      <div class="card-body">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 class="h2">Domains / objectives</h2>
+            <p class="mt-1 text-sm muted">Questions are tagged with a domain; results show a breakdown per domain. Weights should total 100%.</p>
+          </div>
+          <p class="text-sm font-semibold" :class="totalClass()" aria-live="polite">Total: <span x-text="total()"></span>%</p>
+        </div>
+        <% if (errors.domains) { %><p class="field-error"><%= errors.domains %></p><% } %>
+        <div class="mt-5 space-y-3">
+          <template x-for="(d, i) in rows" :key="d.uid">
+            <div class="grid grid-cols-12 items-start gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <input type="hidden" :name="'domains[' + (i) + '][id]'" :value="d.id || ''">
+              <div class="col-span-3 sm:col-span-2"><label class="sr-only" :for="'dc-' + (i)">Code</label><input :id="'dc-' + (i)" class="input" :name="'domains[' + (i) + '][code]'" x-model="d.code" placeholder="Code" maxlength="30"></div>
+              <div class="col-span-9 sm:col-span-6"><label class="sr-only" :for="'dn-' + (i)">Name</label><input :id="'dn-' + (i)" class="input" :name="'domains[' + (i) + '][name]'" x-model="d.name" placeholder="Domain name" maxlength="200" required></div>
+              <div class="col-span-6 sm:col-span-2"><label class="sr-only" :for="'dw-' + (i)">Weight %</label><div class="relative"><input :id="'dw-' + (i)" class="input pr-7" type="number" step="0.5" min="0" max="100" :name="'domains[' + (i) + '][weight]'" x-model.number="d.weight"><span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm muted">%</span></div></div>
+              <div class="col-span-6 flex items-center justify-end gap-1 sm:col-span-2">
+                <button type="button" class="btn-ghost btn-sm px-2" @click="up(i)" :disabled="i === 0" aria-label="Move up">↑</button>
+                <button type="button" class="btn-ghost btn-sm px-2" @click="down(i)" :disabled="i === rows.length - 1" aria-label="Move down">↓</button>
+                <button type="button" class="btn-ghost btn-sm px-2 text-red-600" @click="remove(i)" aria-label="Remove domain"><%- include('../../partials/icon', { name: 'trash', cls: 'h-4 w-4' }) %></button>
+              </div>
+              <p class="col-span-12 text-xs text-amber-700 dark:text-amber-400" x-show="d.questions > 0" x-cloak>Used by <span x-text="d.questions"></span> question(s). Removing it keeps the questions but clears their domain.</p>
+            </div>
+          </template>
+          <p class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm muted dark:border-slate-700" x-show="!rows.length">No domains yet.</p>
+        </div>
+        <button type="button" class="btn-secondary btn-sm mt-4" @click="add"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> Add domain</button>
+      </div>
+    </section>
+    <section class="card card-body grid gap-5 sm:grid-cols-2">
+      <%- include('../../partials/field', { name: 'display_order', label: 'Display order', type: 'number', value: cert.display_order, min: -9999, max: 9999 }) %>
+      <div class="flex items-end"><%- include('../../partials/field', { name: 'is_active', label: 'Active (visible in the catalogue)', type: 'checkbox', value: cert.is_active }) %></div>
+    </section>
+    <div class="flex justify-end gap-3">
+      <a href="/admin/catalogue/certifications" class="btn-secondary">Cancel</a>
+      <button type="submit" class="btn-primary" data-loading-text="Saving…">Save certification</button>
+    </div>
+  </form>
+</div>

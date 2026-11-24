@@ -61,6 +61,23 @@
       </fieldset>
     </form>
 
+    <% if (isAuthor) { %>
+    <form id="authoring" method="post" action="/admin/users/<%= target.id %>/author-categories" class="card">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <fieldset class="card-body" <%= can('users.manage') ? '' : 'disabled' %>>
+        <legend class="h2">Authoring categories</legend>
+        <p class="mt-1 text-sm muted">This Question Author can create and edit questions only in the ticked categories (and their sub-categories).</p>
+        <% if (!categoryTree.length) { %><p class="mt-4 text-sm muted">No categories exist yet. <a class="link" href="/admin/catalogue/categories/new">Create one</a>.</p><% } %>
+        <div class="mt-4 grid gap-1.5 sm:grid-cols-2">
+          <% categoryTree.forEach(function (c) { %>
+          <label class="flex items-center gap-2 text-sm <%= ['', 'pl-5', 'pl-10', 'pl-14'][Math.min(c.depth, 3)] %>"><input type="checkbox" name="category_ids" value="<%= c.id %>" class="checkbox" <%= authorCategories.includes(c.id) ? 'checked' : '' %>> <%= c.name %></label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <% if (can('users.manage') && categoryTree.length) { %><div class="flex justify-end border-t border-slate-200 px-6 py-4 dark:border-slate-800"><button type="submit" class="btn-primary">Save categories</button></div><% } %>
+    </form>
+    <% } %>
+
     <% if (can('users.accommodations')) { %>
     <form id="accommodations" method="post" action="/admin/users/<%= target.id %>/accommodations" class="card" novalidate x-data="tabs('<%= old.extra_time || extraMode %>')">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">

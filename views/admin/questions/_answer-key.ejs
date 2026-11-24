@@ -1,0 +1,46 @@
+<%
+/* Answer key for staff. Locals: a (authoring model). */
+const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const inline = function (t) { return String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/`([^`]+)`/g, '<code>$1</code>'); };
+const tick = '<span class="text-emerald-600 dark:text-emerald-400" aria-label="correct">✔</span>';
+%>
+<div class="q-content space-y-2 text-sm">
+<% if (a.type === 'single_choice' || a.type === 'multiple_response') { %>
+  <ul class="space-y-1.5">
+    <% a.options.forEach(function (o, i) { %>
+    <li class="flex gap-2 rounded-lg px-2 py-1.5 <%= o.correct ? 'bg-emerald-50 dark:bg-emerald-950/40' : '' %>">
+      <span class="w-5 shrink-0 font-semibold"><%= L[i] %></span>
+      <span class="flex-1"><%- inline(o.text) %><% if (o.pin_last) { %> <span class="badge-gray">pinned last</span><% } %><% if (o.feedback) { %><span class="block text-xs muted">Feedback: <%- inline(o.feedback) %></span><% } %></span>
+      <% if (o.correct) { %><%- tick %><% } %>
+    </li>
+    <% }) %>
+  </ul>
+  <% if (a.select_exact) { %><p class="muted">Candidates must select exactly <%= a.select_exact %>.</p><% } %>
+<% } else if (a.type === 'true_false') { %>
+  <p>Correct answer: <strong><%= a.correct ? 'True' : 'False' %></strong></p>
+  <% if (a.feedback_true) { %><p class="text-xs muted">If “True”: <%- inline(a.feedback_true) %></p><% } %>
+  <% if (a.feedback_false) { %><p class="text-xs muted">If “False”: <%- inline(a.feedback_false) %></p><% } %>
+<% } else if (a.type === 'fill_blank') { %>
+  <ol class="space-y-1">
+    <% a.blanks.forEach(function (b, i) { %><li><span class="font-semibold">[[<%= i + 1 %>]]</span> → <% b.variants.forEach(function (v, j) { %><%= j ? ' or ' : '' %><code><%= v %></code><% }) %></li><% }) %>
+  </ol>
+  <p class="text-xs muted"><%= a.case_sensitive ? 'Case-sensitive' : 'Not case-sensitive' %> · <%= a.trim_whitespace ? 'extra spaces ignored' : 'spaces must match exactly' %></p>
+<% } else if (a.type === 'numeric') { %>
+  <p>Correct: <strong><%= a.value %></strong> <%= a.units %><% if (a.tolerance) { %> ± <%= a.tolerance %> (accepts <%= Number(a.value) - Number(a.tolerance) %> to <%= Number(a.value) + Number(a.tolerance) %>)<% } else { %> (exact)<% } %></p>
+<% } else if (a.type === 'matching') { %>
+  <ul class="space-y-1"><% a.pairs.forEach(function (p) { %><li><%- inline(p.left) %> <span class="muted">→</span> <strong><%- inline(p.right) %></strong></li><% }) %></ul>
+  <% if (a.distractors.length) { %><p class="text-xs muted">Distractors: <%- a.distractors.map(inline).join(', ') %></p><% } %>
+<% } else if (a.type === 'ordering') { %>
+  <ol class="list-decimal space-y-1 pl-5"><% a.items.forEach(function (t) { %><li><%- inline(t) %></li><% }) %></ol>
+<% } else if (a.type === 'hotspot') { %>
+  <ul class="space-y-1"><% a.regions.forEach(function (r) { %><li><%- inline(r.label) %> <% if (r.correct) { %><%- tick %><% } %></li><% }) %></ul>
+<% } else if (a.type === 'short_answer') { %>
+  <ul class="space-y-1"><% a.keywords.forEach(function (k) { %><li><% k.terms.forEach(function (t, j) { %><%= j ? ' / ' : '' %><code><%= t %></code><% }) %> <span class="muted">— weight <%= k.weight %></span></li><% }) %></ul>
+  <p class="text-xs muted">Full marks at a keyword score of <%= a.threshold %>; below that, the keyword weights found (capped at the marks). <%= a.case_sensitive ? 'Case-sensitive.' : 'Not case-sensitive.' %></p>
+<% } else if (a.type === 'essay') { %>
+  <p class="muted">Graded manually<%= a.min_words || a.max_words ? ` · ${a.min_words || 0}–${a.max_words || '∞'} words` : '' %>.</p>
+  <% if (a.rubric_html) { %><div class="prose-content rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><%- a.rubric_html %></div><% } %>
+<% } else { %>
+  <p class="muted">Marks come from the child questions.</p>
+<% } %>
+</div>

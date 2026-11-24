@@ -166,6 +166,9 @@ async function show(req, res) {
   } catch {
     canManage = false;
   }
+  const isAuthor = target.roles.some((r) => r.slug === 'question_author');
+  const authorCategories = isAuthor ? await db()('author_categories').where({ user_id: target.id }).pluck('category_id') : [];
+  const categoryTree = isAuthor ? await require('../../services/catalogue').categoryTree() : [];
   const [accommodations, history, auditRows] = await Promise.all([
     db()('user_accommodations').where({ user_id: target.id }).first(),
     db()('login_history').where({ user_id: target.id }).orderBy('created_at', 'desc').limit(10),
@@ -182,6 +185,9 @@ async function show(req, res) {
     history,
     auditRows,
     timezones: TIMEZONES,
+    isAuthor,
+    authorCategories,
+    categoryTree,
     breadcrumbs: [{ label: 'Admin', href: '/admin' }, { label: 'Users', href: '/admin/users' }, { label: target.full_name }],
   });
 }

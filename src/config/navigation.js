@@ -10,6 +10,16 @@ const ADMIN_NAV = [
     items: [{ label: 'Dashboard', href: '/admin', icon: 'home', exact: true, any: ['admin.access'] }],
   },
   {
+    heading: 'Content',
+    items: [
+      { label: 'Question bank', href: '/admin/questions', icon: 'clipboard', any: ['questions.view'], exclude: ['/admin/questions/reports'] },
+      { label: 'Reported questions', href: '/admin/questions/reports', icon: 'flag', any: ['question_reports.manage'] },
+      { label: 'Categories', href: '/admin/catalogue/categories', icon: 'list', any: ['catalogue.manage'] },
+      { label: 'Certifications', href: '/admin/catalogue/certifications', icon: 'academic', any: ['catalogue.manage'] },
+      { label: 'Training programmes', href: '/admin/catalogue/programmes', icon: 'chart', any: ['catalogue.manage'] },
+    ],
+  },
+  {
     heading: 'People',
     items: [
       { label: 'Users', href: '/admin/users', icon: 'users', any: ['users.view'] },

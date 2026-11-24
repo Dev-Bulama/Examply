@@ -1,0 +1,114 @@
+<%
+  const stripLen = function (s, n) { s = s || ''; return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+  const diffDots = function (d) { return '●'.repeat(d) + '○'.repeat(5 - d); };
+  const backUrl = currentPath + (Object.keys(query).length ? '?' + new URLSearchParams(query).toString() : '');
+  const activeFilters = ['q','category','certification','domain','type','status','difficulty','tag','import'].filter(function (k) { return f[k]; }).length + (f.mine ? 1 : 0);
+%>
+<div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+  <div>
+    <h1 class="h1">Question bank</h1>
+    <p class="mt-1 muted">
+      <% ['draft','in_review','published','retired'].forEach(function (s, i) { %><%= i ? ' · ' : '' %><a class="hover:underline" href="/admin/questions?status=<%= s %>"><%= counts[s] || 0 %> <%= STATUS_LABEL[s].toLowerCase() %></a><% }) %>
+    </p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a href="/admin/questions/duplicates" class="btn-secondary">Duplicate finder</a>
+    <% if (can('questions.create')) { %><a href="/admin/questions/new/choose" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New question</a><% } %>
+  </div>
+</div>
+
+<form method="get" action="/admin/questions" class="card card-body mb-4" role="search" x-data="tabs('<%= activeFilters > (f.q ? 1 : 0) ? 'open' : '' %>')">
+  <div class="flex flex-col gap-3 sm:flex-row">
+    <div class="relative flex-1">
+      <label for="q" class="sr-only">Search questions</label>
+      <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center muted"><%- include('../../partials/icon', { name: 'search', cls: 'h-4 w-4' }) %></span>
+      <input id="q" name="q" value="<%= f.q %>" class="input pl-9" placeholder="Search question text, or #ID">
+    </div>
+    <div class="flex gap-2">
+      <button type="button" class="btn-secondary" @click="select(is('open') ? '' : 'open')" :aria-expanded="is('open')">Filters<% if (activeFilters) { %> <span class="badge-blue"><%= activeFilters %></span><% } %></button>
+      <button type="submit" class="btn-primary">Search</button>
+    </div>
+  </div>
+  <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" x-show="is('open')" x-cloak>
+    <div><label class="label" for="fc">Category</label>
+      <select id="fc" name="category" class="input"><option value="">Any category</option><% categories.forEach(function (c) { %><option value="<%= c.id %>" <%= f.category === c.id ? 'selected' : '' %>><%= '— '.repeat(c.depth) %><%= c.name %></option><% }) %></select></div>
+    <div><label class="label" for="fce">Certification</label>
+      <select id="fce" name="certification" class="input" data-autosubmit><option value="">Any certification</option><% certifications.forEach(function (c) { %><option value="<%= c.id %>" <%= f.certification === c.id ? 'selected' : '' %>><%= c.exam_code ? c.exam_code + ' · ' : '' %><%= c.name %></option><% }) %></select></div>
+    <div><label class="label" for="fd">Domain</label>
+      <select id="fd" name="domain" class="input" <%= domains.length ? '' : 'disabled' %>><option value=""><%= domains.length ? 'Any domain' : 'Choose a certification first' %></option><% domains.forEach(function (d) { %><option value="<%= d.id %>" <%= f.domain === d.id ? 'selected' : '' %>><%= d.code ? d.code + ' · ' : '' %><%= d.name %></option><% }) %></select></div>
+    <div><label class="label" for="ft">Type</label>
+      <select id="ft" name="type" class="input"><option value="">Any type</option><% Object.entries(TYPES).forEach(function (t) { %><option value="<%= t[0] %>" <%= f.type === t[0] ? 'selected' : '' %>><%= t[1].label %></option><% }) %></select></div>
+    <div><label class="label" for="fs">Status</label>
+      <select id="fs" name="status" class="input"><option value="">Any status</option><% Object.entries(STATUS_LABEL).forEach(function (s) { %><option value="<%= s[0] %>" <%= f.status === s[0] ? 'selected' : '' %>><%= s[1] %></option><% }) %></select></div>
+    <div><label class="label" for="fdi">Difficulty</label>
+      <select id="fdi" name="difficulty" class="input"><option value="">Any</option><% [1,2,3,4,5].forEach(function (d) { %><option value="<%= d %>" <%= f.difficulty === d ? 'selected' : '' %>><%= d %> — <%= ['Very easy','Easy','Medium','Hard','Very hard'][d-1] %></option><% }) %></select></div>
+    <div><label class="label" for="ftag">Tag</label><input id="ftag" name="tag" value="<%= f.tag %>" class="input" placeholder="e.g. joins"></div>
+    <div><label class="label" for="fsort">Sort by</label>
+      <select id="fsort" name="sort" class="input"><% [['newest','Newest first'],['oldest','Oldest first'],['updated','Recently edited'],['difficulty','Hardest first']].forEach(function (s) { %><option value="<%= s[0] %>" <%= f.sort === s[0] ? 'selected' : '' %>><%= s[1] %></option><% }) %></select></div>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="mine" value="1" class="checkbox" <%= f.mine ? 'checked' : '' %>> Only my questions</label>
+    <% if (f.import) { %><input type="hidden" name="import" value="<%= f.import %>"><p class="text-sm">Showing import #<%= f.import %></p><% } %>
+    <div class="flex items-end sm:col-span-2 lg:col-span-3 lg:justify-end"><a href="/admin/questions" class="btn-ghost">Clear all filters</a></div>
+  </div>
+</form>
+
+<form method="post" action="/admin/questions/bulk" x-data="bulkSelect" class="card overflow-hidden">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <input type="hidden" name="back" value="<%= backUrl %>">
+  <% if (pager.rows.length) { %>
+  <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-800" x-show="count() > 0" x-cloak>
+    <span class="text-sm font-medium"><span x-text="count()"></span> selected</span>
+    <label class="sr-only" for="bulk-action">Bulk action</label>
+    <select id="bulk-action" name="bulk_action" class="input w-auto py-1.5" x-model="action">
+      <option value="">Choose an action…</option>
+      <% if (can('questions.create')) { %><option value="submit">Send for review</option><% } %>
+      <% if (can('questions.publish')) { %><option value="publish">Publish</option><option value="retire">Retire</option><% } %>
+      <% if (can('questions.edit_any')) { %><option value="move_category">Move to category…</option><option value="add_tags">Add tags…</option><% } %>
+      <% if (can('questions.delete')) { %><option value="delete">Delete</option><% } %>
+    </select>
+    <select name="category_id" class="input w-auto py-1.5" x-show="action === 'move_category'" x-cloak aria-label="Target category"><% categories.forEach(function (c) { %><option value="<%= c.id %>"><%= c.path %></option><% }) %></select>
+    <input name="tags" class="input w-48 py-1.5" placeholder="tag one, tag two" x-show="action === 'add_tags'" x-cloak aria-label="Tags to add">
+    <button type="submit" class="btn-primary btn-sm" :disabled="!action" @click="confirmIfDelete">Apply</button>
+  </div>
+  <% } %>
+  <% if (!pager.rows.length) { %>
+    <div class="flex flex-col items-center px-6 py-16 text-center">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"><%- include('../../partials/icon', { name: 'clipboard' }) %></span>
+      <p class="mt-4 font-semibold"><%= activeFilters ? 'No questions match these filters' : 'The question bank is empty' %></p>
+      <p class="mt-1 max-w-md text-sm muted"><%= activeFilters ? 'Try different filters or clear them.' : 'Write questions one by one, or import hundreds at once from Excel, CSV, Word, GIFT, Aiken or JSON.' %></p>
+      <div class="mt-4 flex gap-2"><% if (activeFilters) { %><a href="/admin/questions" class="btn-secondary">Clear filters</a><% } else if (can('questions.create')) { %><a href="/admin/questions/new/choose" class="btn-primary">Write a question</a><% } %></div>
+    </div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr>
+        <th class="w-10"><label class="sr-only" for="sel-all">Select all on this page</label><input id="sel-all" type="checkbox" class="checkbox" @change="toggleAll" :checked="allChecked()"></th>
+        <th>Question</th><th>Classification</th><th>Difficulty</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        <% pager.rows.forEach(function (r) { %>
+        <tr>
+          <td data-label="Select"><input type="checkbox" name="ids" value="<%= r.id %>" class="checkbox" @change="sync" aria-label="Select question <%= r.id %>"></td>
+          <td data-label="Question" class="sm:max-w-xl">
+            <a href="/admin/questions/<%= r.id %>" class="block text-left font-medium hover:underline"><span class="mr-1 font-mono text-xs muted">#<%= r.id %></span><%= stripLen(r.stem_text, 140) || '(no text)' %></a>
+            <div class="mt-1.5 flex flex-wrap justify-end gap-1 sm:justify-start">
+              <span class="badge-blue"><%= TYPES[r.type].short %></span>
+              <% r.tags.slice(0, 4).forEach(function (t) { %><a href="/admin/questions?tag=<%= t.slug %>" class="badge-gray hover:underline">#<%= t.name %></a><% }) %>
+            </div>
+          </td>
+          <td data-label="Classification" class="text-sm">
+            <p><%= r.category_name || '—' %></p>
+            <% if (r.certification_name) { %><p class="text-xs muted"><%= r.exam_code || r.certification_name %><%= r.domain_name ? ' · ' + stripLen(r.domain_name, 40) : '' %></p><% } %>
+          </td>
+          <td data-label="Difficulty" class="whitespace-nowrap text-sm tracking-widest text-amber-500" title="Difficulty <%= r.difficulty %> of 5"><span aria-hidden="true"><%= diffDots(r.difficulty) %></span><span class="sr-only"><%= r.difficulty %> of 5</span></td>
+          <td data-label="Status" class="whitespace-nowrap">
+            <span class="<%= STATUS_BADGE[r.status] %>"><%= STATUS_LABEL[r.status] %></span>
+            <p class="mt-1 text-xs muted">v<%= r.version %> · <%= fmt.relative(r.updated_at) %></p>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/questions', query: query }) %>
+</form>

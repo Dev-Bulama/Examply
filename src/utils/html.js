@@ -48,7 +48,9 @@ function sanitizeRich(html) {
 /** Strips all tags; collapses whitespace. Used for search indexes, hashes, plain previews. */
 function toPlainText(html) {
   if (!html) return '';
-  return sanitizeHtml(String(html), { allowedTags: [], allowedAttributes: {} })
+  // Keep block boundaries as spaces so "…employees.</p><pre>SELECT" does not become "employees.SELECT".
+  const spaced = String(html).replace(/<\/(p|div|li|h[1-6]|pre|tr|td|th|blockquote|table|ul|ol)>|<br\s*\/?>/gi, '$& ');
+  return sanitizeHtml(spaced, { allowedTags: [], allowedAttributes: {} })
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')

@@ -1,0 +1,133 @@
+<%
+  const a = q.current.authoring;
+  const canTransition = function (action) {
+    const map = { submit: ['draft'], approve: ['in_review'], reject: ['in_review'], publish: ['draft', 'in_review', 'retired'], retire: ['published'], to_draft: ['retired'] };
+    const perm = { submit: 'questions.create', approve: 'questions.review', reject: 'questions.review', publish: 'questions.publish', retire: 'questions.publish', to_draft: 'questions.edit_any' }[action];
+    return map[action].includes(q.status) && can(perm) && !(action === 'publish' && q.status === 'in_review' && can('questions.review'));
+  };
+%>
+<script src="/vendor/katex/katex.min.js"></script><script src="/vendor/katex/auto-render.min.js"></script><script src="/vendor/highlight/highlight.min.js"></script><script src="/js/question-render.js"></script>
+<link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/vendor/highlight/github.min.css" media="(prefers-color-scheme: light)"><link rel="stylesheet" href="/vendor/highlight/github-dark.min.css" media="(prefers-color-scheme: dark)">
+
+<% if (parent) { %><p class="mb-2 text-sm"><a href="/admin/questions/<%= parent.id %>" class="link">← Case study #<%= parent.id %></a></p><% } %>
+<div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+  <div>
+    <div class="flex flex-wrap items-center gap-2">
+      <h1 class="h1">Question #<%= q.id %></h1>
+      <span class="<%= STATUS_BADGE[q.status] %>"><%= STATUS_LABEL[q.status] %></span>
+      <span class="badge-blue"><%= TYPES[q.type].label %></span>
+      <span class="badge-gray">v<%= q.version %></span>
+    </div>
+    <p class="mt-1 text-sm muted">By <%= q.author_name || 'Unknown' %> · created <%= fmt.date(q.created_at) %><% if (q.reviewer_name) { %> · reviewed by <%= q.reviewer_name %> <%= fmt.relative(q.reviewed_at) %><% } %></p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <% if (canEdit) { %><a href="/admin/questions/<%= q.id %>/edit" class="btn-primary">Edit</a><% } %>
+    <% if (can('questions.create')) { %><form method="post" action="/admin/questions/<%= q.id %>/duplicate"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-secondary">Duplicate</button></form><% } %>
+    <% if (can('questions.delete')) { %><form method="post" action="/admin/questions/<%= q.id %>/delete" data-confirm="Delete question #<%= q.id %><%= q.type === 'case_study' ? ' and its child questions' : '' %>?" data-confirm-label="Delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button type="submit" class="btn-ghost text-red-600">Delete</button></form><% } %>
+  </div>
+</div>
+
+<% if (q.status === 'draft' && q.review_note) { %>
+  <div class="alert-warning mb-6"><%- include('../../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %><div><p class="font-semibold">Sent back by <%= q.reviewer_name || 'a reviewer' %></p><p class="mt-1 whitespace-pre-line"><%= q.review_note %></p></div></div>
+<% } %>
+<% if (!canEdit && editBlocker && can('questions.create')) { %><div class="alert-info mb-6"><%- include('../../partials/icon', { name: 'info', cls: 'h-5 w-5 shrink-0' }) %><p><%= editBlocker %></p></div><% } %>
+<% if (openReports) { %><div class="alert-danger mb-6"><%- include('../../partials/icon', { name: 'flag', cls: 'h-5 w-5 shrink-0' }) %><p><%= openReports %> open report<%= openReports === 1 ? '' : 's' %> from candidates. <% if (can('question_reports.manage')) { %><a href="/admin/questions/reports" class="font-semibold underline">Review reports</a><% } %></p></div><% } %>
+
+<div class="grid gap-6 lg:grid-cols-5">
+  <div class="space-y-6 lg:col-span-3">
+    <section class="card" aria-labelledby="pv">
+      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-800">
+        <h2 id="pv" class="text-sm font-semibold">Candidate preview</h2>
+        <% const totalMarks = q.type === 'case_study' ? children.reduce(function (s, c) { return s + Number(c.default_marks); }, 0) : Number(q.default_marks); %><span class="text-xs muted"><%= totalMarks %> mark<%= totalMarks === 1 ? '' : 's' %><%= q.type === 'case_study' ? ` in ${children.length} question${children.length === 1 ? '' : 's'}` : '' %> · ~<%= Math.round(q.est_time_sec / 6) / 10 %> min</span>
+      </div>
+      <div class="p-5 sm:p-6">
+        <%- include('../../questions/render', { view: view, name: 'preview', interactive: true }) %>
+        <% if (q.type === 'case_study') { %>
+          <div class="mt-6 space-y-6 border-t border-slate-200 pt-6 dark:border-slate-800">
+            <% if (!children.length) { %><p class="text-sm muted">This case study has no questions yet.</p><% } %>
+            <% children.forEach(function (c, i) { %>
+            <div>
+              <div class="mb-2 flex items-center justify-between gap-2"><p class="text-sm font-semibold">Question <%= i + 1 %> <span class="font-normal muted">· <%= TYPES[c.type].short %> · <%= Number(c.default_marks) %> mark(s)</span></p><a class="text-sm link" href="/admin/questions/<%= c.id %>">#<%= c.id %> <span class="<%= STATUS_BADGE[c.status] %>"><%= STATUS_LABEL[c.status] %></span></a></div>
+              <%- include('../../questions/render', { view: c.view, name: `child${c.id}`, interactive: true }) %>
+            </div>
+            <% }) %>
+            <% if (can('questions.create') && canEdit) { %><a href="/admin/questions/new/choose?parent=<%= q.id %>" class="btn-secondary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> Add a question to this case study</a><% } %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <% if (a.explanation_html || a.reference) { %>
+    <section class="card card-body">
+      <h2 class="h3">Explanation</h2>
+      <% if (a.explanation_html) { %><div class="q-content prose-content mt-2 max-w-none text-sm"><%- a.explanation_html %></div><% } %>
+      <% if (a.reference) { %><p class="mt-3 text-sm muted">Reference: <% if (/^https?:\/\//.test(a.reference)) { %><a class="link break-all" href="<%= a.reference %>" target="_blank" rel="noopener noreferrer"><%= a.reference %></a><% } else { %><%= a.reference %><% } %></p><% } %>
+    </section>
+    <% } %>
+  </div>
+
+  <aside class="space-y-6 lg:col-span-2">
+    <% const actions = ['submit','approve','reject','publish','retire','to_draft'].filter(canTransition); if (actions.length) { %>
+    <section class="card card-body" x-data="tabs('')">
+      <h2 class="h3">Workflow</h2>
+      <ol class="mt-3 flex items-center gap-1 text-xs" aria-label="Status">
+        <% ['draft','in_review','published','retired'].forEach(function (s, i) { %><li class="flex items-center gap-1"><%= i ? '→' : '' %><span class="<%= s === q.status ? STATUS_BADGE[s] : 'muted' %>"><%= STATUS_LABEL[s] %></span></li><% }) %>
+      </ol>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <% actions.filter(function (x) { return x !== 'reject'; }).forEach(function (act) { %>
+          <form method="post" action="/admin/questions/<%= q.id %>/transition/<%= act %>" <%= act === 'retire' ? `data-confirm="Retire question #${q.id}? It will no longer be drawn into new attempts." data-confirm-label="Retire"` : '' %>>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="<%= ['approve','publish'].includes(act) ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= { submit: 'Send for review', approve: 'Approve & publish', publish: 'Publish', retire: 'Retire', to_draft: 'Move to draft' }[act] %></button>
+          </form>
+        <% }) %>
+        <% if (actions.includes('reject')) { %><button type="button" class="btn-secondary btn-sm" @click="select('reject')">Send back…</button><% } %>
+      </div>
+      <% if (actions.includes('reject')) { %>
+      <form method="post" action="/admin/questions/<%= q.id %>/transition/reject" class="mt-4 space-y-2" x-show="is('reject')" x-cloak>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="label" for="note">What needs to change?</label>
+        <textarea id="note" name="note" rows="3" class="input" required maxlength="1000"></textarea>
+        <button type="submit" class="btn-danger btn-sm">Send back to author</button>
+      </form>
+      <% } %>
+    </section>
+    <% } %>
+
+    <section class="card card-body">
+      <h2 class="h3">Answer key</h2>
+      <div class="mt-3"><%- include('_answer-key', { a: a }) %></div>
+    </section>
+
+    <section class="card card-body text-sm">
+      <h2 class="h3">Classification</h2>
+      <dl class="mt-3 grid grid-cols-3 gap-x-3 gap-y-2">
+        <dt class="muted">Category</dt><dd class="col-span-2"><%= q.category_name || '—' %></dd>
+        <dt class="muted">Certification</dt><dd class="col-span-2"><%= q.certification_name || '—' %></dd>
+        <dt class="muted">Domain</dt><dd class="col-span-2"><%= q.domain_name || '—' %></dd>
+        <dt class="muted">Topic</dt><dd class="col-span-2"><%= q.topic || '—' %></dd>
+        <dt class="muted">Difficulty</dt><dd class="col-span-2"><%= q.difficulty %> / 5</dd>
+        <dt class="muted">Bloom level</dt><dd class="col-span-2 capitalize"><%= q.bloom_level || '—' %></dd>
+        <dt class="muted">Tags</dt><dd class="col-span-2 flex flex-wrap gap-1"><% if (!q.tags.length) { %>—<% } %><% q.tags.forEach(function (t) { %><span class="badge-gray">#<%= t %></span><% }) %></dd>
+      </dl>
+    </section>
+
+    <section class="card card-body text-sm">
+      <h2 class="h3">Version history</h2>
+      <ol class="mt-3 space-y-2">
+        <% versions.forEach(function (v) { %>
+        <li class="flex items-start justify-between gap-3">
+          <div><a href="/admin/questions/<%= q.id %>/versions/<%= v.id %>" class="font-medium link">Version <%= v.version_no %></a><% if (v.version_no === q.version) { %> <span class="badge-blue">current</span><% } %><% if (v.published_at) { %> <span class="badge-green">was live</span><% } %>
+            <p class="text-xs muted"><%= v.full_name || 'Import' %> · <%= fmt.dateTime(v.created_at) %><%= v.change_note ? ' · ' + v.change_note : '' %></p></div>
+        </li>
+        <% }) %>
+      </ol>
+    </section>
+
+    <section class="card card-body text-sm">
+      <h2 class="h3">Used in exams</h2>
+      <% if (!usage.length) { %><p class="mt-2 muted">Not in any fixed exam yet. Blueprint-driven exams may still draw it when it is published.</p><% } else { %>
+        <ul class="mt-2 space-y-1"><% usage.forEach(function (e) { %><li><%= e.title %> <span class="badge-gray"><%= e.status %></span></li><% }) %></ul>
+      <% } %>
+    </section>
+  </aside>
+</div>

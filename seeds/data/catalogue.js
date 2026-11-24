@@ -1,0 +1,90 @@
+'use strict';
+
+/** Demo catalogue (original content). Weights are this platform's practice blueprints, not official figures. */
+module.exports = {
+  categories: [
+    { slug: 'database', name: 'Database', icon: 'list', children: [
+      { slug: 'oracle', name: 'Oracle', icon: 'key' },
+      { slug: 'postgresql', name: 'PostgreSQL', icon: 'key' },
+    ] },
+    { slug: 'cloud', name: 'Cloud', icon: 'computer', children: [{ slug: 'aws', name: 'AWS', icon: 'computer' }] },
+    { slug: 'project-management', name: 'Project Management', icon: 'clipboard', children: [{ slug: 'pmp', name: 'PMP', icon: 'flag' }] },
+    { slug: 'quality', name: 'Quality', icon: 'chart', children: [{ slug: 'lean-six-sigma', name: 'Lean Six Sigma', icon: 'chart' }] },
+    { slug: 'programming', name: 'Programming', icon: 'cog', children: [{ slug: 'python', name: 'Python', icon: 'cog' }] },
+    { slug: 'data', name: 'Data', icon: 'chart', children: [{ slug: 'sql-dbt', name: 'SQL / dbt', icon: 'list' }] },
+  ],
+  certifications: [
+    {
+      key: 'oracle',
+      category: 'oracle',
+      name: 'Oracle Database Administration I',
+      issuing_body: 'Oracle University',
+      exam_code: '1Z0-082',
+      official_passing_score: 60,
+      official_score_scale: '%',
+      official_duration_minutes: 120,
+      official_question_count: 72,
+      external_url: 'https://education.oracle.com/',
+      description: 'Core Oracle Database administration and SQL skills for the Oracle Database Administration 2019 Certified Professional path.',
+      domains: [
+        ['ARCH', 'Database architecture', 20],
+        ['INST', 'Instances & networking', 20],
+        ['SEC', 'Users, roles & privileges', 15],
+        ['STOR', 'Storage structures', 15],
+        ['SQL', 'SQL fundamentals', 30],
+      ],
+    },
+    {
+      key: 'aws',
+      category: 'aws',
+      name: 'AWS Certified Cloud Practitioner',
+      issuing_body: 'Amazon Web Services',
+      exam_code: 'CLF-C02',
+      official_passing_score: 700,
+      official_score_scale: '100–1000',
+      official_duration_minutes: 90,
+      official_question_count: 65,
+      external_url: 'https://aws.amazon.com/certification/',
+      description: 'Foundational understanding of AWS Cloud concepts, services, security and billing.',
+      domains: [
+        ['D1', 'Cloud concepts', 24],
+        ['D2', 'Security and compliance', 30],
+        ['D3', 'Cloud technology and services', 34],
+        ['D4', 'Billing, pricing and support', 12],
+      ],
+    },
+    {
+      key: 'lss',
+      category: 'lean-six-sigma',
+      name: 'Lean Six Sigma Green Belt',
+      issuing_body: 'Various accrediting bodies',
+      exam_code: 'LSSGB',
+      official_passing_score: 70,
+      official_score_scale: '%',
+      official_duration_minutes: 120,
+      official_question_count: 100,
+      description: 'Process improvement using the DMAIC method and core statistical tools.',
+      domains: [
+        ['DEF', 'Define', 15],
+        ['MEA', 'Measure', 25],
+        ['ANA', 'Analyze', 25],
+        ['IMP', 'Improve', 20],
+        ['CTL', 'Control', 15],
+      ],
+    },
+  ],
+  programmes: [
+    {
+      name: 'Oracle 19c DBA Bootcamp',
+      category: 'oracle',
+      description: 'Instructor-led programme from SQL foundations to backup, recovery and performance.',
+      levels: ['SQL foundations', 'Administration essentials', 'Backup & recovery', 'Performance tuning'],
+      bands: {
+        Beginner: ['Oracle SQL Foundations (2 weeks)', 'Start with the SQL Foundations module before the DBA track.'],
+        Intermediate: ['Oracle 19c Administration Essentials', 'You know SQL well — go straight to administration essentials.'],
+        Advanced: ['Backup, Recovery & High Availability', 'Focus on RMAN, Data Guard and recovery scenarios.'],
+        Expert: ['Performance Tuning Masterclass', 'Take the masterclass and consider the 1Z0-083 exam.'],
+      },
+    },
+  ],
+};

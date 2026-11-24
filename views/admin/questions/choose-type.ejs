@@ -1,0 +1,32 @@
+<div class="mx-auto max-w-5xl">
+  <h1 class="h1"><%= parentId ? 'Add a question to the case study' : 'New question' %></h1>
+  <p class="mt-1 muted">Choose the question type. Every type except essay is marked automatically.</p>
+  <%
+    const blurbs = {
+      single_choice: 'One correct option. The classic MCQ.',
+      multiple_response: 'Select all that apply, optionally “select exactly N”.',
+      true_false: 'A statement that is true or false.',
+      fill_blank: 'One or more blanks, several accepted answers each.',
+      numeric: 'A number, exact or within a tolerance, with units.',
+      matching: 'Match items on the left to items on the right.',
+      ordering: 'Put steps or items in the correct sequence.',
+      hotspot: 'Pick the correct labelled region on an image.',
+      short_answer: 'A few words, marked by weighted keywords.',
+      essay: 'Long answer, graded by a person.',
+      case_study: 'A shared scenario with several child questions.',
+    };
+    const icons = { single_choice: 'check', multiple_response: 'list', true_false: 'shield', fill_blank: 'clipboard', numeric: 'chart', matching: 'arrowRight', ordering: 'queue', hotspot: 'eye', short_answer: 'mail', essay: 'academic', case_study: 'flag' };
+  %>
+  <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <% Object.entries(TYPES).filter(function (t) { return !(parentId && t[0] === 'case_study'); }).forEach(function (t) { %>
+    <a href="/admin/questions/new?type=<%= t[0] %><%= parentId ? `&parent=${parentId}` : '' %>" class="card card-body group flex gap-4 transition hover:border-primary-400 hover:shadow-pop focus-visible:ring-2 focus-visible:ring-primary-500">
+      <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary-700 group-hover:bg-primary-600 group-hover:text-on-primary dark:bg-primary-950 dark:text-primary-300"><%- include('../../partials/icon', { name: icons[t[0]] }) %></span>
+      <span>
+        <span class="block font-semibold"><%= t[1].label %></span>
+        <span class="mt-0.5 block text-sm muted"><%= blurbs[t[0]] %></span>
+        <% if (!t[1].auto) { %><span class="badge-amber mt-2"><%= t[0] === 'essay' ? 'Manual grading' : 'Group' %></span><% } %>
+      </span>
+    </a>
+    <% }) %>
+  </div>
+</div>

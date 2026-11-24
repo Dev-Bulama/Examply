@@ -52,6 +52,10 @@ function mountMain(app) {
   app.use('/account', require('./account'));
   app.use(require('./candidate'));
   app.use('/admin', require('./admin'));
+  // Question images: any signed-in user (exam content is never public).
+  const { requireAuth } = require('../middleware/auth');
+  const { asyncHandler } = require('../utils/errors');
+  app.get('/qmedia/:uuid', requireAuth, asyncHandler(require('../controllers/admin/questionsController').serveMedia));
 }
 
 module.exports = { mountPreSession, mountInstall, mountMain };

@@ -1,0 +1,46 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Categories</h1>
+    <p class="mt-1 muted">A tree such as Database › Oracle › Oracle 19c DBA. Certifications, questions and exams are filed under categories.</p>
+  </div>
+  <a href="/admin/catalogue/categories/new" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New category</a>
+</div>
+<div class="card overflow-hidden">
+  <% if (!tree.length) { %>
+    <div class="flex flex-col items-center px-6 py-16 text-center">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"><%- include('../../partials/icon', { name: 'list' }) %></span>
+      <p class="mt-4 font-semibold">No categories yet</p>
+      <p class="mt-1 text-sm muted">Start with broad areas like “Database” or “Cloud”, then add sub-categories.</p>
+      <a href="/admin/catalogue/categories/new" class="btn-primary mt-4">Create the first category</a>
+    </div>
+  <% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0">
+    <table class="table table-responsive">
+      <thead><tr><th>Category</th><th>Certifications</th><th>Questions</th><th>Status</th><th class="text-right">Actions</th></tr></thead>
+      <tbody>
+        <% tree.forEach(function (c) { %>
+        <tr>
+          <td data-label="Category">
+            <div class="flex items-center gap-2 <%= ['', 'sm:pl-6', 'sm:pl-12', 'sm:pl-16', 'sm:pl-20'][Math.min(c.depth, 4)] %>">
+              <% if (c.depth) { %><span class="hidden text-slate-300 sm:inline dark:text-slate-600" aria-hidden="true">└</span><% } %>
+              <% if (c.image_path) { %><img src="/media/branding/<%= c.image_path %>" alt="" class="h-6 w-6 rounded object-cover"><% } else { %><span class="text-primary-600 dark:text-primary-400"><%- include('../../partials/icon', { name: c.icon || 'academic', cls: 'h-5 w-5' }) %></span><% } %>
+              <div><p class="font-medium"><%= c.name %></p><p class="text-xs muted">/<%= c.slug %></p></div>
+            </div>
+          </td>
+          <td data-label="Certifications"><%= c.certifications %></td>
+          <td data-label="Questions"><% if (c.questions) { %><a class="link" href="/admin/questions?category=<%= c.id %>"><%= c.questions %></a><% } else { %>0<% } %></td>
+          <td data-label="Status"><span class="<%= c.is_active ? 'badge-green' : 'badge-gray' %>"><%= c.is_active ? 'Active' : 'Hidden' %></span></td>
+          <td data-label="Actions" class="text-right">
+            <div class="flex justify-end gap-2">
+              <a href="/admin/catalogue/categories/new?parent=<%= c.id %>" class="btn-ghost btn-sm" title="Add a sub-category">+ Sub</a>
+              <a href="/admin/catalogue/categories/<%= c.id %>/edit" class="btn-secondary btn-sm">Edit</a>
+              <form method="post" action="/admin/catalogue/categories/<%= c.id %>/delete" data-confirm="Delete the category “<%= c.name %>”?" data-confirm-label="Delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600" type="submit">Delete</button></form>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>

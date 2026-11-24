@@ -1,0 +1,40 @@
+<div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Training programmes</h1>
+    <p class="mt-1 muted">Diagnostic exams place candidates in a band and recommend the matching course from these programmes.</p>
+  </div>
+  <a href="/admin/catalogue/programmes/new" class="btn-primary"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New programme</a>
+</div>
+<% if (!programmes.length) { %>
+  <div class="card flex flex-col items-center px-6 py-16 text-center">
+    <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800"><%- include('../../partials/icon', { name: 'chart' }) %></span>
+    <p class="mt-4 font-semibold">No programmes yet</p>
+    <p class="mt-1 max-w-md text-sm muted">For example “Oracle 19c DBA Bootcamp” with a course link for Beginners, Intermediate, Advanced and Expert candidates.</p>
+    <a href="/admin/catalogue/programmes/new" class="btn-primary mt-4">Add a programme</a>
+  </div>
+<% } else { %>
+<div class="grid gap-4 lg:grid-cols-2">
+  <% programmes.forEach(function (p) { %>
+  <article class="card">
+    <div class="card-body">
+      <div class="flex items-start justify-between gap-3">
+        <div><h2 class="h3"><%= p.name %></h2><p class="text-xs muted"><%= p.category_name || 'No category' %></p></div>
+        <span class="<%= p.is_active ? 'badge-green' : 'badge-gray' %>"><%= p.is_active ? 'Active' : 'Hidden' %></span>
+      </div>
+      <ul class="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+        <% p.bands.forEach(function (b) { %>
+        <li class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+          <p class="font-semibold"><%= b.band %></p>
+          <p class="mt-0.5 truncate muted" title="<%= b.course_title || '' %>"><%= b.course_title || (b.course_url ? 'Course link' : 'Not set') %></p>
+        </li>
+        <% }) %>
+      </ul>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+      <form method="post" action="/admin/catalogue/programmes/<%= p.id %>/delete" data-confirm="Delete “<%= p.name %>”?" data-confirm-label="Delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600" type="submit">Delete</button></form>
+      <a href="/admin/catalogue/programmes/<%= p.id %>/edit" class="btn-secondary btn-sm">Edit</a>
+    </div>
+  </article>
+  <% }) %>
+</div>
+<% } %>

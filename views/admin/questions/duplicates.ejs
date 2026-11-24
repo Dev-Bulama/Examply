@@ -1,0 +1,31 @@
+<div class="mb-6">
+  <h1 class="h1">Duplicate finder</h1>
+  <p class="mt-1 muted">Questions whose type, text and options match after ignoring formatting, letter case and option order.</p>
+</div>
+<% if (!groups.length) { %>
+  <div class="card flex flex-col items-center px-6 py-16 text-center">
+    <span class="grid h-12 w-12 place-items-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950"><%- include('../../partials/icon', { name: 'check' }) %></span>
+    <p class="mt-4 font-semibold">No duplicates found</p>
+    <p class="mt-1 text-sm muted">Every question in the bank is unique.</p>
+  </div>
+<% } else { %>
+  <p class="mb-4 text-sm"><strong><%= groups.length %></strong> group<%= groups.length === 1 ? '' : 's' %> of duplicates.</p>
+  <div class="space-y-4">
+    <% groups.forEach(function (g, gi) { %>
+    <section class="card">
+      <div class="border-b border-slate-200 px-5 py-3 text-sm font-semibold dark:border-slate-800">Group <%= gi + 1 %> · <%= g.questions.length %> copies</div>
+      <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+        <% g.questions.forEach(function (q, i) { %>
+        <li class="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0"><a href="/admin/questions/<%= q.id %>" class="font-medium hover:underline"><span class="font-mono text-xs muted">#<%= q.id %></span> <%= (q.stem_text || '').slice(0, 160) %></a>
+            <p class="text-xs muted"><%= TYPES[q.type].short %> · <%= q.category_name || 'No category' %> · created <%= fmt.date(q.created_at) %><%= i === 0 ? ' · oldest' : '' %></p></div>
+          <div class="flex shrink-0 items-center gap-2"><span class="<%= STATUS_BADGE[q.status] %>"><%= STATUS_LABEL[q.status] %></span>
+            <% if (i > 0 && can('questions.delete')) { %><form method="post" action="/admin/questions/<%= q.id %>/delete" data-confirm="Delete duplicate #<%= q.id %>?" data-confirm-label="Delete"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600" type="submit">Delete</button></form><% } %>
+          </div>
+        </li>
+        <% }) %>
+      </ul>
+    </section>
+    <% }) %>
+  </div>
+<% } %>

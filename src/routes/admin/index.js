@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { requireAuth, can } = require('../../middleware/auth');
+const { requireAuth, can, canAny } = require('../../middleware/auth');
 const { appNav } = require('../../middleware/nav');
 const { memoryUpload } = require('../../services/uploads');
 const { asyncHandler: h } = require('../../utils/errors');
@@ -10,6 +10,9 @@ const usersC = require('../../controllers/admin/usersController');
 const roles = require('../../controllers/admin/rolesController');
 const settingsC = require('../../controllers/admin/settingsController');
 const system = require('../../controllers/admin/systemController');
+const cat = require('../../controllers/admin/catalogueController');
+const qs = require('../../controllers/admin/questionsController');
+const { uploadLimiter } = require('../../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -26,6 +29,47 @@ router.get('/users/:id(\\d+)', can('users.view'), h(usersC.show));
 router.post('/users/:id(\\d+)', can('users.manage'), h(usersC.update));
 router.post('/users/:id(\\d+)/accommodations', can('users.accommodations'), h(usersC.updateAccommodations));
 router.post('/users/:id(\\d+)/:action(verify-email|send-reset|reset-2fa|delete)', can('users.manage'), h(usersC.action));
+
+// Catalogue
+const catImage = memoryUpload({ field: 'image', maxBytes: 1024 * 1024 });
+router.get('/catalogue/categories', can('catalogue.manage'), h(cat.categoriesIndex));
+router.get('/catalogue/categories/new', can('catalogue.manage'), h(cat.categoryForm));
+router.post('/catalogue/categories', can('catalogue.manage'), catImage, h(cat.categorySave));
+router.get('/catalogue/categories/:id(\\d+)/edit', can('catalogue.manage'), h(cat.categoryForm));
+router.post('/catalogue/categories/:id(\\d+)', can('catalogue.manage'), catImage, h(cat.categorySave));
+router.post('/catalogue/categories/:id(\\d+)/delete', can('catalogue.manage'), h(cat.categoryDelete));
+router.get('/catalogue/certifications', can('catalogue.manage'), h(cat.certificationsIndex));
+router.get('/catalogue/certifications/new', can('catalogue.manage'), h(cat.certificationForm));
+router.post('/catalogue/certifications', can('catalogue.manage'), h(cat.certificationSave));
+router.get('/catalogue/certifications/:id(\\d+)/edit', can('catalogue.manage'), h(cat.certificationForm));
+router.post('/catalogue/certifications/:id(\\d+)', can('catalogue.manage'), h(cat.certificationSave));
+router.post('/catalogue/certifications/:id(\\d+)/delete', can('catalogue.manage'), h(cat.certificationDelete));
+router.get('/catalogue/certifications/:id(\\d+)/domains.json', canAny('questions.view', 'catalogue.manage'), h(cat.domainsJson));
+router.get('/catalogue/programmes', can('catalogue.manage'), h(cat.programmesIndex));
+router.get('/catalogue/programmes/new', can('catalogue.manage'), h(cat.programmeForm));
+router.post('/catalogue/programmes', can('catalogue.manage'), h(cat.programmeSave));
+router.get('/catalogue/programmes/:id(\\d+)/edit', can('catalogue.manage'), h(cat.programmeForm));
+router.post('/catalogue/programmes/:id(\\d+)', can('catalogue.manage'), h(cat.programmeSave));
+router.post('/catalogue/programmes/:id(\\d+)/delete', can('catalogue.manage'), h(cat.programmeDelete));
+
+// Question bank
+router.get('/questions', can('questions.view'), h(qs.index));
+router.get('/questions/new/choose', can('questions.create'), h(qs.chooseType));
+router.get('/questions/new', can('questions.create'), h(qs.newForm));
+router.post('/questions', can('questions.create'), h(qs.create));
+router.post('/questions/bulk', canAny('questions.create', 'questions.publish', 'questions.edit_any', 'questions.delete'), h(qs.bulk));
+router.get('/questions/duplicates', can('questions.view'), h(qs.duplicates));
+router.post('/questions/media', can('questions.create'), uploadLimiter(), memoryUpload({ field: 'file', maxBytes: 5 * 1024 * 1024 }), h(qs.uploadMedia));
+router.get('/questions/reports', can('question_reports.manage'), h(qs.reportsIndex));
+router.post('/questions/reports/:id(\\d+)/:action(resolve|dismiss)', can('question_reports.manage'), h(qs.reportResolve));
+router.get('/questions/:id(\\d+)', can('questions.view'), h(qs.show));
+router.get('/questions/:id(\\d+)/edit', canAny('questions.create', 'questions.edit_any'), h(qs.editForm));
+router.post('/questions/:id(\\d+)', canAny('questions.create', 'questions.edit_any'), h(qs.update));
+router.get('/questions/:id(\\d+)/versions/:vid(\\d+)', can('questions.view'), h(qs.versionShow));
+router.post('/questions/:id(\\d+)/transition/:action(submit|approve|reject|publish|retire|to_draft)', canAny('questions.create', 'questions.review', 'questions.publish', 'questions.edit_any'), h(qs.transition));
+router.post('/questions/:id(\\d+)/duplicate', can('questions.create'), h(qs.duplicateQuestion));
+router.post('/questions/:id(\\d+)/delete', can('questions.delete'), h(qs.destroy));
+router.post('/users/:id(\\d+)/author-categories', can('users.manage'), h(qs.setAuthorCategories));
 
 // Roles
 router.get('/roles', can('roles.manage'), h(roles.index));

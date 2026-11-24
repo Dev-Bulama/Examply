@@ -1,0 +1,45 @@
+<div class="mb-6">
+  <h1 class="h1">Reported questions</h1>
+  <p class="mt-1 muted">Candidates report questions from the review screen. Fix the question (a new version is created) and resolve the report.</p>
+</div>
+<nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter by status">
+  <% [['open','Open'],['resolved','Resolved'],['dismissed','Dismissed']].forEach(function (s) { %>
+    <a href="/admin/questions/reports?status=<%= s[0] %>" class="<%= status === s[0] ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= s[1] %> <span class="opacity-75">(<%= counts[s[0]] || 0 %>)</span></a>
+  <% }) %>
+</nav>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %>
+    <div class="flex flex-col items-center px-6 py-16 text-center">
+      <span class="grid h-12 w-12 place-items-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950"><%- include('../../partials/icon', { name: 'check' }) %></span>
+      <p class="mt-4 font-semibold"><%= status === 'open' ? 'No open reports' : `No ${status} reports` %></p>
+      <p class="mt-1 text-sm muted"><%= status === 'open' ? 'Nothing needs attention right now.' : 'Handled reports appear here.' %></p>
+    </div>
+  <% } else { %>
+  <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+    <% pager.rows.forEach(function (r) { %>
+    <li class="p-5" x-data="tabs('')">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+          <p class="text-sm"><span class="badge-red"><%= { wrong_key: 'Wrong answer key', typo: 'Typo', unclear: 'Unclear', other: 'Other' }[r.reason] %></span> <span class="muted">by <%= r.reporter || 'a candidate' %> · <%= fmt.relative(r.created_at) %></span></p>
+          <a href="/admin/questions/<%= r.question_id %>" class="mt-2 block font-medium hover:underline"><span class="font-mono text-xs muted">#<%= r.question_id %></span> <%= (r.stem_text || '').slice(0, 180) %></a>
+          <% if (r.message) { %><p class="mt-2 whitespace-pre-line rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-800/60">“<%= r.message %>”</p><% } %>
+          <% if (r.resolution_note) { %><p class="mt-2 text-sm muted">Resolution (<%= r.resolver %>): <%= r.resolution_note %></p><% } %>
+        </div>
+        <% if (r.status === 'open') { %><div class="flex shrink-0 gap-2"><button type="button" class="btn-primary btn-sm" @click="select('resolve')">Resolve</button><button type="button" class="btn-secondary btn-sm" @click="select('dismiss')">Dismiss</button></div><% } %>
+      </div>
+      <% if (r.status === 'open') { %>
+        <% ['resolve','dismiss'].forEach(function (act) { %>
+        <form method="post" action="/admin/questions/reports/<%= r.id %>/<%= act %>" class="mt-3 flex flex-col gap-2 sm:flex-row" x-show="is('<%= act %>')" x-cloak>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <label class="sr-only" for="n-<%= act %>-<%= r.id %>">Note</label>
+          <input id="n-<%= act %>-<%= r.id %>" name="note" class="input flex-1" maxlength="2000" placeholder="<%= act === 'resolve' ? 'What did you change? (shown to staff)' : 'Why is no change needed?' %>">
+          <button type="submit" class="<%= act === 'resolve' ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= act === 'resolve' ? 'Mark resolved' : 'Dismiss report' %></button>
+        </form>
+        <% }) %>
+      <% } %>
+    </li>
+    <% }) %>
+  </ul>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/questions/reports', query: query }) %>
+</div>
