@@ -50,7 +50,9 @@
     <div class="card card-body">
       <p class="text-2xl font-bold"><% if (!exam.is_paid) { %>Free<% } else { %><%= fmt.money(exam.sale_price_kobo || exam.price_kobo) %><% } %></p>
       <% if (exam.certificate_enabled) { %><p class="mt-1 flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400"><%- include('../partials/icon', { name: 'academic', cls: 'h-4 w-4' }) %> Verifiable certificate when you pass</p><% } %>
-      <% if (!user) { %>
+      <% if (!user && exam.is_paid && buyProduct) { %>
+        <a href="/login?returnTo=<%= encodeURIComponent('/checkout/' + buyProduct.slug) %>" class="btn-primary mt-5 w-full">Sign in to buy</a>
+      <% } else if (!user) { %>
         <a href="/login?returnTo=<%= encodeURIComponent('/exams/' + exam.slug) %>" class="btn-primary mt-5 w-full">Sign in to start</a>
         <% if (site.registrationOpen) { %><a href="/register" class="btn-secondary mt-2 w-full">Create a free account</a><% } %>
       <% } else if (inProgress) { %>
@@ -75,7 +77,8 @@
         </form>
         <% } %>
         <% if (reasons.some(function (r) { return r.code === 'verify_email'; })) { %><a href="/account" class="btn-secondary mt-4 w-full">Verify my email</a><% } %>
-        <% if (elig.needsPurchase) { %><p class="mt-4 text-sm muted">Buying is available by card or bank transfer once checkout opens for this exam.</p><% } %>
+        <% if (elig.needsPurchase && buyProduct) { %><a href="/checkout/<%= buyProduct.slug %>" class="btn-primary mt-4 w-full">Buy now · <%= fmt.money(buyProduct.sale_price_kobo || buyProduct.price_kobo, buyProduct.currency) %></a><p class="mt-2 text-center text-xs muted">Card, bank, USSD or bank transfer</p><% } else if (elig.needsPurchase) { %><p class="mt-4 text-sm muted">This exam is not on sale right now.</p><% } %>
+        <% if (attemptsProduct && reasons.some(function (r) { return r.code === 'attempts'; }) && !elig.needsPurchase) { %><a href="/checkout/<%= attemptsProduct.slug %>" class="btn-secondary mt-4 w-full">Buy another attempt · <%= fmt.money(attemptsProduct.price_kobo, attemptsProduct.currency) %></a><% } %>
       <% } %>
     </div>
     <% if (history.length) { %>

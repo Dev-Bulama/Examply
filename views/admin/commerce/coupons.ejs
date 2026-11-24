@@ -1,0 +1,15 @@
+<div class="mb-6 flex items-end justify-between gap-3"><div><h1 class="h1">Coupons</h1><p class="mt-1 muted">Percentage or fixed discounts, with limits and dates.</p></div><a href="/admin/coupons/new" class="btn-primary">New coupon</a></div>
+<div class="card overflow-hidden">
+  <% if (!rows.length) { %><p class="p-10 text-center text-sm muted">No coupons yet.</p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0"><table class="table table-responsive">
+    <thead><tr><th>Code</th><th>Discount</th><th>Used</th><th>Valid</th><th>Status</th></tr></thead>
+    <tbody><% rows.forEach(function (c) { const expired = c.expires_at && new Date(c.expires_at) < new Date(); %>
+      <tr><td data-label="Code"><a class="font-mono font-semibold hover:underline" href="/admin/coupons/<%= c.id %>/edit"><%= c.code %></a></td>
+      <td data-label="Discount"><%= c.discount_type === 'percent' ? c.value + '%' : fmt.money(c.value) %><%= c.product_ids ? ' · selected products' : '' %></td>
+      <td data-label="Used"><%= c.used_count %><%= c.max_uses ? ' / ' + c.max_uses : '' %></td>
+      <td data-label="Valid" class="text-sm"><%= c.starts_at ? fmt.date(c.starts_at) : 'now' %> → <%= c.expires_at ? fmt.date(c.expires_at) : 'no end' %></td>
+      <td data-label="Status"><span class="<%= c.is_active && !expired ? 'badge-green' : 'badge-gray' %>"><%= !c.is_active ? 'Off' : expired ? 'Expired' : 'Active' %></span></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</div>

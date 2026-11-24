@@ -39,7 +39,10 @@ function mountPreSession(app) {
   });
 
   app.use('/cron', require('./cron'));
-  app.use('/webhooks', express.Router()); // payment webhooks are added in the commerce module
+  // Payment webhooks: raw body (for the signature), no session, no CSRF.
+  const { asyncHandler } = require('../utils/errors');
+  const { webhookLimiter } = require('../middleware/rateLimit');
+  app.post('/webhooks/paystack', webhookLimiter(), express.raw({ type: '*/*', limit: '1mb' }), asyncHandler(require('../controllers/shopController').webhook));
 }
 
 function mountInstall(app) {
@@ -52,6 +55,7 @@ function mountMain(app) {
   app.use('/account', require('./account'));
   app.use(require('./candidate'));
   app.use(require('./exams'));
+  app.use(require('./shop'));
   app.use('/admin', require('./admin'));
   // Question images: any signed-in user (exam content is never public).
   const { requireAuth } = require('../middleware/auth');

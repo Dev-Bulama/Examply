@@ -16,6 +16,8 @@ const imports = require('../../controllers/admin/importsController');
 const ai = require('../../controllers/admin/aiController');
 const exams = require('../../controllers/admin/examsController');
 const att = require('../../controllers/admin/attemptsController');
+const com = require('../../controllers/admin/commerceController');
+const shop = require('../../controllers/shopController');
 const sqlLab = require('../../controllers/admin/sqlLabController');
 const { uploadLimiter, sqlLimiter } = require('../../middleware/rateLimit');
 
@@ -95,6 +97,27 @@ router.post('/questions/:id(\\d+)/delete', can('questions.delete'), h(qs.destroy
 // SQL lab (editor "Run" and preview)
 router.post('/sql/run', canAny('questions.create', 'questions.edit_any'), sqlLimiter(), h(sqlLab.runDraft));
 router.post('/questions/:id(\\d+)/sql/run', can('questions.view'), sqlLimiter(), h(sqlLab.runQuestion));
+
+// Commerce
+router.get('/products', can('products.manage'), h(com.products));
+router.get('/products/new', can('products.manage'), h(com.productForm));
+router.post('/products', can('products.manage'), h(com.productSave));
+router.get('/products/:id(\\d+)/edit', can('products.manage'), h(com.productForm));
+router.post('/products/:id(\\d+)', can('products.manage'), h(com.productSave));
+router.get('/coupons', can('coupons.manage'), h(com.coupons));
+router.get('/coupons/new', can('coupons.manage'), h(com.couponForm));
+router.post('/coupons', can('coupons.manage'), h(com.couponSave));
+router.get('/coupons/:id(\\d+)/edit', can('coupons.manage'), h(com.couponForm));
+router.post('/coupons/:id(\\d+)', can('coupons.manage'), h(com.couponSave));
+router.get('/orders', can('orders.view'), h(com.orders));
+router.get('/orders/grant', can('orders.manage'), h(com.grantForm));
+router.post('/orders/grant', can('orders.manage'), h(com.grant));
+router.get('/orders/:id(\\d+)', can('orders.view'), h(com.orderShow));
+router.get('/orders/:id(\\d+)/invoice', can('orders.view'), h(com.invoice));
+router.get('/orders/:id(\\d+)/proof', can('orders.view'), h(shop.transferProof));
+router.post('/orders/:id(\\d+)/approve', can('orders.manage'), h(com.approveTransfer));
+router.post('/orders/:id(\\d+)/reject', can('orders.manage'), h(com.rejectTransfer));
+router.post('/orders/:id(\\d+)/refund', can('orders.manage'), h(com.refund));
 
 // Attempts, grading and certificates
 router.get('/attempts', can('attempts.view'), h(att.index));

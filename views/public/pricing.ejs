@@ -1,0 +1,40 @@
+<% const per = { monthly: 'month', quarterly: 'quarter', biannually: '6 months', annually: 'year' }; %>
+<section class="border-b border-slate-200 bg-gradient-to-b from-primary-50 to-white dark:border-slate-800 dark:from-primary-950/40 dark:to-slate-950">
+  <div class="container-page py-12 text-center">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Pricing</h1>
+    <p class="mx-auto mt-3 max-w-2xl text-lg muted">Individual exams are priced on each exam page. Companies subscribe to a plan to build their own exams — with AI — for their people.</p>
+  </div>
+</section>
+<div class="container-page py-12">
+  <% if (plans.length) { %>
+  <h2 class="h2 text-center">Plans for companies</h2>
+  <div class="mx-auto mt-8 grid max-w-6xl gap-6 lg:grid-cols-<%= Math.min(3, plans.length) %>">
+    <% plans.forEach(function (p) { const price = priceOf(p); %>
+    <article class="card relative flex flex-col p-6 <%= p.is_featured ? 'ring-2 ring-primary-600' : '' %>">
+      <% if (p.is_featured) { %><span class="badge-blue absolute -top-3 left-6">Most popular</span><% } %>
+      <h3 class="text-xl font-semibold"><%= p.name %></h3>
+      <% if (p.tagline) { %><p class="mt-1 text-sm muted"><%= p.tagline %></p><% } %>
+      <p class="mt-5"><span class="text-4xl font-bold"><%= fmt.money(price, p.currency) %></span><span class="muted"> / <%= per[p.plan_interval] || 'month' %></span></p>
+      <% if (price < p.price_kobo) { %><p class="text-sm muted line-through"><%= fmt.money(p.price_kobo, p.currency) %></p><% } %>
+      <ul class="mt-6 flex-1 space-y-2 text-sm"><% p.features.forEach(function (f) { %><li class="flex gap-2"><span class="text-emerald-600"><%- include('../partials/icon', { name: 'check', cls: 'h-4 w-4' }) %></span><%= f %></li><% }) %></ul>
+      <a href="/checkout/<%= p.slug %>" class="<%= p.is_featured ? 'btn-primary' : 'btn-secondary' %> mt-6 w-full">Subscribe</a>
+    </article>
+    <% }) %>
+  </div>
+  <% } %>
+  <% if (bundles.length) { %>
+  <h2 class="h2 mt-16 text-center">Exam bundles</h2>
+  <div class="mx-auto mt-8 grid max-w-5xl gap-6 md:grid-cols-2">
+    <% bundles.forEach(function (b) { const price = priceOf(b); %>
+    <article class="card flex flex-col p-6">
+      <h3 class="text-lg font-semibold"><%= b.name %></h3>
+      <% if (b.description) { %><p class="mt-1 text-sm muted"><%= b.description %></p><% } %>
+      <ul class="mt-4 flex-1 space-y-1 text-sm"><% b.contents.forEach(function (c) { %><li>• <%= c.exam_title || c.name %></li><% }) %></ul>
+      <div class="mt-5 flex items-center justify-between"><span class="text-2xl font-bold"><%= fmt.money(price, b.currency) %></span><a href="/checkout/<%= b.slug %>" class="btn-primary">Buy bundle</a></div>
+      <p class="mt-2 text-xs muted"><%= b.access_days ? b.access_days + ' days of access' : 'Lifetime access' %></p>
+    </article>
+    <% }) %>
+  </div>
+  <% } %>
+  <p class="mt-12 text-center text-sm muted">Pay securely by card, bank, USSD or transfer with Paystack, or by direct bank transfer. Prices in Naira include VAT where applicable.</p>
+</div>

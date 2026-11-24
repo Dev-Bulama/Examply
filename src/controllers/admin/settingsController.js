@@ -89,6 +89,26 @@ const SECTIONS = {
       { key: 'ai.max_questions_per_run', label: 'Maximum questions per generation', type: 'number', min: 1, max: 300 },
     ],
   },
+  payments: {
+    label: 'Payments',
+    description: 'Paystack (card, bank, USSD, transfer) and manual bank transfer. Prices are stored in kobo; nothing is charged until you enable a method.',
+    fields: [
+      { key: 'payments.paystack_enabled', label: 'Accept payments with Paystack', type: 'checkbox' },
+      { key: 'payments.paystack_mode', label: 'Paystack mode', type: 'select', options: () => [{ value: 'test', label: 'Test (sk_test_… keys)' }, { value: 'live', label: 'Live (sk_live_… keys)' }] },
+      { key: 'payments.paystack_public_key', label: 'Paystack public key', type: 'text', max: 120, hint: 'Starts with pk_test_ or pk_live_.' },
+      { key: 'payments.paystack_secret_key', label: 'Paystack secret key', type: 'secret', hint: 'Also used to verify webhook signatures. Set the webhook URL in your Paystack dashboard to <site>/webhooks/paystack.' },
+      { key: 'payments.bank_enabled', label: 'Accept manual bank transfer', type: 'checkbox', hint: 'Candidates transfer, upload the receipt, and an admin confirms the order.' },
+      { key: 'payments.bank_name', label: 'Bank name', type: 'text', max: 120 },
+      { key: 'payments.bank_account_name', label: 'Account name', type: 'text', max: 150 },
+      { key: 'payments.bank_account_number', label: 'Account number', type: 'text', max: 20 },
+      { key: 'payments.bank_instructions', label: 'Transfer instructions', type: 'textarea', max: 1000 },
+      { key: 'payments.transfer_expiry_hours', label: 'Unpaid transfer orders expire after (hours)', type: 'number', min: 1, max: 720 },
+      { key: 'payments.vat_percent', label: 'VAT shown on invoices (%)', type: 'number', min: 0, max: 50, hint: 'Prices include VAT; the invoice shows the VAT portion. 0 hides it.' },
+      { key: 'payments.business_name', label: 'Business name on invoices', type: 'text', max: 150 },
+      { key: 'payments.business_address', label: 'Business address on invoices', type: 'textarea', max: 400 },
+      { key: 'payments.tax_id', label: 'Tax ID (TIN)', type: 'text', max: 40 },
+    ],
+  },
   maintenance: {
     label: 'Maintenance & SEO',
     description: 'Maintenance mode blocks everyone except staff. SEO defaults apply to every public page.',
@@ -184,6 +204,18 @@ async function save(req, res) {
   if (name === 'auth' && changes['auth.google_enabled']) {
     const hasSecret = changes['auth.google_client_secret'] || (await settings.isSet('auth.google_client_secret'));
     if (!changes['auth.google_client_id'] || !hasSecret) errors['auth.google_enabled'] = 'Enter the client ID and secret before enabling Google sign-in.';
+  }
+  if (name === 'payments') {
+    const pk = changes['payments.paystack_public_key'] || '';
+    const mode = changes['payments.paystack_mode'];
+    if (pk && !/^pk_(test|live)_[A-Za-z0-9]+$/.test(pk)) errors['payments.paystack_public_key'] = 'A Paystack public key looks like pk_test_… or pk_live_….';
+    else if (pk && mode && !pk.startsWith(`pk_${mode}_`)) errors['payments.paystack_public_key'] = `This is not a ${mode} key — switch the mode or paste the matching key.`;
+    const sk = changes['payments.paystack_secret_key'];
+    if (sk && !/^sk_(test|live)_[A-Za-z0-9]+$/.test(sk)) errors['payments.paystack_secret_key'] = 'A Paystack secret key looks like sk_test_… or sk_live_….';
+    else if (sk && mode && !sk.startsWith(`sk_${mode}_`)) errors['payments.paystack_secret_key'] = `This is not a ${mode} secret key.`;
+    if (changes['payments.paystack_enabled'] && !(sk || (await settings.isSet('payments.paystack_secret_key')))) errors['payments.paystack_enabled'] = 'Enter the Paystack secret key before enabling Paystack.';
+    if (changes['payments.bank_enabled'] && !(changes['payments.bank_account_number'] && changes['payments.bank_name'] && changes['payments.bank_account_name'])) errors['payments.bank_enabled'] = 'Enter the bank name, account name and account number before enabling bank transfer.';
+    if (changes['payments.bank_account_number'] && !/^\d{10}$/.test(changes['payments.bank_account_number'])) errors['payments.bank_account_number'] = 'Nigerian account numbers (NUBAN) have 10 digits.';
   }
   if (name === 'ai' && changes['ai.openai_base_url'] && !/^https:\/\/[^\s]+$/i.test(changes['ai.openai_base_url'])) errors['ai.openai_base_url'] = 'Enter an https:// URL.';
   if (Object.keys(errors).length) {

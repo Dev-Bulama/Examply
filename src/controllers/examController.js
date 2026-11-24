@@ -108,7 +108,10 @@ async function examShow(req, res) {
   const history = user
     ? await db()('attempts as a').leftJoin('results as r', 'r.attempt_id', 'a.id').where({ 'a.exam_id': exam.id, 'a.user_id': user.id }).orderBy('a.id', 'desc').limit(10).select('a.uuid', 'a.attempt_no', 'a.status', 'a.started_at', 'a.submitted_at', 'a.mode', 'r.percent', 'r.passed', 'r.band', 'r.release_status', 'r.has_pending_manual')
     : [];
+  const products = await db()('products').where({ exam_id: exam.id, is_active: true }).whereNull('deleted_at').select('slug', 'type', 'price_kobo', 'sale_price_kobo', 'currency');
   res.render('public/exam', {
+    buyProduct: products.find((p) => p.type === 'exam') || null,
+    attemptsProduct: products.find((p) => p.type === 'attempts') || null,
     title: exam.title,
     layout: 'layouts/public',
     exam,

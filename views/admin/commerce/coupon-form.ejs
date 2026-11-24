@@ -1,0 +1,16 @@
+<div class="mb-6"><h1 class="h1"><%= c.id ? 'Coupon ' + c.code : 'New coupon' %></h1></div>
+<form method="post" action="<%= c.id ? '/admin/coupons/' + c.id : '/admin/coupons' %>" class="card card-body grid max-w-3xl gap-5 sm:grid-cols-2" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <%- include('../../partials/field', { name: 'code', label: 'Code', value: c.code, required: true, maxlength: 40, placeholder: 'e.g. LAUNCH20' }) %>
+  <%- include('../../partials/field', { name: 'discount_type', label: 'Type', type: 'select', value: c.discount_type, options: [{ value: 'percent', label: 'Percentage off' }, { value: 'fixed', label: 'Fixed amount off (NGN)' }] }) %>
+  <%- include('../../partials/field', { name: 'value', label: 'Discount', value: c.discount_type === 'fixed' ? major(c.value) : c.value, inputmode: 'decimal', required: true, hint: 'e.g. 20 for 20%, or 5000 for ₦5,000 off' }) %>
+  <%- include('../../partials/field', { name: 'min_order', label: 'Minimum order (NGN)', value: major(c.min_order_kobo), inputmode: 'decimal' }) %>
+  <%- include('../../partials/field', { name: 'max_uses', label: 'Total uses allowed', type: 'number', min: 1, value: c.max_uses, hint: 'Empty = unlimited' }) %>
+  <%- include('../../partials/field', { name: 'max_uses_per_user', label: 'Uses per person', type: 'number', min: 1, value: c.max_uses_per_user }) %>
+  <%- include('../../partials/field', { name: 'starts_at', label: 'Starts', type: 'datetime-local', value: toLocal(c.starts_at) }) %>
+  <%- include('../../partials/field', { name: 'expires_at', label: 'Ends', type: 'datetime-local', value: toLocal(c.expires_at) }) %>
+  <fieldset class="sm:col-span-2"><legend class="label">Limit to products <span class="font-normal muted">(none ticked = everything)</span></legend>
+    <div class="mt-2 grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2"><% allProducts.forEach(function (p) { %><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="product_ids" value="<%= p.id %>" class="checkbox" <%= c.product_ids.includes(p.id) ? 'checked' : '' %>> <%= p.name %></label><% }) %></div></fieldset>
+  <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" class="checkbox" <%= c.is_active ? 'checked' : '' %>> Active</label>
+  <div class="flex justify-end sm:col-span-2"><button class="btn-primary">Save coupon</button></div>
+</form>

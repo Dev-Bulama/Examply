@@ -11,10 +11,10 @@
     { label: 'Revenue today', value: fmt.money(kpi.revenueToday), sub: `${fmt.money(kpi.revenueMtd)} this month`, icon: 'banknotes' },
   ];
   const attention = [
-    { label: 'Essays waiting to be graded', n: kpi.pendingEssays, icon: 'clipboard' },
-    { label: 'Reported questions', n: kpi.reportedQuestions, icon: 'flag' },
-    { label: 'Failed imports (30 days)', n: kpi.failedImports, icon: 'warning' },
-    { label: 'Bank transfers to review', n: kpi.pendingTransfers, icon: 'banknotes' },
+    { label: 'Essays waiting to be graded', n: kpi.pendingEssays, icon: 'clipboard', href: can('results.manage') ? '/admin/grading' : null },
+    { label: 'Reported questions', n: kpi.reportedQuestions, icon: 'flag', href: can('question_reports.manage') ? '/admin/questions/reports' : null },
+    { label: 'Failed imports (30 days)', n: kpi.failedImports, icon: 'warning', href: can('questions.import') ? '/admin/imports' : null },
+    { label: 'Bank transfers to review', n: kpi.pendingTransfers, icon: 'banknotes', href: can('orders.view') ? '/admin/orders?status=awaiting_transfer' : null },
     { label: 'Failed background jobs', n: kpi.failedJobs, icon: 'queue', href: can('jobs.view') ? '/admin/jobs?status=failed' : null },
     { label: 'Account deletion requests', n: kpi.deletionRequests, icon: 'user', href: can('users.view') ? '/admin/users?status=deletion' : null },
   ];

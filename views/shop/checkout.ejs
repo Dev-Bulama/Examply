@@ -1,0 +1,79 @@
+<%
+  const sub = unit * qty;
+  const disc = preview && !preview.error ? preview.discount : 0;
+  const total = Math.max(0, sub - disc);
+  const per = { monthly: 'month', quarterly: 'quarter', biannually: '6 months', annually: 'year' };
+  const noMethod = total > 0 && !m.paystack && !m.bank;
+%>
+<div class="container-page max-w-4xl py-10">
+  <nav class="text-sm muted"><a class="hover:underline" href="<%= product.exam_slug ? '/exams/' + product.exam_slug : '/pricing' %>">← Back</a></nav>
+  <h1 class="h1 mt-2">Checkout</h1>
+  <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <form method="post" action="/checkout/<%= product.slug %>" class="card card-body space-y-6" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <section>
+        <h2 class="h3">What you are buying</h2>
+        <div class="mt-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+          <p class="font-semibold"><%= product.name %></p>
+          <p class="mt-1 text-sm muted">
+            <% if (product.type === 'exam') { %><%= product.access_days ? product.access_days + ' days of access' : 'Lifetime access' %><%= product.certificate_enabled ? ' · certificate when you pass' : '' %>
+            <% } else if (product.type === 'attempts') { %>Extra attempt<%= qty > 1 ? 's' : '' %> for “<%= product.exam_title %>”
+            <% } else if (product.type === 'plan') { %>Billed every <%= per[product.plan_interval] || 'month' %>. Your company workspace is ready as soon as payment is confirmed.
+            <% } else if (product.type === 'bundle') { %>Includes: <%= contents.map(function (c) { return c.exam_title || c.name; }).join(', ') %><% } %>
+          </p>
+          <% if (product.type === 'plan' && product.features.length) { %><ul class="mt-3 grid gap-1 text-sm sm:grid-cols-2"><% product.features.forEach(function (f) { %><li>✓ <%= f %></li><% }) %></ul><% } %>
+        </div>
+        <% if (product.type === 'attempts') { %>
+        <p class="label mt-4">How many attempts?</p>
+        <div class="flex gap-2" role="group" aria-label="Number of attempts"><% [1,2,3,5].forEach(function (n) { %><a href="/checkout/<%= product.slug %>?qty=<%= n %>" class="<%= qty === n ? 'btn-primary' : 'btn-secondary' %> btn-sm" <%= qty === n ? 'aria-current="true"' : '' %>><%= n %></a><% }) %></div>
+        <input type="hidden" name="quantity" value="<%= qty %>">
+        <% } %>
+        <% if (product.type === 'plan') { %>
+        <label class="label mt-4" for="org">Company name <span class="text-red-600" aria-hidden="true">*</span></label>
+        <input id="org" name="organisation_name" class="input" maxlength="150" value="<%= managed ? managed.name : '' %>" placeholder="e.g. Acme Data Ltd" required>
+        <p class="hint">Your workspace is created under this name; you become its manager.</p>
+        <% } %>
+      </section>
+      <% if (total > 0 || (preview && !preview.error)) { %>
+      <section>
+        <h2 class="h3">Payment method</h2>
+        <% if (noMethod) { %><div class="alert-warning mt-3"><p>Online payment is not set up yet. Please contact us to buy this.</p></div><% } %>
+        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+          <% if (m.paystack) { %>
+          <label class="flex cursor-pointer gap-3 rounded-lg border border-slate-200 p-4 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50 dark:border-slate-700 dark:has-[:checked]:bg-primary-950/40">
+            <input type="radio" name="method" value="paystack" class="mt-1" checked>
+            <span><span class="font-semibold">Card, bank or USSD</span><span class="block text-sm muted">Instant access. Secured by Paystack.</span></span>
+          </label>
+          <% } %>
+          <% if (m.bank) { %>
+          <label class="flex cursor-pointer gap-3 rounded-lg border border-slate-200 p-4 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50 dark:border-slate-700 dark:has-[:checked]:bg-primary-950/40">
+            <input type="radio" name="method" value="bank_transfer" class="mt-1" <%= m.paystack ? '' : 'checked' %>>
+            <span><span class="font-semibold">Bank transfer</span><span class="block text-sm muted">Transfer to <%= bank.name || 'our account' %> and upload the receipt. Access after we confirm it.</span></span>
+          </label>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
+      <input type="hidden" name="coupon" value="<%= preview && !preview.error ? preview.code : '' %>">
+      <button class="btn-primary w-full" <%= noMethod ? 'disabled' : '' %>><%= total === 0 ? 'Get access' : 'Pay ' + fmt.money(total, product.currency) %></button>
+      <p class="text-center text-xs muted">By continuing you agree to the terms of use. Refunds are handled under our refund policy.</p>
+    </form>
+
+    <aside class="space-y-4">
+      <div class="card card-body text-sm">
+        <h2 class="h3">Summary</h2>
+        <dl class="mt-3 space-y-2">
+          <div class="flex justify-between"><dt><%= product.name %><%= qty > 1 ? ' × ' + qty : '' %></dt><dd><%= fmt.money(sub, product.currency) %></dd></div>
+          <% if (disc) { %><div class="flex justify-between text-emerald-700 dark:text-emerald-400"><dt>Coupon <%= preview.code %></dt><dd>− <%= fmt.money(disc, product.currency) %></dd></div><% } %>
+          <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold dark:border-slate-700"><dt>Total</dt><dd><%= fmt.money(total, product.currency) %></dd></div>
+        </dl>
+      </div>
+      <form method="get" action="/checkout/<%= product.slug %>" class="card card-body">
+        <label class="label" for="cp">Coupon code</label>
+        <% if (qty > 1) { %><input type="hidden" name="qty" value="<%= qty %>"><% } %>
+        <div class="flex gap-2"><input id="cp" name="coupon" value="<%= preview ? preview.code : '' %>" class="input uppercase" autocomplete="off"><button class="btn-secondary">Apply</button></div>
+        <% if (preview && preview.error) { %><p class="field-error"><%= preview.error %></p><% } else if (preview) { %><p class="mt-1 text-sm text-emerald-700 dark:text-emerald-400">Coupon applied.</p><% } %>
+      </form>
+    </aside>
+  </div>
+</div>

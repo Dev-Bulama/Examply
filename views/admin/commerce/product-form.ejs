@@ -1,0 +1,43 @@
+<% const isPlan = p.type === 'plan'; const L = p.limits || {}; %>
+<div class="mb-6"><h1 class="h1"><%= p.id ? 'Edit ' + p.name : isPlan ? 'New company plan' : 'New bundle' %></h1><p class="mt-1 muted"><%= isPlan ? 'Companies subscribe to a plan for their own workspace: questions, exams, AI generation and their candidates.' : 'Sell several paid exams together at a lower price.' %></p></div>
+<form method="post" action="<%= p.id ? '/admin/products/' + p.id : '/admin/products' %>" class="grid gap-6 lg:grid-cols-3" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="type" value="<%= p.type %>">
+  <section class="card card-body space-y-5 lg:col-span-2">
+    <%- include('../../partials/field', { name: 'name', label: 'Name', value: p.name, required: true, maxlength: 200 }) %>
+    <%- include('../../partials/field', { name: 'tagline', label: 'Tagline', value: p.tagline, maxlength: 200, placeholder: isPlan ? 'e.g. For growing training teams' : '' }) %>
+    <%- include('../../partials/field', { name: 'description', label: 'Description', type: 'textarea', rows: 3, value: p.description, maxlength: 2000 }) %>
+    <%- include('../../partials/field', { name: 'features', label: 'Feature list (one per line, shown on the pricing page)', type: 'textarea', rows: 6, value: (p.features || []).join('\n') }) %>
+    <% if (!isPlan) { %>
+    <fieldset><legend class="label">Exams in this bundle</legend><% if (errors.items) { %><p class="field-error"><%= errors.items %></p><% } %>
+      <div class="mt-2 grid gap-2 sm:grid-cols-2"><% examProducts.forEach(function (e) { %><label class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700"><input type="checkbox" name="items" value="<%= e.id %>" class="checkbox" <%= items.includes(e.id) ? 'checked' : '' %>> <span class="flex-1"><%= e.title %></span><span class="text-xs muted"><%= fmt.money(e.price_kobo) %></span></label><% }) %></div>
+      <% if (!examProducts.length) { %><p class="text-sm muted">No paid exams yet — set a price on an exam first.</p><% } %>
+    </fieldset>
+    <% } else { %>
+    <fieldset class="grid gap-4 sm:grid-cols-3"><legend class="label sm:col-span-3">Plan limits (enforced in the company workspace)</legend>
+      <%- include('../../partials/field', { name: 'limit_candidates', label: 'Candidates', type: 'number', min: 1, value: L.candidates, hint: 'Empty = unlimited' }) %>
+      <%- include('../../partials/field', { name: 'limit_ai', label: 'AI questions / month', type: 'number', min: 0, value: L.ai_questions_per_month }) %>
+      <%- include('../../partials/field', { name: 'limit_exams', label: 'Published exams', type: 'number', min: 1, value: L.exams, hint: 'Empty = unlimited' }) %>
+      <%- include('../../partials/field', { name: 'limit_staff', label: 'Staff seats', type: 'number', min: 1, value: L.staff_seats || 1 }) %>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="limit_labs" value="1" class="checkbox" <%= L.labs ? 'checked' : '' %>> SQL &amp; cyber labs</label>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="limit_branding" value="1" class="checkbox" <%= L.custom_branding ? 'checked' : '' %>> Custom branding</label>
+    </fieldset>
+    <% } %>
+  </section>
+  <aside class="space-y-6">
+    <section class="card card-body space-y-4">
+      <h2 class="h3">Price</h2>
+      <%- include('../../partials/field', { name: 'price', label: 'Price (NGN)', value: major(p.price_kobo), inputmode: 'decimal', required: true }) %>
+      <%- include('../../partials/field', { name: 'sale_price', label: 'Sale price', value: major(p.sale_price_kobo), inputmode: 'decimal' }) %>
+      <% if (isPlan) { %>
+        <%- include('../../partials/field', { name: 'plan_interval', label: 'Billing period', type: 'select', value: p.plan_interval, options: [{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'biannually', label: 'Every 6 months' }, { value: 'annually', label: 'Yearly' }] }) %>
+        <%- include('../../partials/field', { name: 'paystack_plan_code', label: 'Paystack plan code (optional)', value: p.paystack_plan_code, placeholder: 'PLN_…', hint: 'For automatic renewals: create the plan in Paystack with the same price and period, then paste its code. Without it, companies renew by buying again.' }) %>
+      <% } else { %>
+        <%- include('../../partials/field', { name: 'access_days', label: 'Access period (days)', type: 'number', min: 1, value: p.access_days, hint: 'Empty = lifetime' }) %>
+      <% } %>
+      <%- include('../../partials/field', { name: 'display_order', label: 'Display order', type: 'number', value: p.display_order || 0 }) %>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_featured" value="1" class="checkbox" <%= p.is_featured ? 'checked' : '' %>> Highlight as “most popular”</label>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="is_active" value="1" class="checkbox" <%= p.is_active ? 'checked' : '' %>> On sale</label>
+      <button class="btn-primary w-full">Save</button>
+    </section>
+  </aside>
+</form>

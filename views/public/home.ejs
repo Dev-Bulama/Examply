@@ -190,7 +190,7 @@
         <ul class="mt-6 flex-1 space-y-3 text-sm">
           <% p.features.forEach(function (f) { %><li class="flex gap-2.5"><span class="mt-0.5 text-emerald-600"><%- include('../partials/icon', { name: 'check', cls: 'h-4 w-4' }) %></span><%= f %></li><% }) %>
         </ul>
-        <a href="/register?plan=<%= p.slug %>" class="mt-8 <%= p.is_featured ? 'btn-primary' : 'btn-secondary' %> w-full">Get started</a>
+        <a href="/checkout/<%= p.slug %>" class="mt-8 <%= p.is_featured ? 'btn-primary' : 'btn-secondary' %> w-full">Get started</a>
       </article>
       <% }) %>
     </div>

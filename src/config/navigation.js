@@ -25,6 +25,14 @@ const ADMIN_NAV = [
     ],
   },
   {
+    heading: 'Commerce',
+    items: [
+      { label: 'Orders', href: '/admin/orders', icon: 'banknotes', any: ['orders.view'] },
+      { label: 'Products & plans', href: '/admin/products', icon: 'list', any: ['products.manage'] },
+      { label: 'Coupons', href: '/admin/coupons', icon: 'key', any: ['coupons.manage'] },
+    ],
+  },
+  {
     heading: 'People',
     items: [
       { label: 'Users', href: '/admin/users', icon: 'users', any: ['users.view'] },
@@ -49,6 +57,7 @@ const CANDIDATE_NAV = [
       { label: 'Browse exams', href: '/exams', icon: 'search' },
       { label: 'My results', href: '/my/results', icon: 'chart' },
       { label: 'Certificates', href: '/my/certificates', icon: 'academic' },
+      { label: 'Orders & library', href: '/my/orders', icon: 'banknotes' },
       { label: 'Profile', href: '/account', icon: 'user', exact: true },
       { label: 'Security', href: '/account/security', icon: 'lock' },
     ],

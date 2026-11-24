@@ -1,0 +1,65 @@
+<%
+  const o = order;
+  const ST = { pending: ['badge-amber', 'Awaiting payment'], awaiting_transfer: ['badge-amber', 'Awaiting transfer'], paid: ['badge-green', 'Paid'], failed: ['badge-red', 'Payment failed'], cancelled: ['badge-gray', 'Cancelled'], refunded: ['badge-red', 'Refunded'] };
+%>
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div><p class="text-sm muted"><%= fmt.dateTime(o.created_at) %></p><h1 class="h1 mt-1">Order <span class="font-mono"><%= o.order_no %></span></h1></div>
+  <div class="flex flex-wrap items-center gap-2"><span class="<%= ST[o.status][0] %> text-sm"><%= ST[o.status][1] %></span><a class="btn-secondary" href="/my/orders/<%= o.order_no %>.pdf"><%- include('../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> <%= o.status === 'paid' ? 'Receipt' : 'Invoice' %> (PDF)</a></div>
+</div>
+<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+  <div class="space-y-6">
+    <% if (o.status === 'paid') { %>
+    <section class="card card-body">
+      <h2 class="h2">You have access</h2>
+      <ul class="mt-3 space-y-2">
+        <% products.forEach(function (p) { %>
+          <% if (p.type === 'exam' || p.type === 'attempts') { %><li><a class="btn-primary" href="/exams/<%= p.exam_slug %>"><%= p.type === 'attempts' ? 'Use my extra attempt' : 'Start' %>: <%= p.exam_title %></a></li><% } %>
+          <% if (p.type === 'bundle') { p.contents.forEach(function (c) { if (c.exam_slug) { %><li><a class="link" href="/exams/<%= c.exam_slug %>"><%= c.exam_title %></a></li><% } }); } %>
+          <% if (p.type === 'plan') { %><li class="text-sm">Your company subscription is active. Manage your workspace from the dashboard.</li><% } %>
+        <% }) %>
+      </ul>
+    </section>
+    <% } else if (o.status === 'awaiting_transfer') { %>
+    <section class="card card-body">
+      <h2 class="h2">Pay by bank transfer</h2>
+      <p class="mt-1 muted">Transfer exactly <strong class="text-slate-900 dark:text-white"><%= fmt.money(o.total_kobo, o.currency) %></strong> to:</p>
+      <dl class="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800/60 sm:grid-cols-3">
+        <div><dt class="muted">Bank</dt><dd class="font-semibold"><%= bank.name %></dd></div>
+        <div><dt class="muted">Account name</dt><dd class="font-semibold"><%= bank.account_name %></dd></div>
+        <div><dt class="muted">Account number</dt><dd class="font-mono text-lg font-semibold tracking-wider"><%= bank.account_number %></dd></div>
+        <div class="sm:col-span-3"><dt class="muted">Narration / reference</dt><dd class="font-mono font-semibold"><%= o.order_no %></dd></div>
+      </dl>
+      <% if (bank.instructions) { %><p class="mt-3 whitespace-pre-line text-sm"><%= bank.instructions %></p><% } %>
+      <% if (o.expires_at) { %><p class="mt-2 text-sm muted">This order is held until <%= fmt.dateTime(o.expires_at) %>.</p><% } %>
+      <% if (o.transfer_submitted_at) { %><div class="alert-info mt-4"><p>Receipt received <%= fmt.relative(o.transfer_submitted_at) %>. We will confirm it shortly and email you.</p></div><% } %>
+      <% if (o.review_note) { %><div class="alert-warning mt-4"><p><strong>From our team:</strong> <%= o.review_note %></p></div><% } %>
+      <form method="post" action="/my/orders/<%= o.order_no %>/transfer?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="mt-5 grid gap-3 sm:grid-cols-2">
+        <div class="sm:col-span-2"><label class="label" for="proof">Transfer receipt (image or PDF, up to 5 MB)</label><input id="proof" name="proof" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" class="input"></div>
+        <div><label class="label" for="tref">Transfer reference / session ID</label><input id="tref" name="transfer_reference" class="input" maxlength="120" value="<%= o.transfer_reference || '' %>"></div>
+        <div><label class="label" for="tnote">Note (optional)</label><input id="tnote" name="transfer_note" class="input" maxlength="1000" placeholder="e.g. paid from my company account"></div>
+        <div class="flex justify-end sm:col-span-2"><button class="btn-primary"><%= o.transfer_submitted_at ? 'Update receipt' : 'I have paid — send receipt' %></button></div>
+      </form>
+    </section>
+    <% } else if (o.status === 'pending' || o.status === 'failed') { %>
+    <section class="card card-body">
+      <h2 class="h2"><%= o.status === 'failed' ? 'The payment did not go through' : 'Complete your payment' %></h2>
+      <p class="mt-1 muted">You have not been charged for this order yet.</p>
+      <% if (m.paystack) { %><form method="post" action="/my/orders/<%= o.order_no %>/pay" class="mt-4"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-primary">Pay <%= fmt.money(o.total_kobo, o.currency) %> with Paystack</button></form><% } %>
+    </section>
+    <% } else if (o.status === 'refunded') { %>
+    <div class="alert-warning"><p>This order was refunded on <%= fmt.date(o.refunded_at) %><%= o.refund_reason ? ': ' + o.refund_reason : '' %>. Access has been removed.</p></div>
+    <% } %>
+  </div>
+  <aside class="space-y-4">
+    <div class="card card-body text-sm">
+      <h2 class="h3">Summary</h2>
+      <dl class="mt-3 space-y-2">
+        <% o.items.forEach(function (i) { %><div class="flex justify-between gap-2"><dt><%= i.name %><%= i.quantity > 1 ? ' × ' + i.quantity : '' %></dt><dd><%= fmt.money(i.total_kobo, o.currency) %></dd></div><% }) %>
+        <% if (o.discount_kobo) { %><div class="flex justify-between text-emerald-700 dark:text-emerald-400"><dt>Coupon <%= o.coupon_code %></dt><dd>− <%= fmt.money(o.discount_kobo, o.currency) %></dd></div><% } %>
+        <div class="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold dark:border-slate-700"><dt>Total</dt><dd><%= fmt.money(o.total_kobo, o.currency) %></dd></div>
+      </dl>
+      <p class="mt-3 text-xs muted"><%= { paystack: 'Paystack', bank_transfer: 'Bank transfer', free: 'Free', admin: 'Granted by an administrator' }[o.payment_method] %></p>
+    </div>
+    <% if (['pending', 'awaiting_transfer', 'failed'].includes(o.status) && !o.transfer_submitted_at) { %><form method="post" action="/my/orders/<%= o.order_no %>/cancel" data-confirm="Cancel this order?" data-confirm-label="Cancel order"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost w-full text-red-600">Cancel order</button></form><% } %>
+  </aside>
+</div>

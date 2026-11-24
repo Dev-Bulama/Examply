@@ -1,0 +1,9 @@
+<div class="mb-6"><h1 class="h1">Grant access</h1><p class="mt-1 muted">Give a product to someone without payment — scholarships, partners, or fixing a payment problem. It is recorded as a ₦0 order and in the audit log.</p></div>
+<form method="post" action="/admin/orders/grant" class="card card-body grid max-w-2xl gap-5" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div><label class="label" for="ge">User email</label><input id="ge" name="email" type="email" class="input" required></div>
+  <div><label class="label" for="gp">Product</label><select id="gp" name="product_id" class="input"><% products.forEach(function (p) { %><option value="<%= p.id %>"><%= p.name %> (<%= TYPE_LABEL[p.type] %>)</option><% }) %></select></div>
+  <div><label class="label" for="go">Company name (plans only)</label><input id="go" name="organisation_name" class="input" maxlength="150"></div>
+  <div><label class="label" for="gr">Reason</label><input id="gr" name="reason" class="input" maxlength="200" required placeholder="e.g. Scholarship — Lagos DBA cohort"></div>
+  <div class="flex justify-end"><button class="btn-primary">Grant</button></div>
+</form>

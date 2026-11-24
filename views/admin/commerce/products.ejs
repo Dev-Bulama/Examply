@@ -1,0 +1,22 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div><h1 class="h1">Products &amp; plans</h1><p class="mt-1 muted">Paid exams and extra attempts are created automatically from each exam’s price settings. Bundles and company plans are managed here.</p></div>
+  <div class="flex flex-wrap gap-2"><a href="/admin/products/new?type=bundle" class="btn-secondary">New bundle</a><a href="/admin/products/new?type=plan" class="btn-primary">New company plan</a></div>
+</div>
+<nav class="mb-4 flex flex-wrap gap-1 text-sm" aria-label="Filter by type"><a href="/admin/products" class="rounded-md px-3 py-1.5 <%= !type ? 'bg-primary-600 text-on-primary' : 'bg-slate-100 dark:bg-slate-800' %>">All</a><% Object.entries(TYPE_LABEL).forEach(function (t) { %><a href="/admin/products?type=<%= t[0] %>" class="rounded-md px-3 py-1.5 <%= type === t[0] ? 'bg-primary-600 text-on-primary' : 'bg-slate-100 dark:bg-slate-800' %>"><%= t[1] %></a><% }) %></nav>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %><p class="p-10 text-center text-sm muted">No products yet. Mark an exam as paid in its builder (Attempts &amp; access), or create a bundle or plan.</p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0"><table class="table table-responsive">
+    <thead><tr><th>Product</th><th>Type</th><th>Price</th><th>Sold</th><th>Status</th></tr></thead>
+    <tbody><% pager.rows.forEach(function (p) { %>
+      <tr>
+        <td data-label="Product"><a class="font-medium hover:underline" href="<%= ['exam','attempts'].includes(p.type) ? '/admin/exams/' + p.exam_id + '/attempts' : '/admin/products/' + p.id + '/edit' %>"><%= p.name %></a><p class="font-mono text-xs muted">/checkout/<%= p.slug %></p></td>
+        <td data-label="Type"><span class="badge-gray"><%= TYPE_LABEL[p.type] %></span><%= p.plan_interval ? ' ' + p.plan_interval : '' %></td>
+        <td data-label="Price" class="text-sm"><% if (p.sale_price_kobo) { %><span class="line-through muted"><%= fmt.money(p.price_kobo, p.currency) %></span> <% } %><span class="font-semibold"><%= fmt.money(p.sale_price_kobo || p.price_kobo, p.currency) %></span></td>
+        <td data-label="Sold" class="text-sm"><%= fmt.number(p.sold) %></td>
+        <td data-label="Status"><span class="<%= p.is_active ? 'badge-green' : 'badge-gray' %>"><%= p.is_active ? 'On sale' : 'Off sale' %></span></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/products', query: query }) %>
+</div>

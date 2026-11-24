@@ -294,6 +294,7 @@ async function saveTab(id, tab, input, user, { timezone = 'Africa/Lagos' } = {},
   await knex('exams')
     .where({ id })
     .update({ ...patch, settings: toJson(merged), updated_by: user ? user.id : null, updated_at: knex.fn.now() });
+  if (tab === 'attempts' || tab === 'basics') await require('../commerce').syncExamProducts(id, knex);
   return { before: exam, patch, settingsPatch };
 }
 
@@ -516,12 +517,19 @@ async function publish(id, user, note = null, knex = db()) {
     await trx('exam_versions').insert({ exam_id: id, version_no: versionNo, snapshot: toJson(snap), note: str(note, 255) || null, created_by: user ? user.id : null });
     const now = new Date();
     await trx('exams').where({ id }).update({ status: 'published', version: versionNo, published_at: now, updated_at: now, updated_by: user ? user.id : null });
+    await require('../commerce').syncExamProducts(id, trx);
     return versionNo;
   });
 }
 
-const unpublish = (id, user, knex = db()) => knex('exams').where({ id }).update({ status: 'draft', updated_by: user ? user.id : null });
-const archive = (id, user, knex = db()) => knex('exams').where({ id }).update({ status: 'archived', updated_by: user ? user.id : null });
+async function unpublish(id, user, knex = db()) {
+  await knex('exams').where({ id }).update({ status: 'draft', updated_by: user ? user.id : null });
+  await require('../commerce').syncExamProducts(id, knex);
+}
+async function archive(id, user, knex = db()) {
+  await knex('exams').where({ id }).update({ status: 'archived', updated_by: user ? user.id : null });
+  await require('../commerce').syncExamProducts(id, knex);
+}
 
 async function duplicateExam(id, user, knex = db()) {
   const full = await loadFull(id, knex);
@@ -559,6 +567,7 @@ async function softDelete(id, user, knex = db()) {
   const [{ n }] = await knex('attempts').where({ exam_id: id }).count({ n: '*' });
   if (Number(n) > 0) throw new ExamError('This exam has attempts, so it cannot be deleted. Archive it instead.', [], 409);
   await knex('exams').where({ id }).update({ deleted_at: knex.fn.now(), updated_by: user ? user.id : null });
+  await require('../commerce').syncExamProducts(id, knex);
 }
 
 module.exports = {

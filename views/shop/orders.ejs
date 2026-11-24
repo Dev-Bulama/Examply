@@ -1,0 +1,29 @@
+<% const ST = { pending: ['badge-amber', 'Awaiting payment'], awaiting_transfer: ['badge-amber', 'Awaiting transfer'], paid: ['badge-green', 'Paid'], failed: ['badge-red', 'Failed'], cancelled: ['badge-gray', 'Cancelled'], refunded: ['badge-red', 'Refunded'] }; %>
+<div class="mb-6"><h1 class="h1">Orders &amp; library</h1><p class="mt-1 muted">What you have bought, and what you can access.</p></div>
+<section class="card card-body">
+  <h2 class="h2">My library</h2>
+  <% if (!access.length) { %><p class="mt-2 text-sm muted">Nothing yet. Paid exams and bundles you buy appear here.</p><% } else { %>
+  <ul class="mt-3 divide-y divide-slate-200 dark:divide-slate-800">
+    <% access.forEach(function (a) { const expired = a.expires_at && new Date(a.expires_at) < new Date(); %>
+    <li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
+      <span><span class="font-medium"><%= a.name %></span> <span class="muted">· <%= expired ? 'expired ' + fmt.date(a.expires_at) : a.expires_at ? 'until ' + fmt.date(a.expires_at) : 'lifetime' %></span></span>
+      <% if (a.exam_slug && !expired) { %><a class="btn-secondary btn-sm" href="/exams/<%= a.exam_slug %>">Open exam</a><% } %>
+    </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
+<section class="card mt-6 overflow-hidden">
+  <div class="card-body pb-0"><h2 class="h2">Orders</h2></div>
+  <% if (!rows.length) { %><p class="card-body text-sm muted">No orders yet. <a class="link" href="/exams">Browse exams</a></p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0 sm:pt-3"><table class="table table-responsive">
+    <thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody><% rows.forEach(function (o) { %>
+      <tr><td data-label="Order"><a class="font-mono font-medium hover:underline" href="/my/orders/<%= o.order_no %>"><%= o.order_no %></a><p class="text-xs muted"><%= fmt.dateTime(o.created_at) %></p></td>
+      <td data-label="Items" class="text-sm"><%= o.items.map(function (i) { return i.name + (i.quantity > 1 ? ' × ' + i.quantity : ''); }).join(', ') %></td>
+      <td data-label="Total" class="text-sm font-semibold"><%= fmt.money(o.total_kobo, o.currency) %></td>
+      <td data-label="Status"><span class="<%= ST[o.status][0] %>"><%= ST[o.status][1] %></span></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</section>

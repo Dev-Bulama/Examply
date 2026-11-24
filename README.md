@@ -17,8 +17,8 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 | 3. Import / export + AI generation | Excel, CSV, JSON, Aiken, GIFT, Word and ZIP imports with dry-run preview, duplicate handling, background batches, error report and 24-hour undo; templates; export to xlsx/JSON/GIFT; **AI question generation with Claude or OpenAI**; marketing landing page with plans | ✅ Done |
 | 4. Exam builder + instruction generator + SQL lab + AI exams | 11-tab exam builder with autosave (sections, fixed lists, blueprint rules with live availability, bands, access rules, extra attempts, pre-publish checklist, versioned publishing, duplicate); instructions generated from the settings; **SQL lab question type** (sandboxed SQLite in worker threads, result-set marking); **AI “generate a complete exam”** | ✅ Done |
 | 5. Exam engine, grading, results, certificates | Public catalogue and exam pages; eligibility rules (attempts, cooldown, overrides, window, invite code, IP/organisation, prerequisite, entitlement); mobile-first player with server timer, autosave + offline queue, resume, sections, palette, flags, review, keyboard, calculator/notepad, integrity events; §4 grading engine; results with domain radar, percentile, history and review; weak-area practice; PDF result slip; certificates with QR and `/verify`; admin attempts, grading queue, release, re-grade, revoke | ✅ Done |
-| 6. Commerce (Paystack + bank transfer) | | Next |
-| 7. Organisations & cohorts | | |
+| 6. Commerce (Paystack + bank transfer) | Paid exams, extra attempts, bundles and company plans; coupons; Paystack checkout with signed webhooks and idempotent fulfilment; bank transfer with receipt upload and admin approval; refunds; admin grants; PDF invoices/receipts and receipt emails; orders & library for candidates | ✅ Done |
+| 7. Company workspaces & cohorts | | Next |
 | 8. Live quiz | | |
 | 9. Analytics, notifications, CMS, support | | |
 | 10. Hardening & delivery | | |

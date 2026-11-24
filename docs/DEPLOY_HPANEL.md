@@ -133,3 +133,11 @@ A task never runs twice, whether the in-process scheduler or the cron call reach
 | **Emails not arriving** | Admin → Background jobs → Failed shows the SMTP error. Use **Send test email** in Settings. Check spam, and SPF/DKIM for the sending domain in hPanel → Emails. |
 | **Live features fall back to slow polling** | The proxy is blocking WebSockets; Socket.IO automatically falls back to HTTP long-polling. No action is needed. |
 | **Forgot the Super Admin password and lost the 2FA device and recovery codes** | Over SSH, from the application root: `node scripts/create-admin.js "Name" admin@example.com "New-Password-123" --reset-2fa`. This resets the password, clears 2FA and signs out other sessions; you will enrol again at the next sign-in. |
+
+
+## Payments
+
+1. **Admin → Settings → Payments**: paste the Paystack public and secret keys (test keys first), choose the mode, and turn Paystack on. For bank transfer, enter the bank name, account name and 10-digit account number and turn it on.
+2. In the **Paystack dashboard → Settings → API Keys & Webhooks**, set the webhook URL to `https://<your-domain>/webhooks/paystack`. The app verifies every webhook with your secret key; nothing else is needed.
+3. Optional, for automatic renewals of company plans: create a Plan in Paystack with the same price and period as the plan in **Admin → Products & plans**, and paste its `PLN_…` code into the plan.
+4. Test with Paystack's test cards, then switch to live keys and live mode.

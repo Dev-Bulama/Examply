@@ -1,0 +1,27 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div><h1 class="h1">Orders</h1><p class="mt-1 muted"><%= fmt.money(revenue30) %> from <%= paid30 %> paid order<%= paid30 === 1 ? '' : 's' %> in the last 30 days</p></div>
+  <div class="flex flex-wrap gap-2">
+    <% if (toReview) { %><a href="/admin/orders?status=awaiting_transfer" class="btn-primary">Transfers to confirm <span class="badge-amber"><%= toReview %></span></a><% } %>
+    <% if (can('orders.manage')) { %><a href="/admin/orders/grant" class="btn-secondary">Grant access</a><% } %>
+  </div>
+</div>
+<form method="get" action="/admin/orders" class="card card-body mb-4 grid gap-3 sm:grid-cols-4" role="search">
+  <div class="sm:col-span-2"><label class="sr-only" for="oq">Search</label><input id="oq" name="q" value="<%= f.q %>" class="input" placeholder="Order number, name or email"></div>
+  <div><label class="sr-only" for="os">Status</label><select id="os" name="status" class="input"><option value="">Any status</option><% Object.entries(ORDER_STATUS).forEach(function (s) { %><option value="<%= s[0] %>" <%= f.status === s[0] ? 'selected' : '' %>><%= s[1][1] %></option><% }) %></select></div>
+  <div class="flex gap-2"><label class="sr-only" for="om">Method</label><select id="om" name="method" class="input"><option value="">Any method</option><option value="paystack" <%= f.method === 'paystack' ? 'selected' : '' %>>Paystack</option><option value="bank_transfer" <%= f.method === 'bank_transfer' ? 'selected' : '' %>>Bank transfer</option><option value="free" <%= f.method === 'free' ? 'selected' : '' %>>Free</option><option value="admin" <%= f.method === 'admin' ? 'selected' : '' %>>Granted</option></select><button class="btn-primary">Filter</button></div>
+</form>
+<div class="card overflow-hidden">
+  <% if (!pager.rows.length) { %><p class="p-10 text-center text-sm muted">No orders match.</p><% } else { %>
+  <div class="overflow-x-auto p-2 sm:p-0"><table class="table table-responsive">
+    <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+    <tbody><% pager.rows.forEach(function (o) { %>
+      <tr><td data-label="Order"><a class="font-mono font-medium hover:underline" href="/admin/orders/<%= o.id %>"><%= o.order_no %></a><p class="text-xs muted"><%= fmt.dateTime(o.created_at) %></p></td>
+      <td data-label="Customer" class="text-sm"><%= o.full_name %><p class="text-xs muted"><%= o.email %></p></td>
+      <td data-label="Items" class="text-sm"><%= o.items.map(function (i) { return i.name; }).join(', ') %></td>
+      <td data-label="Total" class="text-sm font-semibold"><%= fmt.money(o.total_kobo, o.currency) %><p class="text-xs font-normal muted"><%= { paystack: 'Paystack', bank_transfer: 'Transfer', free: 'Free', admin: 'Granted' }[o.payment_method] %></p></td>
+      <td data-label="Status"><span class="<%= ORDER_STATUS[o.status][0] %>"><%= ORDER_STATUS[o.status][1] %></span><% if (o.status === 'awaiting_transfer' && o.transfer_submitted_at) { %> <span class="badge-blue">Receipt uploaded</span><% } %></td></tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+  <%- include('../../partials/pagination', { pager: pager, basePath: '/admin/orders', query: query }) %>
+</div>
