@@ -52,7 +52,7 @@ function createApp() {
 
   // Defaults so error pages render even if settings could not be loaded.
   app.locals.assetVersion = assetVersion(env.rootDir);
-  app.locals.site = { name: 'Skillscore Assess', tagline: '', timezone: env.DEFAULT_TIMEZONE, themeVersion: 'default', url: env.APP_URL, registrationOpen: false };
+  app.locals.site = { name: 'EXAMPLY', tagline: '', timezone: env.DEFAULT_TIMEZONE, themeVersion: 'default', url: env.APP_URL, registrationOpen: false };
   app.locals.fmt = { date: (d) => String(d), dateTime: (d) => String(d), relative: (d) => String(d), money: (m) => String(m), number: (n) => String(n) };
   app.locals.flash = [];
   app.locals.old = {};

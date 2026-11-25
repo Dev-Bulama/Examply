@@ -34,6 +34,12 @@
         <%- include('../partials/icon', { name: 'clock', cls: 'h-4 w-4' }) %><span x-text="timerText()">--:--</span>
       </div>
       <% } %>
+      <% if (d.background_music !== false) { %>
+      <div class="flex items-center gap-1" data-ambient>
+        <button type="button" class="btn-ghost px-2" data-ambient-toggle aria-pressed="false" aria-label="Calm background music" title="Play calm background music"><%- include('../partials/icon', { name: 'music', cls: 'h-5 w-5' }) %></button>
+        <input type="range" min="0" max="100" step="5" class="h-1 w-16 cursor-pointer accent-secondary-600 sm:w-20" data-ambient-volume aria-label="Music volume" hidden>
+      </div>
+      <% } %>
       <div class="hidden items-center gap-1 sm:flex">
         <button type="button" class="btn-ghost px-2 text-sm" @click="fontSmaller" aria-label="Smaller text">A−</button>
         <button type="button" class="btn-ghost px-2 text-base" @click="fontBigger" aria-label="Larger text">A+</button>
@@ -181,4 +187,5 @@
 <script src="/vendor/highlight/highlight.min.js?v=<%= assetVersion %>" defer></script>
 <script src="/js/question-render.js?v=<%= assetVersion %>"></script>
 <script src="/js/exam-player.js?v=<%= assetVersion %>"></script>
+<% if (d.background_music !== false) { %><script src="/js/ambient.js?v=<%= assetVersion %>"></script><% } %>
 <% if (top.some(function (t) { return t.type === 'lab'; })) { %><link rel="stylesheet" href="/vendor/xterm/xterm.css?v=<%= assetVersion %>"><script src="/vendor/xterm/xterm.js?v=<%= assetVersion %>"></script><script src="/js/lab-terminal.js?v=<%= assetVersion %>"></script><% } %>

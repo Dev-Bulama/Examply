@@ -163,7 +163,7 @@ function validateField(f, raw) {
       return { value: n };
     }
     case 'color':
-      if (!isHexColor(v)) return { error: 'Enter a colour like #1f4fd1.' };
+      if (!isHexColor(v)) return { error: 'Enter a colour like #1f3a5f.' };
       return { value: v.toLowerCase() };
     case 'email':
       if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return { error: 'Enter a valid email address.' };

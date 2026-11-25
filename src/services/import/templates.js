@@ -64,7 +64,7 @@ function rowValues(ex) {
 
 async function xlsxTemplate() {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Skillscore Assess';
+  wb.creator = 'EXAMPLY';
   const ins = wb.addWorksheet('Instructions');
   ins.columns = [{ width: 22 }, { width: 110 }];
   ins.addRow(['Question import template']).font = { bold: true, size: 14 };

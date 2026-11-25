@@ -2,7 +2,7 @@
 
 /**
  * Certificates: issued automatically when a candidate passes an exam that has certificates turned on. Each has a
- * unique public code (e.g. SSA-7KQ2-M9XD) and a QR code that opens /verify/<code>.
+ * unique public code (e.g. EXM-7KQ2-M9XD) and a QR code that opens /verify/<code>.
  * PDFs (certificate and result slip) are generated on demand with pdfkit (pure JS) and cached in storage/pdf.
  */
 const fs = require('fs');
@@ -22,7 +22,7 @@ const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I
 function newCode() {
   const bytes = crypto.randomBytes(8);
   const chars = [...bytes].map((b) => ALPHABET[b % ALPHABET.length]).join('');
-  return `SSA-${chars.slice(0, 4)}-${chars.slice(4, 8)}`;
+  return `EXM-${chars.slice(0, 4)}-${chars.slice(4, 8)}`;
 }
 
 const verifyUrl = (code) => `${String(getEnv().APP_URL).replace(/\/$/, '')}/verify/${code}`;
@@ -76,7 +76,7 @@ async function verify(code, knex = db()) {
 
 function hexToRgb(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
-  const n = m ? parseInt(m[1], 16) : 0x1f4fd1;
+  const n = m ? parseInt(m[1], 16) : 0x1f3a5f;
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
@@ -92,7 +92,7 @@ function toBuffer(doc) {
 
 async function brand() {
   await settings.ensureLoaded();
-  return { name: settings.getSync('general.site_name') || 'Skillscore Assess', primary: hexToRgb(settings.getSync('branding.primary_color')), timezone: settings.getSync('general.timezone') || 'Africa/Lagos' };
+  return { name: settings.getSync('general.site_name') || 'EXAMPLY', primary: hexToRgb(settings.getSync('branding.primary_color')), timezone: settings.getSync('general.timezone') || 'Africa/Lagos' };
 }
 
 /** Landscape A4 certificate in one of three designs. Returns a Buffer (cached on disk by code). */

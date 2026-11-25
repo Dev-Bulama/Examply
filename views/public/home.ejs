@@ -17,7 +17,10 @@
   <div class="container-page relative grid gap-14 py-16 sm:py-20 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-24">
     <div>
       <p class="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-800 dark:border-primary-900 dark:bg-primary-950 dark:text-primary-200"><span class="h-1.5 w-1.5 rounded-full bg-secondary-500" aria-hidden="true"></span> AI-built exams · Live cyber labs · Instant results</p>
-      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">Assess skills. <span class="text-primary-600 dark:text-primary-400">Prove them.</span> Certify with confidence.</h1>
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl" aria-label="Assess skills. Prove them. Certify with confidence.">
+        <span aria-hidden="true">Assess skills. <span class="text-primary-600 dark:text-primary-300">Prove them.</span></span>
+        <span class="mt-1 block min-h-[2.4em] sm:min-h-[1.2em]" aria-hidden="true"><span class="text-secondary-700 dark:text-secondary-300" data-typewriter='["Certify with confidence.","Pass Oracle 1Z0-082.","Harden a Linux server.","Ace AWS Cloud Practitioner.","Hire proven engineers.","Build exams with AI in minutes."]'>Certify with confidence.</span><span class="typewriter-caret" aria-hidden="true"></span></span>
+      </h1>
       <p class="mt-6 max-w-xl text-lg leading-relaxed muted"><%= site.name %> helps professionals and IT teams find their level, practise under real exam conditions — including hands-on security labs — and earn certificates that can be verified.</p>
       <div class="mt-8 flex flex-col gap-3 sm:flex-row">
         <% if (user) { %>
@@ -28,7 +31,7 @@
         <% } %>
       </div>
       <dl class="mt-10 grid max-w-md grid-cols-3 gap-6 text-sm">
-        <div><dt class="muted">Question types</dt><dd class="mt-1 text-2xl font-bold">11</dd></div>
+        <div><dt class="muted">Question types</dt><dd class="mt-1 text-2xl font-bold">13</dd></div>
         <div><dt class="muted">Import formats</dt><dd class="mt-1 text-2xl font-bold">7</dd></div>
         <div><dt class="muted">Marking</dt><dd class="mt-1 text-2xl font-bold">Instant</dd></div>
       </dl>

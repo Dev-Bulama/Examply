@@ -297,7 +297,7 @@ async function updateSettings(orgId, { name, primary_color, contact_email }, kne
     patch.name = n;
   }
   if (primary_color !== undefined) {
-    if (primary_color && !/^#[0-9a-fA-F]{6}$/.test(primary_color)) throw new WorkspaceError('Colours look like #1f4fd1.');
+    if (primary_color && !/^#[0-9a-fA-F]{6}$/.test(primary_color)) throw new WorkspaceError('Colours look like #1f3a5f.');
     patch.primary_color = primary_color || null;
   }
   if (contact_email !== undefined) patch.contact_email = String(contact_email).trim().slice(0, 191) || null;

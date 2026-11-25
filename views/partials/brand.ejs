@@ -1,8 +1,8 @@
-<a href="/" class="flex items-center gap-2.5 font-semibold tracking-tight <%= locals.cls || '' %>" aria-label="<%= site.name %> home">
+<a href="/" class="flex items-center gap-2.5 font-semibold <%= locals.cls || '' %>" aria-label="<%= site.name %> home">
   <% if (site.logo) { %>
     <img src="/media/branding/<%= site.logo %>" alt="" class="h-8 w-auto">
   <% } else { %>
-    <span class="grid h-8 w-8 place-items-center rounded-lg bg-primary-600 text-sm font-bold text-on-primary" aria-hidden="true"><%= (site.name || 'S').trim().charAt(0).toUpperCase() %></span>
+    <svg class="h-8 w-8 shrink-0" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" class="fill-primary-700 dark:fill-primary-500"/><path d="M10 9h12v3H13.5v2.6H20v3h-6.5V20H22v3H10z" fill="#fff"/><circle cx="24.5" cy="8.5" r="2.5" class="fill-secondary-400"/></svg>
   <% } %>
-  <span class="text-base sm:text-lg"><%= site.name %></span>
+  <span class="text-base sm:text-lg <%= /^[A-Z0-9 ]+$/.test(site.name || '') ? 'tracking-[0.14em]' : 'tracking-tight' %>"><%= site.name %></span>
 </a>

@@ -1,4 +1,4 @@
-/* Skillscore Assess — site-wide behaviour (Alpine CSP build: components are registered here, not inline). */
+/* EXAMPLY — site-wide behaviour (Alpine CSP build: components are registered here, not inline). */
 (function () {
   'use strict';
 
@@ -227,7 +227,7 @@
 
     Alpine.data('colorField', function (initial) {
       return {
-        value: initial || '#1f4fd1',
+        value: initial || '#1f3a5f',
         sync: function (e) {
           this.value = e.target.value;
         },
@@ -241,4 +241,49 @@
       if (currentPref() === 'system') applyTheme('system');
     });
   }
+})();
+
+/* Self-writing text: <span data-typewriter='["Phrase one.","Phrase two."]'>Phrase one.</span>
+   Types, pauses, deletes and moves to the next phrase. Static for reduced-motion users. */
+(function () {
+  function start(el) {
+    var words;
+    try {
+      words = JSON.parse(el.getAttribute('data-typewriter') || '[]');
+    } catch (e) {
+      return;
+    }
+    if (!words.length || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    var w = 0;
+    var i = words[0].length;
+    var deleting = true;
+    var wait = 2200;
+    function tick() {
+      var word = words[w];
+      if (deleting) {
+        i -= 1;
+        el.textContent = word.slice(0, Math.max(0, i));
+        if (i <= 0) {
+          deleting = false;
+          w = (w + 1) % words.length;
+          return setTimeout(tick, 350);
+        }
+        return setTimeout(tick, 28);
+      }
+      word = words[w];
+      i += 1;
+      el.textContent = word.slice(0, i);
+      if (i >= word.length) {
+        deleting = true;
+        return setTimeout(tick, wait);
+      }
+      return setTimeout(tick, 55 + Math.random() * 45);
+    }
+    setTimeout(tick, wait);
+  }
+  function init() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-typewriter]'), start);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();

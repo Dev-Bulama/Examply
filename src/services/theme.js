@@ -36,7 +36,7 @@ function contrast(a, b) {
 }
 
 function palette(hex) {
-  const base = parseHex(hex) || parseHex('#1f4fd1');
+  const base = parseHex(hex) || parseHex('#1f3a5f');
   return Object.fromEntries(STOPS.map((s) => [s, mix(base, MIX[s])]));
 }
 

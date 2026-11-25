@@ -126,7 +126,7 @@ describe('taking an exam', () => {
     expect(page.text).toContain('PASS');
     expect(page.text).toContain(SECRET_EXPLANATION); // explanations appear only after submission
     const cert = await db()('certificates').where({ attempt_id: attempt.id }).first();
-    expect(cert.code).toMatch(/^SSA-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+    expect(cert.code).toMatch(/^EXM-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
     expect(cert.holder_name).toBe(user.full_name);
     const verify = await require('supertest')(app).get(`/verify/${cert.code}`);
     expect(verify.text).toContain('Valid certificate');

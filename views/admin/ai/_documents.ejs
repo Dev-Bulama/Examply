@@ -1,0 +1,17 @@
+<% const docErr = (typeof errors !== 'undefined' && errors.documents) || null; %>
+<div x-data="docPicker">
+  <span class="label" id="docs-label">Reference documents (optional)</span>
+  <label for="f-documents" class="mt-1 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition hover:border-primary-400 hover:bg-primary-50/40 dark:hover:bg-primary-950/30 <%= docErr ? 'border-red-400' : 'border-slate-300 dark:border-slate-700' %>" :class="over ? 'border-primary-500 bg-primary-50/60 dark:bg-primary-950/40' : ''" @dragover.prevent="dragOver" @dragleave="dragLeave" @drop.prevent="dropFiles">
+    <%- include('../../partials/icon', { name: 'upload', cls: 'h-7 w-7 text-primary-600 dark:text-primary-300' }) %>
+    <span class="text-sm"><span class="font-semibold text-primary-700 dark:text-primary-300">Choose files</span> or drag them here</span>
+    <span class="text-xs muted">PDF, Word, PowerPoint, text or Markdown · up to 5 files, 20 MB each</span>
+    <input id="f-documents" type="file" name="documents" multiple class="sr-only" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.csv,.html,.htm,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/markdown,text/csv" aria-labelledby="docs-label" @change="picked" <% if (docErr) { %>aria-invalid="true" aria-describedby="f-documents-error"<% } %>>
+  </label>
+  <ul class="mt-2 space-y-1 text-sm" x-show="files.length" x-cloak>
+    <template x-for="f in files" :key="f.name">
+      <li class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-1.5 dark:bg-slate-800/60"><span class="truncate" x-text="f.name"></span><span class="shrink-0 text-xs muted" x-text="f.size"></span></li>
+    </template>
+  </ul>
+  <p class="mt-1 text-xs muted">Questions are written only from what the documents say, with the page or slide noted on each question. Scanned PDFs without selectable text can’t be read.</p>
+  <% if (docErr) { %><p id="f-documents-error" class="field-error"><%= docErr %></p><% } %>
+</div>

@@ -215,6 +215,50 @@ describe('generation flow (fake provider)', () => {
     expect((await db()('ai_generations').where({ import_id: importId }).first()).status).toBe('failed');
   });
 
+  test('uploaded documents ground the prompt and bad files are reported on the form', async () => {
+    const calls = [];
+    spy = jest.spyOn(providers, 'generateJson').mockImplementation(async (provider, args) => {
+      calls.push(args);
+      return { data: { questions: [fakeQuestion('single_choice', 'doc', { reference: 'notes.pdf, p. 1', options: [{ text: '1521', correct: true }, { text: '22', correct: false }] })] }, usage: { input: 10, output: 10 } };
+    });
+    const PDFDocument = require('pdfkit');
+    const pdf = await new Promise((resolve) => {
+      const d = new PDFDocument();
+      const bufs = [];
+      d.on('data', (b) => bufs.push(b));
+      d.on('end', () => resolve(Buffer.concat(bufs)));
+      d.text('Acme Listener Policy. The production listener always runs on port 1521 and must be restarted with lsnrctl.');
+      d.end();
+    });
+    let t = await csrf(agent, '/admin/ai/new');
+    let res = await agent
+      .post(`/admin/ai?_csrf=${encodeURIComponent(t)}`)
+      .field('provider', 'anthropic')
+      .field('prompt', 'Questions on our internal listener policy for new DBAs.')
+      .field('count', '1')
+      .field('types', 'single_choice')
+      .field('category_id', String(catId))
+      .attach('documents', pdf, 'notes.pdf');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/^\/admin\/imports\/\d+$/);
+    await runDueJobs({ limit: 200 });
+    expect(calls[0].prompt).toContain('GROUNDING');
+    expect(calls[0].prompt).toContain('### Source: notes.pdf');
+    expect(calls[0].prompt).toContain('port 1521');
+
+    t = await csrf(agent, '/admin/ai/new');
+    res = await agent
+      .post(`/admin/ai?_csrf=${encodeURIComponent(t)}`)
+      .field('provider', 'anthropic')
+      .field('prompt', 'Questions on our internal listener policy for new DBAs.')
+      .field('count', '1')
+      .field('types', 'single_choice')
+      .field('category_id', String(catId))
+      .attach('documents', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 1, 2, 3]), 'photo.png');
+    expect(res.headers.location).toBe('/admin/ai/new');
+    expect((await agent.get('/admin/ai/new')).text).toContain('is not a supported type');
+  });
+
   test('validation and permissions', async () => {
     const t = await csrf(agent, '/admin/ai/new');
     await agent.post('/admin/ai').type('form').send({ _csrf: t, provider: 'openai', prompt: 'short', count: '999' });

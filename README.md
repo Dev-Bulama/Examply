@@ -1,4 +1,4 @@
-# Skillscore Assess
+# EXAMPLY
 
 A professional assessment and certification exam platform: pre-training diagnostics with proficiency bands and learning gain, timed certification mock exams, a past-question marketplace (Paystack and bank transfer), and live or self-paced quizzes. Every submission is marked automatically and instantly.
 
@@ -66,6 +66,8 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 - **Instructions** are generated from the exam's real settings (timing, scoring, negative marking, attempts, navigation, tools, integrity rules, result release, accommodations such as extra time).
 - **SQL lab questions**: candidates write and run SQL against a sample database in the browser; answers are marked by comparing results with the model solution. Authors get a test bench (show tables, run the solution, verify).
 - **AI “generate a complete exam”**: questions across the certification's domains (including SQL lab tasks), catalogue copy, and timing/pass mark scaled from the official format.
+- **AI from your documents**: upload PDFs, Word or PowerPoint files (up to 5) and the AI writes questions grounded only in them, citing the page or slide.
+- **Calmer, more engaging exams**: optional generated background music, milestone encouragement and a pass celebration.
 - **Cyber security terminal labs**: a `lab` question type with a real-feeling Linux terminal backed by a safe simulated machine (no shell on your server). Seed adds two labs and the free *Linux Incident Response Lab* exam.
 - `npm run seed` adds 6 SQL lab questions and three demo exams (a blueprint mock, a sectioned diagnostic, a draft practice test).
 

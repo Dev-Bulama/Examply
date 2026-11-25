@@ -16,6 +16,7 @@ const DEFAULTS = Object.freeze({
     allow_flag: true,
     calculator: 'none', // none | basic | scientific
     notepad: false,
+    background_music: true, // candidates may switch on calm generated music
     practice_check_answer: false,
     deliver_count: null, // fixed lists: deliver a random N of the listed questions
   },
@@ -72,6 +73,7 @@ function normaliseGroup(group, input, current) {
         allow_flag: bool(i.allow_flag),
         calculator: pick(i.calculator, ['none', 'basic', 'scientific'], c.calculator),
         notepad: bool(i.notepad),
+        background_music: bool(i.background_music),
         practice_check_answer: bool(i.practice_check_answer),
         deliver_count: intOrNull(i.deliver_count, 1, 1000),
       };

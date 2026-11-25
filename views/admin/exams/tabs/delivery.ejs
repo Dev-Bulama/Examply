@@ -12,5 +12,6 @@
   <%- include('_cb', { name: 'allow_flag', label: 'Allow flagging for review', checked: d.allow_flag }) %>
   <%- include('_cb', { name: 'show_timer', label: 'Show the countdown timer', checked: d.show_timer }) %>
   <%- include('_cb', { name: 'notepad', label: 'Provide a notepad', checked: d.notepad }) %>
+  <%- include('_cb', { name: 'background_music', label: 'Offer calm background music', hint: 'Candidates can switch on gentle, generated ambient music (off until they choose it). Turn off for proctored or audio-sensitive exams.', checked: d.background_music }) %>
   <%- include('_cb', { name: 'practice_check_answer', label: 'Practice mode: “Check answer” button', checked: d.practice_check_answer, hint: 'Shows correctness and the explanation immediately. Use for practice tests only.' }) %>
 </div>

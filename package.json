@@ -1,5 +1,5 @@
 {
-  "name": "skillscore-assess",
+  "name": "examply",
   "version": "0.1.0",
   "private": true,
   "description": "Professional assessment & certification exam platform",
@@ -46,6 +46,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1",
     "otplib": "^12.0.1",
+    "pdfjs-dist": "^4.10.38",
     "pdfkit": "^0.17.2",
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",

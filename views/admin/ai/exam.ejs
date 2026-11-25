@@ -14,7 +14,7 @@
     <% if (can('settings.manage')) { %><a href="/admin/settings/ai" class="btn-primary">Open AI settings</a><% } %>
   </div>
 <% } else { %>
-<form method="post" action="/admin/ai" class="grid gap-6 lg:grid-cols-3" x-data="aiForm" data-certs="<%= certJson %>" data-cert="<%= old.certification_id || '' %>" novalidate>
+<form method="post" action="/admin/ai?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="grid gap-6 lg:grid-cols-3" x-data="aiForm" data-certs="<%= certJson %>" data-cert="<%= old.certification_id || '' %>" novalidate>
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <input type="hidden" name="kind" value="exam">
   <input type="hidden" name="difficulty" value="mixed">
@@ -45,7 +45,8 @@
     <section class="card card-body space-y-5">
       <h2 class="h2">2. The brief</h2>
       <%- include('../../partials/field', { name: 'prompt', label: 'What should the exam test?', type: 'textarea', rows: 5, required: true, maxlength: 4000, value: old.prompt, placeholder: 'e.g. A realistic full mock for DBAs with 2–3 years of experience. Emphasise troubleshooting scenarios: listener failures, tablespace issues, privilege problems. SQL tasks should use joins, GROUP BY/HAVING and subqueries on an HR schema.' }) %>
-      <%- include('../../partials/field', { name: 'reference', label: 'Reference material (optional)', type: 'textarea', rows: 4, maxlength: 60000, value: old.reference, placeholder: 'Paste the syllabus or exam objectives to ground the questions.' }) %>
+      <%- include('_documents') %>
+      <%- include('../../partials/field', { name: 'reference', label: 'Or paste reference notes (optional)', type: 'textarea', rows: 4, maxlength: 60000, value: old.reference, placeholder: 'Paste the syllabus or exam objectives to ground the questions.' }) %>
     </section>
 
     <section class="card card-body grid gap-5 sm:grid-cols-2">

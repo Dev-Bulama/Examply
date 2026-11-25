@@ -3,7 +3,7 @@
   <p class="mt-2 muted">Enter the certificate ID printed on the certificate, or scan its QR code.</p>
   <form method="get" action="/verify" class="mt-6 flex gap-2" role="search">
     <label class="sr-only" for="vc">Certificate ID</label>
-    <input id="vc" name="code" value="<%= code %>" class="input font-mono uppercase" placeholder="SSA-XXXX-XXXX" autocomplete="off">
+    <input id="vc" name="code" value="<%= code %>" class="input font-mono uppercase" placeholder="EXM-XXXX-XXXX" autocomplete="off">
     <button class="btn-primary">Verify</button>
   </form>
   <% if (code && !cert) { %>

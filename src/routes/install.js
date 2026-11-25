@@ -105,7 +105,7 @@ router.get(
     res.render('install/index', {
       dbDefaults: { db_host: env.DB_HOST || 'localhost', db_port: env.DB_PORT || 3306, db_name: env.DB_NAME, db_user: env.DB_USER },
       appUrl: env.APP_URL,
-      siteName: env.APP_NAME || 'Skillscore Assess',
+      siteName: env.APP_NAME || 'EXAMPLY',
       layout: 'layouts/install',
       title: 'Install',
       checks,

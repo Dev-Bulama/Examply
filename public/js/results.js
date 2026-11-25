@@ -41,3 +41,35 @@
   if (document.readyState === 'complete') draw();
   else window.addEventListener('load', draw);
 })();
+
+/* A short, quiet celebration when the candidate passes (once per result, never for reduced-motion users). */
+(function () {
+  'use strict';
+  var el = document.querySelector('[data-celebrate]');
+  if (!el || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  var key = 'examply.celebrated.' + location.pathname;
+  try {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch (e) {
+    /* ignore */
+  }
+  var colors = ['#1f3a5f', '#a8822e', '#c2a86d', '#3c5474', '#10b981', '#e2e8f0'];
+  var layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  for (var i = 0; i < 90; i += 1) {
+    var p = document.createElement('i');
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.background = colors[i % colors.length];
+    p.style.animationDelay = Math.random() * 0.6 + 's';
+    p.style.animationDuration = 2.4 + Math.random() * 1.8 + 's';
+    p.style.setProperty('--drift', Math.round(Math.random() * 160 - 80) + 'px');
+    p.style.setProperty('--spin', Math.round(Math.random() * 720 - 360) + 'deg');
+    layer.appendChild(p);
+  }
+  document.body.appendChild(layer);
+  setTimeout(function () {
+    layer.remove();
+  }, 5200);
+})();

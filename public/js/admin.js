@@ -1,4 +1,4 @@
-/* Skillscore Assess — admin components (Alpine CSP build: registered here, referenced by name in templates). */
+/* EXAMPLY — admin components (Alpine CSP build: registered here, referenced by name in templates). */
 (function () {
   'use strict';
 
@@ -80,6 +80,42 @@
           var t = this.total();
           if (!this.rows.length) return 'muted';
           return t === 100 ? 'text-emerald-600 dark:text-emerald-400' : t > 100 ? 'text-red-600' : 'text-amber-600';
+        },
+      };
+    });
+
+    /* ---------------- AI generator: reference document picker ---------------- */
+    Alpine.data('docPicker', function () {
+      var human = function (n) {
+        return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+      };
+      return {
+        files: [],
+        over: false,
+        list: function (fileList) {
+          this.files = Array.prototype.slice.call(fileList || [], 0, 5).map(function (f) {
+            return { name: f.name, size: human(f.size) };
+          });
+        },
+        picked: function (e) {
+          this.list(e.target.files);
+        },
+        dragOver: function () {
+          this.over = true;
+        },
+        dragLeave: function () {
+          this.over = false;
+        },
+        dropFiles: function (e) {
+          this.over = false;
+          var input = this.$root.querySelector('input[type=file]');
+          if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+          try {
+            input.files = e.dataTransfer.files;
+          } catch (err) {
+            /* old browsers: the picker still works */
+          }
+          this.list(e.dataTransfer.files);
         },
       };
     });

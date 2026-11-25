@@ -46,7 +46,7 @@ async function invoicePdf(orderId, knex = db()) {
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
-  const hex = String(s('branding.primary_color') || '#1f4fd1');
+  const hex = String(s('branding.primary_color') || '#1f3a5f');
   doc.rect(0, 0, doc.page.width, 6).fill(hex);
   doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(20).text(s('payments.business_name') || s('general.site_name'), 50, 40);
   doc.font('Helvetica').fontSize(9).fillColor('#64748b').text([s('payments.business_address'), s('general.contact_email'), s('payments.tax_id') ? `TIN ${s('payments.tax_id')}` : ''].filter(Boolean).join('\n'), 50, 66, { width: 260 });

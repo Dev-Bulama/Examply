@@ -37,7 +37,7 @@
         </div>
         <div>
           <% if (pending) { %><span class="badge-amber text-sm">Provisional</span><p class="mt-2 max-w-sm text-sm muted">Some answers are waiting for an examiner. Your score and result will update, and we will email you.</p>
-          <% } else if (passed !== null && !isStudy) { %><p class="text-4xl font-black tracking-tight <%= passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' %>"><%= passed ? 'PASS' : 'FAIL' %></p><p class="mt-1 text-sm muted">Pass mark <%= bd.passMark %><%= bd.passMarkType === 'raw' ? ' marks' : '%' %></p>
+          <% } else if (passed !== null && !isStudy) { %><p <%= passed ? 'data-celebrate' : '' %> class="text-4xl font-black tracking-tight <%= passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' %>"><%= passed ? 'PASS' : 'FAIL' %></p><p class="mt-1 text-sm muted">Pass mark <%= bd.passMark %><%= bd.passMarkType === 'raw' ? ' marks' : '%' %></p>
           <% } %>
           <% if (r.band) { %><p class="mt-2 text-sm muted">Proficiency band</p><p class="text-2xl font-bold"><%= r.band %></p><% } %>
           <% if (r.scaled_score !== null) { %><p class="mt-2 text-sm">Scaled score <span class="font-semibold"><%= Number(r.scaled_score) %></span></p><% } %>

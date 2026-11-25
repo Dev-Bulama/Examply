@@ -74,7 +74,7 @@ function toRecord(a, meta) {
 
 async function toXlsx(items) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Skillscore Assess';
+  wb.creator = 'EXAMPLY';
   const ws = wb.addWorksheet('Questions');
   ws.addRow(COLUMNS.map((c) => c.key));
   ws.getRow(1).font = { bold: true };
@@ -104,7 +104,7 @@ const giftEsc = (s) => String(s).replace(/([~=#{}:\\])/g, '\\$1');
 const giftText = (html) => giftEsc(toPlainText(html));
 
 function toGift(items) {
-  const out = ['// Exported from Skillscore Assess', ''];
+  const out = ['// Exported from EXAMPLY', ''];
   const skipped = [];
   const emit = (it, n) => {
     const a = it.authoring;

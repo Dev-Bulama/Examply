@@ -78,7 +78,8 @@ router.post('/imports/:id(\\d+)/undo', can('questions.import'), h(imports.undo))
 router.get('/imports/:id(\\d+)/error-report', can('questions.import'), h(imports.errorReport));
 router.get('/ai/new', can('ai.generate'), h((req, res) => ai.newForm(req, res)));
 router.get('/ai/exam', canAny('ai.generate'), h(ai.examForm));
-router.post('/ai', can('ai.generate'), h(ai.create));
+const aiDocs = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 20 * 1024 * 1024, files: 5, fields: 80 } }).array('documents', 5);
+router.post('/ai', can('ai.generate'), uploadLimiter(), aiDocs, h(ai.create));
 router.get('/questions/export', can('questions.export'), h(imports.exportQuestions));
 
 // Question bank

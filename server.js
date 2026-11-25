@@ -46,7 +46,7 @@ async function boot() {
   }
 
   server.listen(env.PORT, () => {
-    logger.info({ port: env.PORT, env: env.NODE_ENV, installed: system.isInstalled() }, `${env.APP_NAME || 'Skillscore Assess'} listening on port ${env.PORT}`);
+    logger.info({ port: env.PORT, env: env.NODE_ENV, installed: system.isInstalled() }, `${env.APP_NAME || 'EXAMPLY'} listening on port ${env.PORT}`);
   });
 
   const shutdown = (signal) => {

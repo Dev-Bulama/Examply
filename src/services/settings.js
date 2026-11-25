@@ -10,7 +10,7 @@ const { encrypt, decrypt } = require('../utils/crypto');
  */
 const DEFINITIONS = {
   // General
-  'general.site_name': { type: 'string', default: 'Skillscore Assess' },
+  'general.site_name': { type: 'string', default: 'EXAMPLY' },
   'general.tagline': { type: 'string', default: 'Professional assessment & certification practice' },
   'general.logo_path': { type: 'string', default: '' },
   'general.favicon_path': { type: 'string', default: '' },
@@ -19,8 +19,8 @@ const DEFINITIONS = {
   'general.contact_email': { type: 'string', default: '' },
   'general.currency': { type: 'string', default: 'NGN' },
   // Branding
-  'branding.primary_color': { type: 'string', default: '#1f4fd1' },
-  'branding.secondary_color': { type: 'string', default: '#0f9d7a' },
+  'branding.primary_color': { type: 'string', default: '#1f3a5f' },
+  'branding.secondary_color': { type: 'string', default: '#a8822e' },
   'branding.default_theme': { type: 'string', default: 'system' },
   // Security
   'security.require_2fa_admin': { type: 'boolean', default: true },

@@ -19,14 +19,9 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Fallback palette (overridden by /theme.css with the admin's brand colours). */
+/* Fallback palette (overridden by /theme.css with the admin's brand colours). Navy + antique gold. */
 :root {
-  --c-primary-50: 239 244 255; --c-primary-100: 219 229 254; --c-primary-200: 191 210 254; --c-primary-300: 147 180 253;
-  --c-primary-400: 96 143 250; --c-primary-500: 59 110 246; --c-primary-600: 31 79 209; --c-primary-700: 29 64 175;
-  --c-primary-800: 30 56 143; --c-primary-900: 30 50 113; --c-primary-950: 23 32 69; --c-on-primary: 255 255 255;
-  --c-secondary-50: 236 253 247; --c-secondary-100: 209 250 233; --c-secondary-200: 167 243 214; --c-secondary-300: 110 231 191;
-  --c-secondary-400: 52 211 160; --c-secondary-500: 16 185 135; --c-secondary-600: 15 157 122; --c-secondary-700: 4 120 92;
-  --c-secondary-800: 6 95 74; --c-secondary-900: 6 78 62; --c-secondary-950: 2 44 34;
+  --c-primary-50: 239 241 244; --c-secondary-50: 249 246 240; --c-primary-100: 224 227 233; --c-secondary-100: 243 238 226; --c-primary-200: 192 200 210; --c-secondary-200: 231 220 196; --c-primary-300: 147 160 178; --c-secondary-300: 213 195 155; --c-primary-400: 98 117 143; --c-secondary-400: 194 168 109; --c-primary-500: 60 84 116; --c-secondary-500: 179 146 73; --c-primary-600: 31 58 95; --c-secondary-600: 168 130 46; --c-primary-700: 26 49 81; --c-secondary-700: 143 111 39; --c-primary-800: 22 41 67; --c-secondary-800: 118 91 32; --c-primary-900: 17 32 52; --c-secondary-900: 92 72 25; --c-primary-950: 12 22 36; --c-secondary-950: 64 49 17; --c-on-primary: 255 255 255;
 }
 
 @layer base {
@@ -102,4 +97,18 @@
   .nav-link { @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white; }
   .nav-link-active { @apply bg-primary-50 text-primary-800 hover:bg-primary-50 hover:text-primary-800 dark:bg-primary-950/60 dark:text-primary-200; }
   .prose-content { @apply max-w-prose leading-relaxed [&_a]:link [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_p]:my-3 [&_ul]:list-disc; }
+}
+
+/* Self-writing headline caret */
+@layer components {
+  .typewriter-caret { @apply ml-1 inline-block h-[0.9em] w-[3px] translate-y-[0.08em] rounded-sm bg-secondary-500; animation: caret-blink 1s steps(1) infinite; }
+  @keyframes caret-blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .typewriter-caret { animation: none; display: none; } }
+}
+
+/* Pass celebration (results.js) */
+@layer components {
+  .confetti-layer { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 60; }
+  .confetti-layer i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: 0.9; animation-name: confetti-fall; animation-timing-function: cubic-bezier(.2,.6,.4,1); animation-fill-mode: forwards; }
+  @keyframes confetti-fall { to { transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin)); opacity: 0.2; } }
 }

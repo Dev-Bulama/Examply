@@ -11,6 +11,7 @@ const providers = require('../../services/ai/providers');
 const generator = require('../../services/ai/generator');
 const types = require('../../services/questions/types');
 const examPlan = require('../../services/ai/examPlan');
+const documents = require('../../services/ai/documents');
 
 const LEVELS = [
   'Professional certification exam level — scenario-based, applied',
@@ -83,6 +84,18 @@ async function create(req, res) {
   if (examMode === 'create' && !String(b.exam_title || '').trim()) errors.exam_title = 'Give the new exam a title.';
   if (examMode === 'attach' && !intOrNull(b.exam_id)) errors.exam_id = 'Choose an exam.';
   else if (examMode === 'attach' && !(await db()('exams').where({ id: intOrNull(b.exam_id), organisation_id: scopeOrg(req) }).whereNull('deleted_at').first('id'))) errors.exam_id = 'Choose one of your exams.';
+  // Reference documents: extract their text now, so a bad file is reported on the form, not in a background job.
+  const docs = [];
+  for (const f of req.files || []) {
+    try {
+      docs.push(await documents.extract(f));
+    } catch (err) {
+      if (!(err instanceof documents.DocumentError)) throw err;
+      errors.documents = err.message;
+      break;
+    }
+  }
+  const { reference, truncated } = documents.combine(docs, b.reference);
   if (Object.keys(errors).length) {
     req.setFormState(b, errors);
     req.flash('danger', errors._form || 'Please correct the highlighted fields.');
@@ -97,7 +110,8 @@ async function create(req, res) {
     difficulty: ['mixed', '1', '2', '3', '4', '5'].includes(String(b.difficulty)) ? String(b.difficulty) : 'mixed',
     level: LEVELS.includes(b.level) ? b.level : LEVELS[0],
     language: String(b.language || 'English').slice(0, 40),
-    reference: String(b.reference || '').slice(0, 60000),
+    reference,
+    sources: docs.map((d) => ({ name: d.name, kind: d.kind, pages: d.pages, chars: d.chars })),
     category_id: categoryId,
     certification_id: certificationId,
     domain_ids: domainIds,
@@ -111,6 +125,7 @@ async function create(req, res) {
     if (scopeOrg(req)) await workspaces.assertWithinLimit(scopeOrg(req), 'ai', spec.count);
     const { importId } = await generator.startGeneration({ user: req.user, spec, organisationId: scopeOrg(req) });
     await audit.record(req, 'ai.generate', { entityType: 'import', entityId: importId, after: { ...spec, reference: spec.reference ? `${spec.reference.length} chars` : null } });
+    if (docs.length) req.flash(truncated ? 'warning' : 'info', `Questions will be based on ${docs.map((d) => `“${d.name}”`).join(', ')}${truncated ? '. The documents were long, so only the first part of each is used — split them or upload the key chapters for full coverage.' : '.'}`);
     return res.redirect(`/admin/imports/${importId}`);
   } catch (err) {
     if (!(err instanceof providers.AiError) && !(err instanceof workspaces.WorkspaceError)) throw err;

@@ -14,14 +14,15 @@
     <% if (can('settings.manage')) { %><a href="/admin/settings/ai" class="btn-primary">Open AI settings</a><% } else { %><p class="text-sm">Ask a Super Admin to configure Settings → AI.</p><% } %>
   </div>
 <% } else { %>
-<form method="post" action="/admin/ai" class="grid gap-6 lg:grid-cols-3" x-data="aiForm" data-certs="<%= certJson %>" data-cert="<%= old.certification_id || '' %>" novalidate>
+<form method="post" action="/admin/ai?_csrf=<%= encodeURIComponent(csrfToken) %>" enctype="multipart/form-data" class="grid gap-6 lg:grid-cols-3" x-data="aiForm" data-certs="<%= certJson %>" data-cert="<%= old.certification_id || '' %>" novalidate>
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <div class="space-y-6 lg:col-span-2">
     <section class="card card-body space-y-5">
       <h2 class="h2">What should the questions cover?</h2>
       <%- include('../../partials/field', { name: 'title', label: 'Name for this set (optional)', maxlength: 120, placeholder: 'e.g. CompTIA Security+ mock — network security' }) %>
       <%- include('../../partials/field', { name: 'prompt', label: 'Brief', type: 'textarea', rows: 5, required: true, maxlength: 4000, placeholder: 'e.g. Write scenario-based questions for the CompTIA Security+ exam covering incident response, log analysis and hardening Linux servers. Include commands where relevant.', hint: 'Be specific about the audience, tools, versions and the skills to test.' }) %>
-      <%- include('../../partials/field', { name: 'reference', label: 'Reference material (optional)', type: 'textarea', rows: 5, maxlength: 60000, placeholder: 'Paste a syllabus, course notes or a policy. Questions will be grounded in it (not copied).' }) %>
+      <%- include('_documents') %>
+      <%- include('../../partials/field', { name: 'reference', label: 'Or paste reference notes (optional)', type: 'textarea', rows: 5, maxlength: 60000, placeholder: 'Paste a syllabus, course notes or a policy. Questions will be grounded in it (not copied).' }) %>
     </section>
 
     <section class="card card-body grid gap-5 sm:grid-cols-2">

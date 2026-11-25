@@ -323,18 +323,47 @@
           if (box.getAttribute('data-type') === 'lab') {
             // Labs are answered on the server, command by command; just show progress.
             if (e.type === 'answer-changed') this.answered[id] = true;
+            this.cheer();
             return;
           }
           var resp = collect(box);
           this.dirty[id] = resp;
           if (resp) this.answered[id] = true;
           else delete this.answered[id];
+          this.cheer();
           this.status = 'pending';
           var self = this;
           clearTimeout(this.saveTimer);
           this.saveTimer = setTimeout(function () {
             self.flush(false);
           }, e.type === 'input' ? 900 : 300);
+        },
+        /** Gentle encouragement at 25 / 50 / 75 / 100% answered (once each; not for very short exams). */
+        cheer: function () {
+          if (this.cfg.count < 8 || !window.App || !window.App.toast) return;
+          var pct = (this.progressCount() / this.cfg.count) * 100;
+          if (!this.cheered) {
+            // First answer of this page load: skip milestones already passed before a resume.
+            this.cheered = {};
+            var before = ((this.progressCount() - 1) / this.cfg.count) * 100;
+            [25, 50, 75, 100].forEach(function (m) {
+              if (before >= m) this.cheered[m] = true;
+            }, this);
+          }
+          var notes = {
+            25: 'Good start — a quarter done. Keep a steady pace.',
+            50: 'Halfway there. You are doing well.',
+            75: 'Three quarters done — the finish line is close.',
+            100: 'Every question answered. Check any flagged ones, then submit when you are ready.',
+          };
+          var hit = null;
+          [25, 50, 75, 100].forEach(function (m) {
+            if (pct >= m && !this.cheered[m]) {
+              this.cheered[m] = true;
+              hit = m;
+            }
+          }, this);
+          if (hit) window.App.toast(notes[hit], 'info');
         },
         isAnswered: function (i) {
           var self = this;
