@@ -287,3 +287,31 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
+
+/* Dismissible announcements: remembered on this device. */
+(function () {
+  var KEY = 'examply.dismissed';
+  var dismissed = [];
+  try {
+    dismissed = JSON.parse(localStorage.getItem(KEY) || '[]');
+  } catch (e) {
+    dismissed = [];
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('[data-announcement]'), function (el) {
+    var id = el.getAttribute('data-announcement');
+    if (dismissed.indexOf(id) >= 0 && el.querySelector('[data-dismiss-announcement]')) el.remove();
+  });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-dismiss-announcement]');
+    if (!b) return;
+    var id = b.getAttribute('data-dismiss-announcement');
+    var box = document.querySelector('[data-announcement="' + id + '"]');
+    if (box) box.remove();
+    dismissed.push(id);
+    try {
+      localStorage.setItem(KEY, JSON.stringify(dismissed.slice(-50)));
+    } catch (err) {
+      /* ignore */
+    }
+  });
+})();

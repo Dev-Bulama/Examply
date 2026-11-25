@@ -90,6 +90,20 @@ const DEFAULT_TEMPLATES = [
     body_html: `<p>Hello,</p><p>{{invited_by}} has invited you to join <strong>{{organisation}}</strong> on {{site_name}}.</p>${BTN('invite_url', 'Accept invitation')}${LINK_FALLBACK('invite_url')}<p>The invitation expires in {{expires_days}} days.</p>`,
   },
   {
+    key: 'support_received',
+    name: 'Support ticket received',
+    subject: '[{{ticket_no}}] We received your message: {{subject}}',
+    variables: ['name', 'ticket_no', 'subject', 'ticket_url'],
+    body_html: `<p>Hi {{name}},</p><p>Thanks for contacting us. Your ticket <strong>{{ticket_no}}</strong> is open and our team will reply soon.</p>${BTN('ticket_url', 'View your ticket')}${LINK_FALLBACK('ticket_url')}`,
+  },
+  {
+    key: 'support_reply',
+    name: 'Support ticket reply',
+    subject: '[{{ticket_no}}] New reply: {{subject}}',
+    variables: ['name', 'ticket_no', 'subject', 'reply', 'ticket_url'],
+    body_html: `<p>Hi {{name}},</p><p>There is a new reply on your ticket <strong>{{ticket_no}}</strong>:</p><blockquote style="margin:12px 0;padding:12px 16px;border-left:3px solid #cbd5e1;color:#334155">{{reply}}</blockquote>${BTN('ticket_url', 'Reply or view the ticket')}`,
+  },
+  {
     key: 'test_email',
     name: 'SMTP test email',
     subject: '{{site_name}} SMTP test',

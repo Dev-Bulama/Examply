@@ -53,6 +53,7 @@ const ADMIN_NAV = [
     heading: 'System',
     items: [
       { label: 'Settings', href: '/admin/settings', icon: 'cog', any: ['settings.manage'] },
+      { label: 'Email templates', href: '/admin/email-templates', icon: 'mail', any: ['email_templates.manage'] },
       { label: 'Audit log', href: '/admin/audit', icon: 'clipboard', any: ['audit.view'] },
       { label: 'Background jobs', href: '/admin/jobs', icon: 'queue', any: ['jobs.view'] },
     ],

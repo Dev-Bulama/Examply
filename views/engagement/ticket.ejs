@@ -1,0 +1,46 @@
+<% const wrap = !user; const action = staff ? `/admin/support/${t.id}` : `/support/tickets/${t.ticket_no}/reply`; %>
+<% if (wrap) { %><section class="container-page max-w-3xl py-10"><% } %>
+<div class="mb-6">
+  <p class="text-sm muted"><%= t.ticket_no %> · opened <%= fmt.dateTime(t.created_at) %><%= staff ? ` by ${t.name} <${t.email}>` : '' %></p>
+  <h1 class="h1"><%= t.subject %></h1>
+  <span class="mt-2 inline-block <%= { open: 'badge-blue', pending: 'badge-amber', resolved: 'badge-green', closed: 'badge-gray' }[t.status] %>"><%= staff ? t.status : (t.status === 'pending' ? 'Waiting for your reply' : t.status) %></span>
+</div>
+<div class="grid gap-6 <%= staff ? 'lg:grid-cols-3' : '' %>">
+  <div class="space-y-4 <%= staff ? 'lg:col-span-2' : '' %>">
+    <ol class="space-y-3">
+      <% msgs.forEach(function (m) { %>
+      <li class="rounded-xl border p-4 <%= m.is_staff ? 'border-primary-200 bg-primary-50/60 dark:border-primary-900 dark:bg-primary-950/40' : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900' %>">
+        <p class="text-xs font-semibold muted"><%= m.is_staff ? (staff ? (m.author || 'Support') : `${site.name} support`) : (m.author || t.name) %> · <%= fmt.dateTime(m.created_at) %></p>
+        <p class="mt-2 whitespace-pre-line text-sm"><%= m.body %></p>
+      </li>
+      <% }) %>
+    </ol>
+    <% if (staff || t.status !== 'closed') { %>
+    <form method="post" action="<%= action %>" class="card card-body space-y-4" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <% if (token) { %><input type="hidden" name="t" value="<%= token %>"><% } %>
+      <%- include('../partials/field', { name: 'body', label: staff ? 'Reply to the requester' : 'Add a reply', type: 'textarea', rows: 4, maxlength: 10000, hint: staff ? 'They get it by email; leave empty to only change the status or priority.' : null }) %>
+      <% if (staff) { %>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <%- include('../partials/field', { name: 'status', label: 'Status', type: 'select', value: t.status === 'open' ? 'pending' : t.status, options: STATUSES.map(function (s) { return { value: s, label: s }; }) }) %>
+          <%- include('../partials/field', { name: 'priority', label: 'Priority', type: 'select', value: t.priority, options: PRIORITIES.map(function (s) { return { value: s, label: s }; }) }) %>
+          <%- include('../partials/field', { name: 'assigned_to', label: 'Assigned to', type: 'select', value: t.assigned_to || '', options: [{ value: '', label: 'Nobody' }].concat(staffList.map(function (u) { return { value: u.id, label: u.full_name }; })) }) %>
+        </div>
+      <% } %>
+      <button class="btn-primary"><%= staff ? 'Save' : 'Send reply' %></button>
+    </form>
+    <% } else { %>
+      <p class="text-sm muted">This ticket is closed. <a class="link" href="/support">Open a new one</a> if you still need help.</p>
+    <% } %>
+  </div>
+  <% if (staff) { %>
+  <aside class="card card-body h-fit text-sm">
+    <h2 class="h3">Requester</h2>
+    <p class="mt-2 font-medium"><%= t.name %></p>
+    <p class="muted break-all"><%= t.email %></p>
+    <p class="mt-2"><%= t.user_id ? 'Signed-in user' : 'Guest (link by email)' %></p>
+    <% if (t.user_id && can('users.view')) { %><a class="link mt-2 inline-block" href="/admin/users/<%= t.user_id %>">Open user profile</a><% } %>
+  </aside>
+  <% } %>
+</div>
+<% if (wrap) { %></section><% } %>

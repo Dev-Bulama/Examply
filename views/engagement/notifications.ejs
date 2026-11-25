@@ -1,0 +1,18 @@
+<div class="mb-6 flex items-end justify-between gap-3">
+  <div><h1 class="h1">Notifications</h1><p class="mt-1 muted">Results, certificates, assignments and replies from support.</p></div>
+  <% if (rows.some(function (r) { return !r.read_at; })) { %><form method="post" action="/notifications/read-all"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary btn-sm">Mark all as read</button></form><% } %>
+</div>
+<div class="card">
+  <% if (!rows.length) { %><p class="card-body muted">You have no notifications yet.</p><% } %>
+  <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+    <% rows.forEach(function (n) { %>
+    <li>
+      <a href="/notifications/<%= n.id %>" class="flex items-start gap-3 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+        <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full <%= n.read_at ? 'bg-transparent' : 'bg-secondary-500' %>" aria-hidden="true"></span>
+        <span class="min-w-0 flex-1"><span class="block <%= n.read_at ? '' : 'font-semibold' %>"><%= n.title %></span><% if (n.body) { %><span class="block text-sm muted"><%= n.body %></span><% } %></span>
+        <span class="shrink-0 text-xs muted"><%= fmt.relative ? fmt.relative(n.created_at) : fmt.dateTime(n.created_at) %><span class="sr-only"><%= n.read_at ? '' : ' (unread)' %></span></span>
+      </a>
+    </li>
+    <% }) %>
+  </ul>
+</div>

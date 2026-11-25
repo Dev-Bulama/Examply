@@ -1,0 +1,31 @@
+<% const wrap = !user; %>
+<% if (wrap) { %><section class="container-page max-w-3xl py-10"><% } %>
+<div class="mb-6">
+  <h1 class="h1">Contact support</h1>
+  <p class="mt-1 muted">Tell us what happened and we'll reply by email<%= user ? ' and here' : '' %>. You may find a quick answer in the <a class="link" href="/help">help centre</a>.</p>
+</div>
+<div class="grid gap-6 <%= mine.length ? 'lg:grid-cols-5' : '' %>">
+  <form method="post" action="/support" class="card card-body space-y-5 <%= mine.length ? 'lg:col-span-3' : '' %>" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% if (!user) { %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <%- include('../partials/field', { name: 'name', label: 'Your name', required: true, autocomplete: 'name', maxlength: 150 }) %>
+        <%- include('../partials/field', { name: 'email', label: 'Email', type: 'email', required: true, autocomplete: 'email' }) %>
+      </div>
+    <% } %>
+    <%- include('../partials/field', { name: 'subject', label: 'Subject', required: true, maxlength: 200, placeholder: 'e.g. I paid by transfer but cannot see my exam' }) %>
+    <%- include('../partials/field', { name: 'body', label: 'Message', type: 'textarea', rows: 6, required: true, maxlength: 10000, hint: 'Include the exam name, order number or certificate ID if it is about one.' }) %>
+    <button class="btn-primary">Send message</button>
+  </form>
+  <% if (mine.length) { %>
+  <section class="card lg:col-span-2">
+    <div class="card-body pb-2"><h2 class="h2">Your tickets</h2></div>
+    <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+      <% mine.forEach(function (t) { %>
+      <li><a class="flex items-center justify-between gap-3 px-6 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40" href="/support/tickets/<%= t.ticket_no %>"><span class="min-w-0"><span class="block truncate font-medium"><%= t.subject %></span><span class="text-xs muted"><%= t.ticket_no %> · <%= fmt.dateTime(t.updated_at) %></span></span><span class="<%= { open: 'badge-blue', pending: 'badge-amber', resolved: 'badge-green', closed: 'badge-gray' }[t.status] %>"><%= t.status === 'pending' ? 'replied' : t.status %></span></a></li>
+      <% }) %>
+    </ul>
+  </section>
+  <% } %>
+</div>
+<% if (wrap) { %></section><% } %>

@@ -29,7 +29,8 @@ function adminRoutes() {
         .replace(/:([a-zA-Z_]+)\(([a-z_-]+)[|)][^)]*\)?/g, '$2')
         .replace(/:[a-zA-Z_]+\(\[a-z\]\+\)/g, 'basics')
         .replace(/:section/, 'general')
-        .replace(/:key/, 'general.logo_path'),
+        .replace(/:key/, 'general.logo_path')
+        .replace(/\(\[[^\]]+\]\{\d+,\d+\}\)/g, ''), // leftover patterns like ([a-z0-9_.]{2,60})
     }));
 }
 

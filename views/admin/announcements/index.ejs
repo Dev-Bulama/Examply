@@ -1,0 +1,22 @@
+<div class="mb-6 flex items-end justify-between gap-3">
+  <div><h1 class="h1">Announcements</h1><p class="mt-1 muted">Banners shown at the top of every page, to everyone or to a role or organisation.</p></div>
+  <a class="btn-primary" href="/admin/announcements/new"><%- include('../../partials/icon', { name: 'plus', cls: 'h-4 w-4' }) %> New announcement</a>
+</div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>Title</th><th>Audience</th><th>Window</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      <% rows.forEach(function (a) { const live = a.is_active && (!a.starts_at || new Date(a.starts_at) <= new Date()) && (!a.ends_at || new Date(a.ends_at) > new Date()); %>
+      <tr>
+        <td><span class="mr-2 inline-block h-2.5 w-2.5 rounded-full <%= { info: 'bg-primary-600', success: 'bg-emerald-600', warning: 'bg-amber-400', danger: 'bg-red-600' }[a.level] %>" aria-hidden="true"></span><span class="font-medium"><%= a.title %></span></td>
+        <td class="text-sm"><%= { all: 'Everyone', guests: 'Visitors (signed out)', role: 'Roles', organisation: 'Organisations' }[a.target] %></td>
+        <td class="text-sm muted"><%= a.starts_at ? fmt.dateTime(a.starts_at) : 'Now' %> → <%= a.ends_at ? fmt.dateTime(a.ends_at) : 'no end' %></td>
+        <td><span class="<%= live ? 'badge-green' : 'badge-gray' %>"><%= live ? 'Showing' : a.is_active ? 'Scheduled / ended' : 'Off' %></span></td>
+        <td class="whitespace-nowrap text-right"><a class="btn-secondary btn-sm" href="/admin/announcements/<%= a.id %>/edit">Edit</a>
+          <form method="post" action="/admin/announcements/<%= a.id %>/delete" class="inline" data-confirm="Delete this announcement?"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost btn-sm text-red-600">Delete</button></form></td>
+      </tr>
+      <% }) %>
+      <% if (!rows.length) { %><tr><td colspan="5" class="muted">No announcements yet.</td></tr><% } %>
+    </tbody>
+  </table>
+</div>

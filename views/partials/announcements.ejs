@@ -1,0 +1,13 @@
+<% if (typeof announcements !== 'undefined' && announcements.length) { %>
+<div class="space-y-px" aria-label="Announcements">
+  <% announcements.forEach(function (a) { const tone = { info: 'bg-primary-700 text-white', success: 'bg-emerald-700 text-white', warning: 'bg-amber-300 text-amber-950', danger: 'bg-red-700 text-white' }[a.level]; %>
+  <div class="<%= tone %>" data-announcement="<%= a.id %>" role="<%= a.level === 'danger' ? 'alert' : 'status' %>">
+    <div class="container-page flex items-start gap-3 py-2.5 text-sm">
+      <%- include('icon', { name: a.level === 'warning' || a.level === 'danger' ? 'warning' : 'info', cls: 'mt-0.5 h-4 w-4 shrink-0' }) %>
+      <div class="min-w-0 flex-1"><span class="font-semibold"><%= a.title %></span><% if (a.body_html) { %> <span class="announcement-body opacity-95 [&_a]:underline [&_p]:inline"><%- a.body_html %></span><% } %></div>
+      <% if (a.dismissible) { %><button type="button" class="-mr-1 rounded p-1 opacity-80 hover:opacity-100" data-dismiss-announcement="<%= a.id %>" aria-label="Dismiss announcement"><%- include('icon', { name: 'x', cls: 'h-4 w-4' }) %></button><% } %>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<% } %>

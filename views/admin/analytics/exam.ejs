@@ -1,0 +1,68 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-sm muted">Item analysis</p>
+    <h1 class="h1"><%= exam.title %></h1>
+    <p class="mt-1 text-sm muted">Computed <%= fmt.dateTime(stats.computed_at) %> from <%= stats.completed %> finished attempt<%= stats.completed === 1 ? '' : 's' %>.</p>
+  </div>
+  <div class="flex gap-2">
+    <a class="btn-secondary" href="/admin/exams/<%= exam.id %>">Open in builder</a>
+    <form method="post" action="/admin/analytics/exams/<%= exam.id %>/recompute"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-primary" data-loading-text="Recomputing…">Recompute now</button></form>
+  </div>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+  <% [['Attempts', stats.attempts], ['Completion', stats.completion_rate === null ? '—' : Math.round(stats.completion_rate * 100) + '%'], ['Pass rate', stats.pass_rate === null ? '—' : Math.round(stats.pass_rate * 100) + '%'], ['Average score', stats.avg_percent === null ? '—' : Number(stats.avg_percent).toFixed(1) + '%'], ['Average time', stats.avg_time_sec === null ? '—' : Math.round(stats.avg_time_sec / 60) + ' min']].forEach(function (k) { %>
+  <div class="card card-body"><p class="text-sm muted"><%= k[0] %></p><p class="mt-1 text-2xl font-bold tabular-nums"><%= k[1] %></p></div>
+  <% }) %>
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+  <section class="card card-body lg:col-span-2">
+    <h2 class="h2">Score distribution</h2>
+    <div class="mt-4 h-60"><canvas id="hist-chart" role="img" aria-label="Histogram of scores in 10% bands"></canvas></div>
+  </section>
+  <section class="card card-body">
+    <h2 class="h2">Reliability</h2>
+    <p class="mt-3 text-4xl font-black tabular-nums"><%= stats.kr20 === null ? '—' : Number(stats.kr20).toFixed(2) %></p>
+    <p class="mt-1 font-semibold"><%= stats.reliability %></p>
+    <p class="mt-3 text-sm muted">Cronbach's alpha over the questions every candidate answered (KR-20 when all are right/wrong). 0.70+ is acceptable; 0.80+ is good for certification-style exams. Needs at least 10 finished attempts.</p>
+    <% const drops = Object.entries(stats.dropoff || {}); if (drops.length) { %>
+      <h3 class="mt-5 text-sm font-semibold">Where timed-out candidates stopped</h3>
+      <ul class="mt-2 space-y-1 text-sm"><% drops.sort(function (a, b) { return b[1] - a[1]; }).slice(0, 5).forEach(function (d) { %><li>Question <%= d[0] %>: <%= d[1] %> candidate<%= d[1] === 1 ? '' : 's' %></li><% }) %></ul>
+    <% } %>
+  </section>
+</div>
+
+<section class="card mt-6">
+  <div class="card-body pb-0">
+    <h2 class="h2">Questions</h2>
+    <p class="text-sm muted"><strong>p</strong> = share answering correctly (0.30–0.85 is the useful range) · <strong>r</strong> = point-biserial discrimination (0.20+ is good; negative usually means a wrong answer key) · <strong>D</strong> = upper 27% minus lower 27%.</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="table">
+      <thead><tr><th>Question</th><th class="text-right">n</th><th class="text-right">p</th><th class="text-right">r</th><th class="text-right">D</th><th class="text-right">Avg time</th><th>Checks</th></tr></thead>
+      <tbody>
+        <% items.forEach(function (i) { %>
+        <tr>
+          <td class="max-w-md">
+            <a class="link" href="/admin/questions/<%= i.question_id %>">#<%= i.question_id %></a> <span class="text-sm"><%= i.stem %></span>
+            <% if (i.distractors) { %>
+              <div class="mt-2 flex flex-wrap gap-1.5"><% i.distractors.forEach(function (d) { %><span class="rounded px-1.5 py-0.5 text-xs <%= d.correct ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' %>"><%= d.key %>: <%= Math.round(d.share * 100) %>%</span><% }) %></div>
+            <% } %>
+          </td>
+          <td class="text-right tabular-nums"><%= i.responses %></td>
+          <td class="text-right tabular-nums"><%= i.p_value === null ? '—' : Number(i.p_value).toFixed(2) %></td>
+          <td class="text-right tabular-nums <%= i.point_biserial !== null && Number(i.point_biserial) < 0 ? 'font-semibold text-red-600' : '' %>"><%= i.point_biserial === null ? '—' : Number(i.point_biserial).toFixed(2) %></td>
+          <td class="text-right tabular-nums"><%= i.discrimination_27 === null ? '—' : Number(i.discrimination_27).toFixed(2) %></td>
+          <td class="text-right tabular-nums"><%= i.avg_time_sec === null ? '—' : Math.round(i.avg_time_sec) + ' s' %></td>
+          <td><% if (!i.flags.length) { %><span class="badge-green">OK</span><% } %><% i.flags.forEach(function (f) { %><span class="<%= f.key === 'negative_discrimination' ? 'badge-red' : f.key === 'low_sample' ? 'badge-gray' : 'badge-amber' %> mb-1 mr-1 inline-block"><%= f.label %></span><% }) %></td>
+        </tr>
+        <% }) %>
+        <% if (!items.length) { %><tr><td colspan="7" class="muted">No finished attempts yet.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</section>
+<script type="application/json" id="analytics-data"><%- chart.replace(/</g, '\\u003c') %></script>
+<script src="/vendor/chartjs/chart.umd.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/analytics.js?v=<%= assetVersion %>" defer></script>

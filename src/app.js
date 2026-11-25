@@ -110,6 +110,7 @@ function createApp() {
 
   app.use(loadUser);
   app.use(locals);
+  app.use(require('./middleware/engagement').engagementLocals);
   app.use(maintenance);
   app.use(enforce2faEnrollment);
 

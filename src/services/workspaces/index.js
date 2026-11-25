@@ -225,6 +225,16 @@ async function assignExam(orgId, cohortId, { examId, kind = 'general', dueAt = n
   if (exam.organisation_id && exam.organisation_id !== orgId) throw new WorkspaceError('That exam belongs to another organisation.', 403);
   if (!exam.organisation_id && exam.visibility !== 'public') throw new WorkspaceError('That exam is not available to assign.', 403);
   await knex('cohort_assignments').insert({ cohort_id: cohortId, exam_id: examId, kind: ['pre', 'post', 'general'].includes(kind) ? kind : 'general', due_at: dueAt, created_by: createdBy }).onConflict(['cohort_id', 'exam_id', 'kind']).merge({ due_at: dueAt });
+  // Tell every member (in-app + email). Failures never block the assignment.
+  const { notify } = require('../engagement');
+  const mail = require('../mail');
+  const members = await knex('cohort_members as cm').join('users as u', 'u.id', 'cm.user_id').where('cm.cohort_id', cohortId).whereNull('u.deleted_at').select('u.id', 'u.email', 'u.full_name');
+  const org = await knex('organisations').where({ id: orgId }).first('name');
+  const due = dueAt ? new Date(dueAt).toUTCString().replace(/:\d\d GMT$/, ' UTC') : 'no deadline';
+  for (const m of members) {
+    await notify(m.id, { type: 'assignment', title: `New exam assigned: ${exam.title}`, body: dueAt ? `Due ${due}` : null, url: `/exams/${exam.slug}` }, knex);
+    await mail.queue({ to: m.email, template: 'exam_assigned', vars: { name: m.full_name.split(' ')[0], exam_title: exam.title, assigned_by: org ? org.name : 'Your organisation', due_date: due, exam_url: `${base()}/exams/${exam.slug}` } }, knex).catch(() => {});
+  }
 }
 
 /** Progress grid: each member × each assignment → best released result. */

@@ -1,0 +1,20 @@
+<h1 class="h1 mb-6"><%= id ? 'Edit page' : 'New page' %></h1>
+<form method="post" action="<%= id ? `/admin/pages/${id}` : '/admin/pages' %>" class="card card-body max-w-4xl space-y-5" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%- include('../../partials/field', { name: 'title', label: 'Title', value: p.title, required: true, maxlength: 200 }) %>
+    <%- include('../../partials/field', { name: 'slug', label: 'Address', value: p.slug, required: true, maxlength: 120, hint: 'Shown at /p/your-address, e.g. terms-of-service' }) %>
+  </div>
+  <%- include('../../partials/field', { name: 'body_html', label: 'Content', type: 'textarea', rows: 16, value: p.body_html, hint: 'HTML: headings, paragraphs, lists, links, bold and italics are kept; scripts are removed.' }) %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%- include('../../partials/field', { name: 'meta_title', label: 'SEO title (optional)', value: p.meta_title, maxlength: 200 }) %>
+    <%- include('../../partials/field', { name: 'meta_description', label: 'SEO description (optional)', value: p.meta_description, maxlength: 300 }) %>
+  </div>
+  <div class="grid gap-4 sm:grid-cols-3">
+    <%- include('../../partials/field', { name: 'is_published', label: 'Published', type: 'checkbox', value: p.is_published ? '1' : '0' }) %>
+    <%- include('../../partials/field', { name: 'show_in_footer', label: 'Link in the footer', type: 'checkbox', value: p.show_in_footer ? '1' : '0' }) %>
+    <%- include('../../partials/field', { name: 'display_order', label: 'Order', type: 'number', value: p.display_order }) %>
+  </div>
+  <div class="flex flex-wrap gap-2"><button class="btn-primary">Save page</button><a class="btn-secondary" href="/admin/pages">Cancel</a></div>
+</form>
+<% if (id) { %><form method="post" action="/admin/pages/<%= id %>/delete" class="mt-4" data-confirm="Delete this page?"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost text-red-600">Delete page</button></form><% } %>

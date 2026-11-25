@@ -1,0 +1,11 @@
+<div class="mb-6"><h1 class="h1">Email templates</h1><p class="mt-1 muted">Edit the wording of every email the platform sends. Variables like <code>{{name}}</code> are filled in automatically.</p></div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>Email</th><th>Subject</th><th>Last changed</th><th></th></tr></thead>
+    <tbody>
+      <% rows.forEach(function (t) { %>
+      <tr><td class="font-medium"><%= t.name %></td><td class="text-sm"><%= t.subject %></td><td class="whitespace-nowrap text-sm muted"><%= fmt.dateTime(t.updated_at) %></td><td class="text-right"><a class="btn-secondary btn-sm" href="/admin/email-templates/<%= t.key %>">Edit</a></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

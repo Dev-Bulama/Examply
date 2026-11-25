@@ -1,0 +1,13 @@
+<h1 class="h1 mb-6"><%= id ? 'Edit FAQ' : 'New FAQ' %></h1>
+<form method="post" action="<%= id ? `/admin/faqs/${id}` : '/admin/faqs' %>" class="card card-body max-w-3xl space-y-5" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <%- include('../../partials/field', { name: 'question', label: 'Question', value: f.question, required: true, maxlength: 300 }) %>
+  <%- include('../../partials/field', { name: 'answer_html', label: 'Answer', type: 'textarea', rows: 6, value: f.answer_html, required: true, hint: 'Basic HTML allowed (links, lists, bold).' }) %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%- include('../../partials/field', { name: 'category', label: 'Category', value: f.category, maxlength: 100, hint: categories.length ? 'Existing: ' + categories.join(', ') : 'e.g. Exams, Payments, Certificates' }) %>
+    <%- include('../../partials/field', { name: 'display_order', label: 'Order', type: 'number', value: f.display_order }) %>
+  </div>
+  <%- include('../../partials/field', { name: 'is_published', label: 'Show in the help centre', type: 'checkbox', value: f.is_published ? '1' : '0' }) %>
+  <div class="flex gap-2"><button class="btn-primary">Save</button><a class="btn-secondary" href="/admin/pages">Cancel</a></div>
+</form>
+<% if (id) { %><form method="post" action="/admin/faqs/<%= id %>/delete" class="mt-4" data-confirm="Delete this question?"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-ghost text-red-600">Delete</button></form><% } %>

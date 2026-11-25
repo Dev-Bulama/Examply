@@ -137,6 +137,39 @@ router.post('/certificates/:certId(\\d+)/revoke', can('certificates.manage'), h(
 router.get('/grading', can('results.manage'), h(att.queue));
 
 // Exams
+// Engagement: support, announcements, pages & FAQ, email templates
+const eng = require('../../controllers/engagementController');
+router.get('/support', can('support.manage'), h(eng.adminTickets));
+router.get('/support/:id(\\d+)', can('support.manage'), h(eng.adminTicket));
+router.post('/support/:id(\\d+)', can('support.manage'), h(eng.adminTicketReply));
+router.get('/announcements', can('announcements.manage'), h(eng.adminAnnouncements));
+router.get('/announcements/new', can('announcements.manage'), h(eng.adminAnnouncementForm));
+router.post('/announcements', can('announcements.manage'), h(eng.adminAnnouncementSave));
+router.get('/announcements/:id(\\d+)/edit', can('announcements.manage'), h(eng.adminAnnouncementForm));
+router.post('/announcements/:id(\\d+)', can('announcements.manage'), h(eng.adminAnnouncementSave));
+router.post('/announcements/:id(\\d+)/delete', can('announcements.manage'), h(eng.adminAnnouncementDelete));
+router.get('/pages', can('cms.manage'), h(eng.adminPages));
+router.get('/pages/new', can('cms.manage'), h(eng.adminPageForm));
+router.post('/pages', can('cms.manage'), h(eng.adminPageSave));
+router.get('/pages/:id(\\d+)/edit', can('cms.manage'), h(eng.adminPageForm));
+router.post('/pages/:id(\\d+)', can('cms.manage'), h(eng.adminPageSave));
+router.post('/pages/:id(\\d+)/delete', can('cms.manage'), h(eng.adminPageDelete));
+router.get('/faqs/new', can('cms.manage'), h(eng.adminFaqForm));
+router.post('/faqs', can('cms.manage'), h(eng.adminFaqSave));
+router.get('/faqs/:id(\\d+)/edit', can('cms.manage'), h(eng.adminFaqForm));
+router.post('/faqs/:id(\\d+)', can('cms.manage'), h(eng.adminFaqSave));
+router.post('/faqs/:id(\\d+)/delete', can('cms.manage'), h(eng.adminFaqDelete));
+router.get('/email-templates', can('email_templates.manage'), h(eng.adminTemplates));
+router.get('/email-templates/:key([a-z0-9_.]{2,60})', can('email_templates.manage'), h(eng.adminTemplateForm));
+router.post('/email-templates/:key([a-z0-9_.]{2,60})', can('email_templates.manage'), h(eng.adminTemplateSave));
+
+// Analytics
+const analyticsC = require('../../controllers/admin/analyticsController');
+router.get('/analytics', can('analytics.view'), h(analyticsC.index));
+router.post('/analytics/recompute', can('analytics.view'), h(analyticsC.recompute));
+router.get('/analytics/exams/:id(\\d+)', can('analytics.view'), h(analyticsC.exam));
+router.post('/analytics/exams/:id(\\d+)/recompute', can('analytics.view'), h(analyticsC.recompute));
+
 // Live quiz
 const liveC = require('../../controllers/liveController');
 router.get('/live', canAny('live.host', 'live.view_all'), h(liveC.index));

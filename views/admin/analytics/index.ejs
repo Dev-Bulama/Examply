@@ -1,0 +1,47 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Analytics</h1>
+    <p class="mt-1 muted">Activity in the last 30 days, and item analysis for every exam (recomputed nightly).</p>
+  </div>
+  <form method="post" action="/admin/analytics/recompute"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-secondary" data-loading-text="Recomputing…"><%- include('../../partials/icon', { name: 'chart', cls: 'h-4 w-4' }) %> Recompute all now</button></form>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <% [['Users', kpi.users.toLocaleString('en'), 'users'], ['New users (30 days)', kpi.newUsers.toLocaleString('en'), 'user'], ['Attempts (30 days)', kpi.attempts30.toLocaleString('en'), 'document'], ['Pass rate (30 days)', kpi.passRate30 === null ? '—' : kpi.passRate30 + '%', 'check']].forEach(function (k) { %>
+  <div class="card card-body flex items-center gap-4">
+    <span class="grid h-11 w-11 place-items-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-950 dark:text-primary-300"><%- include('../../partials/icon', { name: k[2] }) %></span>
+    <div><p class="text-sm muted"><%= k[0] %></p><p class="text-2xl font-bold tabular-nums"><%= k[1] %></p></div>
+  </div>
+  <% }) %>
+</div>
+
+<section class="card card-body mt-6">
+  <h2 class="h2">Attempts per day</h2>
+  <div class="mt-4 h-56"><canvas id="daily-chart" aria-label="Attempts per day for the last 30 days" role="img"></canvas></div>
+</section>
+
+<section class="card mt-6">
+  <div class="card-body pb-0"><h2 class="h2">Exams</h2><p class="text-sm muted">Reliability is Cronbach's alpha (KR-20 for right/wrong items). Aim for 0.70 or higher on high-stakes exams.</p></div>
+  <div class="overflow-x-auto">
+    <table class="table">
+      <thead><tr><th>Exam</th><th class="text-right">Attempts</th><th class="text-right">Pass rate</th><th class="text-right">Average</th><th>Reliability</th><th class="text-right">Items to check</th><th></th></tr></thead>
+      <tbody>
+        <% exams.forEach(function (e) { %>
+        <tr>
+          <td class="font-medium"><a class="link" href="/admin/analytics/exams/<%= e.id %>"><%= e.title %></a><span class="block text-xs muted"><%= e.computed_at ? 'Computed ' + fmt.dateTime(e.computed_at) : 'Not computed yet' %></span></td>
+          <td class="text-right tabular-nums"><%= e.attempts || 0 %></td>
+          <td class="text-right tabular-nums"><%= e.pass_rate === null || e.pass_rate === undefined ? '—' : Math.round(e.pass_rate * 100) + '%' %></td>
+          <td class="text-right tabular-nums"><%= e.avg_percent === null || e.avg_percent === undefined ? '—' : Number(e.avg_percent).toFixed(1) + '%' %></td>
+          <td><span class="<%= { Excellent: 'badge-green', Good: 'badge-green', Acceptable: 'badge-blue', Questionable: 'badge-amber', Poor: 'badge-red' }[e.reliability] || 'badge-gray' %>"><%= e.reliability %><%= e.kr20 !== null && e.kr20 !== undefined && e.reliability !== 'Not enough data yet' ? ' · ' + Number(e.kr20).toFixed(2) : '' %></span></td>
+          <td class="text-right tabular-nums"><%= Number(e.bad_items) ? e.bad_items : '—' %></td>
+          <td class="text-right"><a class="btn-secondary btn-sm" href="/admin/analytics/exams/<%= e.id %>">Item analysis</a></td>
+        </tr>
+        <% }) %>
+        <% if (!exams.length) { %><tr><td colspan="7" class="muted">No exam has been taken yet.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</section>
+<script type="application/json" id="analytics-data"><%- chart.replace(/</g, '\\u003c') %></script>
+<script src="/vendor/chartjs/chart.umd.min.js?v=<%= assetVersion %>" defer></script>
+<script src="/js/analytics.js?v=<%= assetVersion %>" defer></script>

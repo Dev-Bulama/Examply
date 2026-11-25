@@ -1,0 +1,26 @@
+<% const dt = function (d) { if (!d) return ''; const x = new Date(d); return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }; %>
+<h1 class="h1 mb-6"><%= id ? 'Edit announcement' : 'New announcement' %></h1>
+<form method="post" action="<%= id ? `/admin/announcements/${id}` : '/admin/announcements' %>" class="card card-body max-w-3xl space-y-5" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <%- include('../../partials/field', { name: 'title', label: 'Title', value: a.title, required: true, maxlength: 200, placeholder: 'e.g. Scheduled maintenance on Saturday 10pm–11pm' }) %>
+  <%- include('../../partials/field', { name: 'body_html', label: 'Details (optional)', type: 'textarea', rows: 3, value: a.body_html, hint: 'Short text. Links are allowed (basic HTML).' }) %>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%- include('../../partials/field', { name: 'level', label: 'Style', type: 'select', value: a.level, options: LEVELS.map(function (l) { return { value: l, label: { info: 'Information (navy)', success: 'Good news (green)', warning: 'Warning (amber)', danger: 'Urgent (red)' }[l] }; }) }) %>
+    <%- include('../../partials/field', { name: 'target', label: 'Who sees it', type: 'select', value: a.target, options: TARGETS.map(function (t) { return { value: t, label: { all: 'Everyone', guests: 'Visitors who are signed out', role: 'People with a role…', organisation: 'Members of an organisation…' }[t] }; }) }) %>
+  </div>
+  <fieldset>
+    <legend class="label">Roles or organisations (when targeted)</legend>
+    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+      <% roles.forEach(function (r) { %><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="target_ids" value="<%= r.slug %>" class="checkbox" <%= a.target === 'role' && a.target_ids.includes(r.slug) ? 'checked' : '' %>> Role: <%= r.name %></label><% }) %>
+      <% orgs.forEach(function (o) { %><label class="flex items-center gap-2 text-sm"><input type="checkbox" name="target_ids" value="<%= o.id %>" class="checkbox" <%= a.target === 'organisation' && a.target_ids.map(Number).includes(o.id) ? 'checked' : '' %>> Organisation: <%= o.name %></label><% }) %>
+    </div>
+    <% if (typeof errors !== 'undefined' && errors.target_ids) { %><p class="field-error"><%= errors.target_ids %></p><% } %>
+  </fieldset>
+  <div class="grid gap-4 sm:grid-cols-2">
+    <%- include('../../partials/field', { name: 'starts_at', label: 'Show from (optional)', type: 'datetime-local', value: dt(a.starts_at) }) %>
+    <%- include('../../partials/field', { name: 'ends_at', label: 'Show until (optional)', type: 'datetime-local', value: dt(a.ends_at) }) %>
+  </div>
+  <%- include('../../partials/field', { name: 'is_active', label: 'Active', type: 'checkbox', value: a.is_active ? '1' : '0' }) %>
+  <%- include('../../partials/field', { name: 'dismissible', label: 'People can dismiss it', type: 'checkbox', value: a.dismissible ? '1' : '0' }) %>
+  <div class="flex gap-2"><button class="btn-primary">Save</button><a class="btn-secondary" href="/admin/announcements">Cancel</a></div>
+</form>

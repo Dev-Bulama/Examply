@@ -1,0 +1,23 @@
+<div class="mb-6"><h1 class="h1">Support tickets</h1><p class="mt-1 muted">Messages from candidates, companies and visitors. Replies are emailed to the requester.</p></div>
+<nav class="mb-4 flex flex-wrap gap-2" aria-label="Filter by status">
+  <a href="/admin/support" class="<%= !status ? 'btn-primary' : 'btn-secondary' %> btn-sm">All</a>
+  <% STATUSES.forEach(function (s) { %><a href="/admin/support?status=<%= s %>" class="<%= status === s ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= s %> <span class="ml-1 tabular-nums opacity-70"><%= counts[s] || 0 %></span></a><% }) %>
+</nav>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>Ticket</th><th>From</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Updated</th></tr></thead>
+    <tbody>
+      <% rows.forEach(function (t) { %>
+      <tr>
+        <td><a class="link font-medium" href="/admin/support/<%= t.id %>"><%= t.subject %></a><span class="block text-xs muted"><%= t.ticket_no %></span></td>
+        <td class="text-sm"><%= t.name %><span class="block text-xs muted"><%= t.email %></span></td>
+        <td><span class="<%= { open: 'badge-blue', pending: 'badge-amber', resolved: 'badge-green', closed: 'badge-gray' }[t.status] %>"><%= t.status %></span></td>
+        <td class="text-sm <%= t.priority === 'high' ? 'font-semibold text-red-600' : '' %>"><%= t.priority %></td>
+        <td class="text-sm"><%= t.assignee || '—' %></td>
+        <td class="whitespace-nowrap text-sm muted"><%= fmt.dateTime(t.updated_at) %></td>
+      </tr>
+      <% }) %>
+      <% if (!rows.length) { %><tr><td colspan="6" class="muted">No tickets.</td></tr><% } %>
+    </tbody>
+  </table>
+</div>

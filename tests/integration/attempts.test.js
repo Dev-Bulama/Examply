@@ -152,6 +152,23 @@ describe('taking an exam', () => {
     const cert = await db()('certificates').join('attempts', 'attempts.id', 'certificates.attempt_id').where('attempts.uuid', uuid).first('certificates.code');
     if (cert) expect((await other.agent.get(`/certificates/${cert.code}.pdf`)).status).toBe(404);
   });
+
+  test('item analysis and exam analytics are computed from finished attempts', async () => {
+    const out = await require('../../src/services/analytics').computeExam(exam.id);
+    expect(out.completed).toBeGreaterThan(0);
+    const stats = await db()('item_statistics').where({ exam_id: exam.id });
+    expect(stats.length).toBeGreaterThan(0);
+    const mcq = stats.find((r) => r.question_id === qids.mcq);
+    expect(mcq).toBeTruthy();
+    expect(parseJson(mcq.distractors, []).map((d) => d.key)).toEqual(['A', 'B', 'C']);
+    const page = await adminAgent.get(`/admin/analytics/exams/${exam.id}`);
+    expect(page.status).toBe(200);
+    expect(page.text).toContain('Score distribution');
+    expect((await adminAgent.get('/admin/analytics')).text).toContain(exam.title);
+    const t = await csrf(adminAgent, '/admin/analytics');
+    const r = await adminAgent.post(`/admin/analytics/exams/${exam.id}/recompute`).type('form').send({ _csrf: t });
+    expect(r.headers.location).toBe(`/admin/analytics/exams/${exam.id}`);
+  });
 });
 
 describe('attempt rules (server-side)', () => {
