@@ -2,7 +2,7 @@
   const meta = top.map(function (it, idx) {
     const kids = children(it.id);
     const parts = kids.length ? kids : [it];
-    return { id: it.id, idx: idx, section: it.sectionId || null, items: parts.map(function (p) { return p.id; }), answered: parts.map(function (p) { return p.id; }).filter(function (id) { const x = parts.find(function (p) { return p.id === id; }); return x.response && Object.keys(x.response).length; }), flagged: it.flagged };
+    return { id: it.id, idx: idx, section: it.sectionId || null, items: parts.map(function (p) { return p.id; }), answered: parts.map(function (p) { return p.id; }).filter(function (id) { const x = parts.find(function (p) { return p.id === id; }); return (x.response && Object.keys(x.response).length) || (x.type === 'lab' && x.answeredAt); }), flagged: it.flagged };
   });
   const sectionTitles = {}; sections.forEach(function (s) { sectionTitles[s.id] = s.title; });
   const sectionInstr = {}; sections.forEach(function (s) { sectionInstr[s.id] = s.instructions_html; });
@@ -87,7 +87,7 @@
               <% if (d.allow_flag) { %><button type="button" class="btn-ghost btn-sm" @click="toggleFlag(<%= idx %>)" :aria-pressed="isFlagged(<%= idx %>)"><span :class="isFlagged(<%= idx %>) ? 'text-amber-500' : 'muted'"><%- include('../partials/icon', { name: 'flag', cls: 'h-4 w-4' }) %></span><span x-text="isFlagged(<%= idx %>) ? 'Flagged' : 'Flag'">Flag</span></button><% } %>
             </div>
             <div data-item="<%= it.id %>" data-type="<%= it.type %>">
-              <%- include('../questions/render', { view: it.view, name: 'i' + it.id, interactive: true, response: forRender(it.response), sqlRunUrl: it.type === 'sql' ? '/attempts/' + attempt.uuid + '/items/' + it.id + '/sql' : '', sqlCheck: false }) %>
+              <%- include('../questions/render', { view: it.view, name: 'i' + it.id, interactive: true, response: forRender(it.response), sqlRunUrl: it.type === 'sql' ? '/attempts/' + attempt.uuid + '/items/' + it.id + '/sql' : '', sqlCheck: false, labUrl: it.type === 'lab' ? '/attempts/' + attempt.uuid + '/items/' + it.id + '/lab' : '' }) %>
             </div>
             <% if (kids.length) { %>
             <div class="mt-6 space-y-6 border-t border-slate-200 pt-6 dark:border-slate-800">
@@ -181,3 +181,4 @@
 <script src="/vendor/highlight/highlight.min.js?v=<%= assetVersion %>" defer></script>
 <script src="/js/question-render.js?v=<%= assetVersion %>"></script>
 <script src="/js/exam-player.js?v=<%= assetVersion %>"></script>
+<% if (top.some(function (t) { return t.type === 'lab'; })) { %><link rel="stylesheet" href="/vendor/xterm/xterm.css?v=<%= assetVersion %>"><script src="/vendor/xterm/xterm.js?v=<%= assetVersion %>"></script><script src="/js/lab-terminal.js?v=<%= assetVersion %>"></script><% } %>

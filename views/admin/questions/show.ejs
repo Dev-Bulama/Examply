@@ -41,7 +41,7 @@
         <% const totalMarks = q.type === 'case_study' ? children.reduce(function (s, c) { return s + Number(c.default_marks); }, 0) : Number(q.default_marks); %><span class="text-xs muted"><%= totalMarks %> mark<%= totalMarks === 1 ? '' : 's' %><%= q.type === 'case_study' ? ` in ${children.length} question${children.length === 1 ? '' : 's'}` : '' %> · ~<%= Math.round(q.est_time_sec / 6) / 10 %> min</span>
       </div>
       <div class="p-5 sm:p-6">
-        <%- include('../../questions/render', { view: view, name: 'preview', interactive: true, sqlRunUrl: q.type === 'sql' ? '/admin/questions/' + q.id + '/sql/run' : '', sqlCheck: true }) %>
+        <%- include('../../questions/render', { view: view, name: 'preview', interactive: true, sqlRunUrl: q.type === 'sql' ? '/admin/questions/' + q.id + '/sql/run' : '', sqlCheck: true, labUrl: q.type === 'lab' ? '/admin/questions/' + q.id + '/lab' : '', labReset: true }) %>
         <% if (q.type === 'case_study') { %>
           <div class="mt-6 space-y-6 border-t border-slate-200 pt-6 dark:border-slate-800">
             <% if (!children.length) { %><p class="text-sm muted">This case study has no questions yet.</p><% } %>
@@ -131,3 +131,5 @@
     </section>
   </aside>
 </div>
+
+<% if (q.type === 'lab') { %><link rel="stylesheet" href="/vendor/xterm/xterm.css?v=<%= assetVersion %>"><script src="/vendor/xterm/xterm.js?v=<%= assetVersion %>"></script><script src="/js/lab-terminal.js?v=<%= assetVersion %>"></script><% } %>

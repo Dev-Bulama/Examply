@@ -15,11 +15,12 @@
       essay: 'Long answer, graded by a person.',
       case_study: 'A shared scenario with several child questions.',
       sql: 'Write and run SQL against a sample database; marked by comparing results.',
+      lab: 'Hands-on cyber security tasks in a live Linux terminal; each task checked automatically.',
     };
-    const icons = { single_choice: 'check', multiple_response: 'list', true_false: 'shield', fill_blank: 'clipboard', numeric: 'chart', matching: 'arrowRight', ordering: 'queue', hotspot: 'eye', short_answer: 'mail', essay: 'academic', case_study: 'flag', sql: 'database' };
+    const icons = { single_choice: 'check', multiple_response: 'list', true_false: 'shield', fill_blank: 'clipboard', numeric: 'chart', matching: 'arrowRight', ordering: 'queue', hotspot: 'eye', short_answer: 'mail', essay: 'academic', case_study: 'flag', sql: 'database', lab: 'computer' };
   %>
   <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-    <% Object.entries(TYPES).filter(function (t) { return !(parentId && t[0] === 'case_study'); }).forEach(function (t) { %>
+    <% Object.entries(TYPES).filter(function (t) { return !(parentId && t[0] === 'case_study') && !(t[0] === 'lab' && locals.workspace && !(workspace.limits || {}).labs); }).forEach(function (t) { %>
     <a href="/admin/questions/new?type=<%= t[0] %><%= parentId ? `&parent=${parentId}` : '' %>" class="card card-body group flex gap-4 transition hover:border-primary-400 hover:shadow-pop focus-visible:ring-2 focus-visible:ring-primary-500">
       <span class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary-700 group-hover:bg-primary-600 group-hover:text-on-primary dark:bg-primary-950 dark:text-primary-300"><%- include('../../partials/icon', { name: icons[t[0]] }) %></span>
       <span>

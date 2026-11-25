@@ -40,6 +40,10 @@ const tick = '<span class="text-emerald-600 dark:text-emerald-400" aria-label="c
 <% } else if (a.type === 'essay') { %>
   <p class="muted">Graded manually<%= a.min_words || a.max_words ? ` · ${a.min_words || 0}–${a.max_words || '∞'} words` : '' %>.</p>
   <% if (a.rubric_html) { %><div class="prose-content rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60"><%- a.rubric_html %></div><% } %>
+<% } else if (a.type === 'lab') { %>
+  <p class="text-xs font-semibold uppercase tracking-wide muted">Tasks and how they are checked</p>
+  <ol class="mt-1 list-decimal space-y-1.5 pl-5"><% ((a.scenario || {}).tasks || []).forEach(function (t) { %><li><span class="font-medium"><%= t.title %></span> <span class="muted">(<%= t.marks %>)</span><code class="mt-0.5 block whitespace-pre-wrap break-all text-[11px] muted"><%= JSON.stringify(t.check) %></code></li><% }) %></ol>
+  <p class="text-xs muted">Marked from the candidate's machine when they submit; each task earns its marks independently.</p>
 <% } else if (a.type === 'sql') { %>
   <p class="text-xs font-semibold uppercase tracking-wide muted"><%= a.mode === 'modify' ? 'Model solution (changes data)' : 'Model solution' %></p>
   <pre class="mt-1 whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs dark:border-slate-700 dark:bg-slate-800/60"><code class="nohighlight"><%= a.solution_sql %></code></pre>

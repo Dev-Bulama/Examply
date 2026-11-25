@@ -133,7 +133,7 @@ describe('generation flow (fake provider)', () => {
       .send({ _csrf: t, provider: 'anthropic', prompt: 'Scenario questions on network defence and incident response for SOC analysts.', count: '24', types: ['single_choice'], category_id: catId, certification_id: certId, difficulty: 'mixed', level: generator.SYSTEM_PROMPT ? require('../../src/controllers/admin/aiController').LEVELS[0] : '', status: 'published', exam_mode: 'create', exam_title: 'AI SOC exam' });
     expect(res.status).toBe(302);
     const importId = Number(res.headers.location.split('/').pop());
-    await runDueJobs({ limit: 10 });
+    await runDueJobs({ limit: 200 });
 
     expect(calls).toHaveLength(2); // 24 questions → batches of 20 + 4
     expect(calls[0].args.schema.properties.questions.type).toBe('array');
@@ -148,7 +148,7 @@ describe('generation flow (fake provider)', () => {
 
     const t2 = await csrf(agent, `/admin/imports/${importId}`);
     await agent.post(`/admin/imports/${importId}/confirm`).type('form').send({ _csrf: t2 });
-    await runDueJobs({ limit: 10 });
+    await runDueJobs({ limit: 200 });
     imp = await db()('imports').where({ id: importId }).first();
     expect(imp.imported_count).toBe(24);
     const qs = await db()('questions').where({ import_id: importId });
@@ -175,7 +175,7 @@ describe('generation flow (fake provider)', () => {
     const t = await csrf(agent, '/admin/ai/exam');
     const res = await agent.post('/admin/ai').type('form').send({ _csrf: t, kind: 'exam', provider: 'anthropic', exam_type: 'mock', exam_title: 'SOC mock', prompt: 'A full mock exam for SOC analysts including SQL log analysis tasks.', count: '3', types: ['single_choice', 'sql'], category_id: catId, certification_id: certId, status: 'published', level: require('../../src/controllers/admin/aiController').LEVELS[0] });
     const importId = Number(res.headers.location.split('/').pop());
-    await runDueJobs({ limit: 10 });
+    await runDueJobs({ limit: 200 });
     const rows = await db()('import_rows').where({ import_id: importId }).orderBy('row_number');
     expect(rows.map((r) => r.status)).toEqual(['valid', 'error', 'valid']);
     expect(JSON.stringify(rows[1].messages)).toContain('model solution failed');
@@ -186,7 +186,7 @@ describe('generation flow (fake provider)', () => {
 
     const t2 = await csrf(agent, `/admin/imports/${importId}`);
     await agent.post(`/admin/imports/${importId}/confirm`).type('form').send({ _csrf: t2 });
-    await runDueJobs({ limit: 10 });
+    await runDueJobs({ limit: 200 });
     const imp = await db()('imports').where({ id: importId }).first();
     const exam = await db()('exams').where({ id: imp.created_exam_id }).first();
     expect(exam).toMatchObject({ title: 'SOC Analyst Full Mock', type: 'mock', status: 'draft', duration_minutes: 10, certificate_enabled: 1, short_description: 'A realistic mock for SOC analysts.' });
@@ -208,7 +208,7 @@ describe('generation flow (fake provider)', () => {
     const t = await csrf(agent, '/admin/ai/new');
     const res = await agent.post('/admin/ai').type('form').send({ _csrf: t, provider: 'anthropic', prompt: 'Twenty questions about firewalls and IDS tuning please.', count: '3', types: ['true_false'], category_id: catId });
     const importId = Number(res.headers.location.split('/').pop());
-    await runDueJobs({ limit: 10 });
+    await runDueJobs({ limit: 200 });
     const imp = await db()('imports').where({ id: importId }).first();
     expect(imp.status).toBe('failed');
     expect(imp.last_error).toContain('API key was rejected');

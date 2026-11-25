@@ -369,7 +369,8 @@ async function buildReview(attempt) {
       status: it.grading_status,
       flagged: !!it.flagged,
       feedback: it.grader_feedback,
-      unanswered: it.response === null || (typeof it.response === 'object' && !Object.values(it.response).some((x) => (Array.isArray(x) ? x.length : x && typeof x === 'object' ? Object.values(x).some(Boolean) : String(x || '').trim() !== ''))),
+      labTasks: it.type === 'lab' ? require('../services/labs/scenario').grade((it.answer || {}).scenario || {}, it.response && it.response.lab).tasks : null,
+      unanswered: it.type === 'lab' ? !(it.response && it.response.lab && it.response.lab.history && it.response.lab.history.length) : it.response === null || (typeof it.response === 'object' && !Object.values(it.response).some((x) => (Array.isArray(x) ? x.length : x && typeof x === 'object' ? Object.values(x).some(Boolean) : String(x || '').trim() !== ''))),
     };
   });
 }
@@ -436,4 +437,24 @@ async function verifyPage(req, res) {
   res.status(code && !cert ? 404 : 200).render('public/verify', { title: cert ? `Certificate ${cert.code}` : 'Verify a certificate', layout: 'layouts/public', code, cert, metaDescription: 'Check that a Skillscore Assess certificate is genuine.' });
 }
 
-module.exports = { catalogueIndex, examShow, redeemInvite, start, player, takeOver, saveAnswers, event, finishSection, submit, runSql, resultPage, slip, practiceWeak, myResults, myCertificates, certificatePdf, verifyPage, buildReview, forRender };
+/** Lab terminal inside an attempt: one command at a time against the candidate's own machine. */
+async function labCommand(req, res) {
+  const labs = require('../services/labs');
+  const attempt = await loadAttempt(req);
+  if (attempt.status !== 'in_progress') return res.status(409).json({ ok: false, error: 'This attempt has been submitted.' });
+  const it = await db()('attempt_items as ai').join('question_versions as v', 'v.id', 'ai.question_version_id').where({ 'ai.id': Number(req.params.itemId), 'ai.attempt_id': attempt.id }).first('ai.id', 'ai.question_version_id', 'v.type', 'v.settings');
+  if (!it || it.type !== 'lab') throw notFound();
+  if (attempt.expires_at && Date.now() > new Date(attempt.expires_at).getTime() + 5000) return res.status(409).json({ ok: false, error: 'Time is up.' });
+  try {
+    const sess = await labs.session({ ownerKey: `item:${it.id}`, versionId: it.question_version_id, userId: req.user.id, attemptItemId: it.id });
+    if (req.body.init) return res.json({ ok: true, ...labs.greeting(sess, (parseJson(it.settings, {}) || {}).brief || {}) });
+    const out = await labs.exec(sess, String(req.body.command || ''));
+    if (sess.commands === 1) await db()('attempt_items').where({ id: it.id }).update({ answered_at: new Date() });
+    return res.json({ ok: true, ...out });
+  } catch (err) {
+    if (!(err instanceof labs.LabError)) throw err;
+    return res.status(err.status).json({ ok: false, error: err.message });
+  }
+}
+
+module.exports = { labCommand, catalogueIndex, examShow, redeemInvite, start, player, takeOver, saveAnswers, event, finishSection, submit, runSql, resultPage, slip, practiceWeak, myResults, myCertificates, certificatePdf, verifyPage, buildReview, forRender };

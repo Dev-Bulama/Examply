@@ -26,6 +26,7 @@ router.post(`/attempts/:uuid(${UUID})/events`, requireAuth, answerLimiter(), h(c
 router.post(`/attempts/:uuid(${UUID})/section/finish`, requireAuth, h(c.finishSection));
 router.post(`/attempts/:uuid(${UUID})/submit`, requireAuth, h(c.submit));
 router.post(`/attempts/:uuid(${UUID})/items/:itemId(\\d+)/sql`, requireAuth, sqlLimiter(), h(c.runSql));
+router.post(`/attempts/:uuid(${UUID})/items/:itemId(\\d+)/lab`, requireAuth, answerLimiter(), h(c.labCommand));
 
 // Results & certificates
 router.get(`/results/:uuid(${UUID})`, requireAuth, appNav('candidate'), h(c.resultPage));

@@ -325,6 +325,7 @@
         draft: null,
         start: null,
         init: function () {
+          if (this.m && this.m.type === 'lab') this.labJson = JSON.stringify(this.m.scenario || {}, null, 2);
           var self = this;
           window.addEventListener('rich-changed', function (e) {
             if (e.detail.name === 'stem_html') self.onStem(e.detail.html);
@@ -450,6 +451,8 @@
             r.correct = j === i;
           });
         },
+        /* ---- Cyber lab ---- */
+        labJson: '',
         /* ---- SQL lab ---- */
         sqlOut: null,
         sqlBusy: false,
@@ -579,6 +582,7 @@
             });
           if (m.type === 'essay') Object.assign(out, { min_words: m.min_words, max_words: m.max_words });
           if (m.type === 'sql') Object.assign(out, this.sqlModel());
+          if (m.type === 'lab') out.scenario = this.labJson;
           this.$refs.payload.value = JSON.stringify(out);
         },
       };

@@ -320,6 +320,11 @@
           if (!box) return;
           if (e.target.closest('[data-notes]')) return;
           var id = Number(box.getAttribute('data-item'));
+          if (box.getAttribute('data-type') === 'lab') {
+            // Labs are answered on the server, command by command; just show progress.
+            if (e.type === 'answer-changed') this.answered[id] = true;
+            return;
+          }
           var resp = collect(box);
           this.dirty[id] = resp;
           if (resp) this.answered[id] = true;

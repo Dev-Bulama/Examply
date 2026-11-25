@@ -207,6 +207,7 @@ async function playerView(attempt, knex = db()) {
       marks: Number(it.marks_possible),
       view: cv,
       response: parseJson(it.response, null),
+      answeredAt: it.answered_at,
       flagged: !!it.flagged,
     };
   });

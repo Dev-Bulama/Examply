@@ -22,6 +22,7 @@
  * Rules shared by all types: unanswered = 0 and never negative; awarded is rounded to 2 dp.
  */
 const sqlLab = require('../sql/lab');
+const labScenario = require('../labs/scenario');
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const str = (v) => (v === undefined || v === null ? '' : String(v));
@@ -51,6 +52,8 @@ function isAnswered(type, r) {
       return str(r.text).trim() !== '';
     case 'sql':
       return str(r.sql).trim() !== '';
+    case 'lab':
+      return !!(r.lab && Array.isArray(r.lab.history) && r.lab.history.length);
     default:
       return false;
   }
@@ -172,6 +175,13 @@ const STRATEGIES = {
 
   essay() {
     return { awarded: null, correct: null, status: 'pending_manual', detail: null };
+  },
+
+  /** Labs: each task's marks when its check passes on the candidate's final machine (task-based partial credit). */
+  lab(item, r) {
+    const g = labScenario.grade(item.answer.scenario || {}, r.lab);
+    const scale = g.total > 0 ? item.marks / g.total : 0;
+    return result(g.awarded * scale, g.allPassed, { detail: { tasks: g.tasks.map((t) => ({ id: t.id, title: t.title, marks: t.marks, passed: t.passed })) } });
   },
 
   async sql(item, r) {

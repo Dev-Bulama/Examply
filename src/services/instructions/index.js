@@ -23,6 +23,7 @@ const TYPE_NAMES = {
   essay: 'essay',
   case_study: 'case-study (scenario)',
   sql: 'SQL lab',
+  lab: 'terminal lab',
 };
 
 const EXAM_PURPOSE = {
@@ -76,6 +77,7 @@ function generateInstructions(exam, user = null, ctx = {}) {
       ? `You will answer ${plural(exam.questionCount, 'question')}${exam.sections.length > 1 ? ` in ${plural(exam.sections.length, 'section')}` : ''}${exam.randomised ? ', drawn at random from a larger question bank, so your questions may differ from other candidates’' : ''}.`
       : null,
     typeNames.length ? `Question types: ${listJoin(typeNames)}.` : exam.mixedTypes ? 'The exam uses a mix of question types.' : null,
+    exam.questionTypes && exam.questionTypes.includes('lab') ? 'Terminal lab questions give you your own simulated Linux machine in the browser. Type commands to complete each task (use sudo for admin commands). Your work is saved after every command and marked on the machine\'s final state when you submit; each task you complete earns its marks.' : null,
     exam.questionTypes && exam.questionTypes.includes('sql') ? 'SQL lab questions give you a sample database: write a query, run it to see the result, then submit your final query. Your answer is marked by comparing what your query returns with the expected result.' : null,
     exam.questionTypes && exam.questionTypes.includes('essay') ? 'Essay answers are marked by an examiner; your result for those questions will show as “pending” until they are graded.' : null,
     exam.sections.length > 1 ? `Sections: ${exam.sections.map((s, i) => `${i + 1}. ${s.title} (${plural(s.questionCount, 'question')}${s.timeLimitMinutes ? `, ${minutesText(adjusted(s.timeLimitMinutes))}` : ''})`).join('; ')}.` : null,

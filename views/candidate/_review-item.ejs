@@ -31,6 +31,7 @@ const badge = { correct: ['badge-green', 'Correct'], partial: ['badge-amber', 'P
         <% } else if (r.type === 'numeric') { %><p><%= resp.value %> <%= a.units || '' %></p>
         <% } else if (r.type === 'matching') { %><ul class="space-y-1"><% (a.pairs || []).forEach(function (p, i) { const pick = (resp.pairs || {})['L' + (i + 1)]; const all = (a.pairs || []).map(function (x) { return x.right; }).concat(a.distractors || []); const txt = pick ? all[Number(pick.slice(1)) - 1] : ''; %><li><%- inline(p.left) %> → <%- txt ? inline(txt) : '<span class="muted">—</span>' %> <%- pick === 'R' + (i + 1) ? '<span class="text-emerald-600">✔</span>' : '<span class="text-red-600">✘</span>' %></li><% }) %></ul>
         <% } else if (r.type === 'ordering') { %><ol class="list-decimal pl-5"><% (resp.order || []).forEach(function (k) { %><li><%- inline((a.items || [])[Number(String(k).slice(1)) - 1]) %></li><% }) %></ol>
+        <% } else if (r.type === 'lab') { %><ul class="space-y-1"><% (r.labTasks || []).forEach(function (t) { %><li class="flex gap-2"><%- t.passed ? '<span class="text-emerald-600">✔</span>' : '<span class="text-red-600">✘</span>' %><span><%= t.title %> <span class="muted">(<%= t.marks %>)</span></span></li><% }) %></ul>
         <% } else if (r.type === 'sql') { %><pre class="whitespace-pre-wrap rounded bg-slate-50 p-2 font-mono text-xs dark:bg-slate-800/60"><%= resp.sql %></pre>
         <% } else { %><p class="whitespace-pre-line"><%= resp.text || '' %></p><% } %>
         <% if (r.feedback) { %><p class="mt-2 rounded bg-primary-50 p-2 text-xs dark:bg-primary-950/40"><span class="font-semibold">Examiner:</span> <%= r.feedback %></p><% } %>
@@ -46,6 +47,7 @@ const badge = { correct: ['badge-green', 'Correct'], partial: ['badge-amber', 'P
         <% } else if (r.type === 'matching') { %><ul class="space-y-1"><% (a.pairs || []).forEach(function (p) { %><li><%- inline(p.left) %> → <%- inline(p.right) %></li><% }) %></ul>
         <% } else if (r.type === 'ordering') { %><ol class="list-decimal pl-5"><% (a.items || []).forEach(function (t) { %><li><%- inline(t) %></li><% }) %></ol>
         <% } else if (r.type === 'short_answer') { %><p>Key points: <%- (a.keywords || []).map(function (k) { return '<code>' + esc(k.terms[0]) + '</code>'; }).join(', ') %></p>
+        <% } else if (r.type === 'lab') { %><p>Every task completed on the machine.</p>
         <% } else if (r.type === 'sql') { %><pre class="whitespace-pre-wrap rounded bg-white p-2 font-mono text-xs dark:bg-slate-900"><%= a.solution_sql %></pre><p class="mt-1 text-xs muted">Any query that returns the same result scores.</p>
         <% } else { %><p class="muted">Graded by an examiner.</p><% } %>
       </div>

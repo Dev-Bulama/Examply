@@ -186,6 +186,18 @@
         <div class="mt-5"><%- include('_rich', { name: 'rubric_html', label: 'Marking guide for graders (never shown to candidates)', value: authoring.rubric_html }) %></div>
       <% } else if (t === 'sql') { %>
         <%- include('_sql-editor') %>
+      <% } else if (t === 'lab') { %>
+        <p class="mt-1 text-sm muted">The candidate gets their own simulated Linux machine with a live terminal. Describe the machine and the tasks as JSON; each task is marked automatically from the machine's final state. Save, then open the question to try the lab yourself.</p>
+        <label class="label mt-4" for="lab-json">Scenario (JSON)</label>
+        <textarea id="lab-json" rows="22" class="input code-input" x-model="labJson" spellcheck="false"></textarea>
+        <details class="mt-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60"><summary class="cursor-pointer font-semibold">Scenario reference</summary>
+          <div class="mt-2 space-y-2">
+            <p><strong>Machine:</strong> <code>hostname</code>, <code>user</code> (login user; give it the <code>sudo</code> group to allow sudo), <code>users</code> {name: {uid, groups, shell, locked}}, <code>files</code> {path: {content, mode "640", owner, group}}, <code>services</code> {name: {port, active, enabled}}, <code>processes</code> [{user, command, cpu}], <code>crontab</code> {user: ["* * * * * cmd"]}, <code>firewall</code> {enabled, rules: [{action, port}]}, <code>hosts</code> {ip: {name, ports: [{port, service, version}], http: {"/": "page"}}}, <code>logins</code> [{user, from, at}].</p>
+            <p><strong>Tasks:</strong> <code>[{ "id", "title", "marks", "check": {...} or [all of these] }]</code></p>
+            <p><strong>Checks:</strong> file_contains / file_not_contains {path, text | regex}, file_exists / file_absent {path}, file_mode {path, mode "640" | max "640"}, file_owner {path, owner, group}, user_absent / user_locked {user}, user_not_in_group {user, group}, service_state {service, active, enabled}, port_closed {port}, firewall_enabled, firewall_denies {port}, cron_absent {contains, user?}, process_absent {contains}, command_ran {regex}, flag_submitted {flag}.</p>
+            <p><strong>Commands available to candidates:</strong> ls cd pwd cat less head tail grep find wc sort uniq cut awk echo touch mkdir rm cp mv chmod chown stat whoami id groups passwd usermod gpasswd userdel useradd last who ps kill pkill systemctl service ss netstat ufw iptables crontab journalctl ip ping nmap curl sha256sum md5sum base64 env export history sudo submit.</p>
+          </div>
+        </details>
       <% } %>
     </section>
     <% } %>

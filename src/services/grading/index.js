@@ -25,7 +25,11 @@ async function loadItemsForMarking(knex, attemptId) {
     .where('ai.attempt_id', attemptId)
     .orderBy('ai.display_order')
     .select('ai.*', 'v.type', 'v.settings as v_settings', 'qa.answer as v_answer', 'q.difficulty', 'q.domain_id', 'd.code as domain_code', 'd.name as domain_name');
-  return items.map((it) => ({ ...it, settings: parseJson(it.v_settings, {}), answer: parseJson(it.v_answer, {}), response: parseJson(it.response, null) }));
+  const out = items.map((it) => ({ ...it, settings: parseJson(it.v_settings, {}), answer: parseJson(it.v_answer, {}), response: parseJson(it.response, null) }));
+  // Labs are answered on the server: the candidate's final machine is the response.
+  const labs = require('../labs');
+  for (const it of out) if (it.type === 'lab') it.response = { lab: await labs.stateForItem(it.id, knex) };
+  return out;
 }
 
 function releaseStatus(exam, now = new Date()) {

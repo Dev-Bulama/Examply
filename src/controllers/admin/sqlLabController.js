@@ -42,4 +42,25 @@ async function runQuestion(req, res) {
   return respond(res, spec, req.body.sql, { check: !!req.body.check });
 }
 
-module.exports = { runDraft, runQuestion };
+/** Staff preview of a lab question: a personal machine per question version; "reset" starts over. */
+async function labPreview(req, res) {
+  const labs = require('../../services/labs');
+  const loaded = await repo.loadQuestion(Number(req.params.id));
+  if (!loaded || loaded.type !== 'lab' || !loaded.current) throw notFound('Lab not found.');
+  const versionId = loaded.current.version.id;
+  const ownerKey = `preview:${req.user.id}:${versionId}`;
+  try {
+    if (req.body.reset) await labs.reset(ownerKey);
+    const sess = await labs.session({ ownerKey, versionId, userId: req.user.id });
+    if (req.body.init || req.body.reset) return res.json({ ok: true, ...labs.greeting(sess, loaded.current.settings.brief || {}) });
+    const out = await labs.exec(sess, String(req.body.command || ''));
+    // Staff see task progress live (candidates do not).
+    const g = labs.scenarioLib.grade(loaded.current.answer.scenario || {}, sess.state);
+    return res.json({ ok: true, ...out, tasks: g.tasks });
+  } catch (err) {
+    if (!(err instanceof labs.LabError)) throw err;
+    return res.status(err.status).json({ ok: false, error: err.message });
+  }
+}
+
+module.exports = { runDraft, runQuestion, labPreview };

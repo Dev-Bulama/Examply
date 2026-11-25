@@ -123,3 +123,14 @@ Decisions made where `PROMPT.md` leaves room, with the reason. Newest phase at t
 | 85 | **Plan limits are enforced where they bite**: candidates and staff seats when inviting (pending invitations count), published exams when publishing, AI questions per month when generating (from `ai_generations`). A lapsed plan keeps all data and the overview but closes the builder. | Clear upgrade moments without losing anyone's work. |
 | 86 | **Joining is always by consent**: invitation links (bound to the invited email, 14-day expiry) or a join code the manager can rotate or turn off. | NDPR — nobody is added to an organisation silently. |
 | 87 | **Cohorts** hold people and assignments (pre-training, post-training or general, with optional due dates). The progress grid uses each person's best released result; learning gain = post − pre for people who took both. Reminders go 48 hours before the due date, once. | Brief §3.10 learning-gain reports. |
+
+## Phase 5A — Cyber security labs
+
+| # | Decision | Why |
+|---|---|---|
+| 88 | **Simulated, not real, machines.** A pure-JS machine (filesystem with modes/owners, users/groups, services, processes, ports, firewall, cron, logins, network hosts) and a shell interpreter. | Hostinger cannot run containers, and a real shell on the web server would be a critical risk. |
+| 89 | **One HTTPS POST per command line** (not a socket). The browser only edits the line locally; the server runs it and stores the whole machine in `lab_sessions` (per attempt item, or per staff member and question version for previews). | Works behind any proxy, survives reloads and device switches, and keeps the answer state on the server. |
+| 90 | **Graded on the final machine state** with declarative checks; each task carries its own marks (scaled to the item's marks). Checks and flags never leave the server; candidates see only task titles. | Partial credit for real-world partial fixes; nothing to reverse-engineer in the page. |
+| 91 | **Scenario validation** rejects unknown check types and tasks that already pass on the starting machine. | A broken scenario must not give free marks. |
+| 92 | **Limits**: 3,000 commands and 4 MB of state per session, 200 KB transcript, output truncation, rate-limited endpoint, closed when the attempt ends or time is up. | Bounded memory/DB use on shared hosting. |
+| 93 | **Labs are a plan feature** (`limits.labs`) for workspaces; platform staff always have them. | Matches the published plans. |

@@ -21,7 +21,7 @@ describe('templates re-import cleanly', () => {
   test('every type appears in the Excel template', async () => {
     const { records } = await P.parseFile('xlsx', await TEMPLATES.xlsx.build());
     const types = new Set(records.map((r) => r.question.type));
-    for (const t of T.TYPE_KEYS.filter((x) => x !== 'hotspot')) expect(types).toContain(t);
+    for (const t of T.TYPE_KEYS.filter((x) => x !== 'hotspot' && x !== 'lab')) expect(types).toContain(t);
   });
 });
 

@@ -13,7 +13,7 @@ The original 10 phases from `PROMPT.md`, extended with three product requests ma
 | 3. Import / export **+ AI generation** | 7 import formats with dry run, undo and error report; export; **Claude / OpenAI generation into the same preview**; marketing landing page; plan records | ✅ |
 | 4. Exam builder + instruction generator | Every §3.5 setting, blueprints, sections, bands, pre-publish checklist. **SQL lab question type.** **AI: "generate a complete exam"**. (Public catalogue pages move to Phase 5, with the candidate flow.) | ✅ |
 | 5. Exam engine, grading, results, certificates | Public catalogue pages, candidate flow, server timer, autosave/offline, proctoring, the §4 grading engine, results, PDF slip, certificates and `/verify`. AI-generated exams issue certificates through the same flow; SQL lab answers graded by result-set comparison | ✅ |
-| **5A. Cyber security labs** | Lab engine, lab question type, exam integration (details below) | |
+| **5A. Cyber security labs** | Lab engine, lab question type, exam integration (details below) | ✅ |
 | 6. Commerce | Products, packs, bundles, coupons, Paystack and **bank transfer**, entitlements, invoices, **plan subscriptions for companies** (Paystack Plans) | ✅ |
 | 7. Organisations → **company workspaces** | Tenant-scoped bank, exams, labs and AI quota (`organisation_id` columns already exist); workspace admin portal; seats, cohorts, bulk invite, learning-gain reports; plan limits enforced | ✅ |
 | 8. Live quiz | Socket.IO sessions, PIN join, leaderboards, homework mode | |
@@ -31,13 +31,15 @@ The original 10 phases from `PROMPT.md`, extended with three product requests ma
   - users and groups, processes, services, listening ports, firewall rules, cron jobs;
   - log files, plus simulated network hosts that tools like `nmap`, `ssh` and `curl` can reach.
 - **Commands:** about 60 common commands (`ls`, `cat`, `grep`, `awk`, `sed -i`, `find`, `chmod`, `chown`, `ps`, `kill`, `ss`/`netstat`, `ufw`/`iptables`, `systemctl`, `journalctl`, `last`, `useradd`/`userdel`, `passwd -l`, `crontab`, `sha256sum`, `base64`, `nmap`, …). Pipes, redirection, `sudo` and environment variables are supported. Unknown commands give realistic errors.
-- **Terminal:** xterm.js in the browser, connected to the engine over Socket.IO (long-polling fallback). Every keystroke is processed server-side, so the browser holds no answers and state cannot be tampered with.
+- **Terminal:** xterm.js in the browser. Each command line is sent to the engine over HTTPS (one POST per command, CSRF-protected and rate-limited) — simpler than a socket on shared hosting, and it survives reconnects. Every command is executed server-side, so the browser holds no answers and state cannot be tampered with.
 - **Scenario authoring:**
   - JSON or YAML scenarios define the starting machine(s) and the tasks;
   - checks are declarative (`file_contains`, `file_mode`, `user_absent`, `service_state`, `port_closed`, `firewall_denies`, `command_ran`, `flag_submitted`);
   - the AI generator can draft scenarios for review.
 - **In exams:** a `lab` question type. Each task is marked automatically with partial credit, and candidates can also answer questions inside the lab (`submit <flag>`). The lab timer, the transcript and an integrity log feed the normal results and certificate flow.
 - **Upgrade path:** a `LabRunner` interface. The simulated runner is the default; an optional external runner (Docker or Firecracker on a separate VPS, reached over an authenticated WebSocket) can be plugged in later for full real-machine labs, without changing scenarios or grading.
+
+**Delivered (Phase 5A):** `services/labs/{machine,shell,scenario,index}.js` — ~60 commands with pipes, redirects, `&&`/`||`, globs and `sudo`; 17 declarative check types; per-candidate machines persisted in `lab_sessions` (refresh/reconnect replays the transcript); `lab` question type with a JSON scenario editor, validation (unknown checks, tasks that already pass), staff preview with live task ticks and reset; task-based partial credit; review shows each task ✔/✘; labs gated by the plan's `labs` limit in workspaces; demo "Linux Incident Response Lab" exam.
 
 ## Company workspaces (design)
 

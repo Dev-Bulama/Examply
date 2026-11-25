@@ -19,6 +19,7 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 | 5. Exam engine, grading, results, certificates | Public catalogue and exam pages; eligibility rules (attempts, cooldown, overrides, window, invite code, IP/organisation, prerequisite, entitlement); mobile-first player with server timer, autosave + offline queue, resume, sections, palette, flags, review, keyboard, calculator/notepad, integrity events; §4 grading engine; results with domain radar, percentile, history and review; weak-area practice; PDF result slip; certificates with QR and `/verify`; admin attempts, grading queue, release, re-grade, revoke | ✅ Done |
 | 6. Commerce (Paystack + bank transfer) | Paid exams, extra attempts, bundles and company plans; coupons; Paystack checkout with signed webhooks and idempotent fulfilment; bank transfer with receipt upload and admin approval; refunds; admin grants; PDF invoices/receipts and receipt emails; orders & library for candidates | ✅ Done |
 | 7. Company workspaces & cohorts | Companies on a plan build private questions and exams (with AI and SQL labs) in the same admin screens, isolated per tenant; people & invitations (bulk, join codes, roles), cohorts with assignments and due dates, progress grids, learning gain, reminders, CSV export; plan limits enforced | ✅ Done |
+| 5A. Cyber security labs | **Live terminal labs** in the browser (xterm.js) on a simulated Linux machine per candidate: investigate logs, lock accounts, kill processes, fix permissions, stop services, configure the firewall, submit flags; tasks auto-checked with partial credit; JSON scenario editor with validation and staff preview | ✅ Done |
 | 8. Live quiz | | |
 | 9. Analytics, notifications, CMS, support | | |
 | 10. Hardening & delivery | | |
@@ -65,6 +66,7 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 - **Instructions** are generated from the exam's real settings (timing, scoring, negative marking, attempts, navigation, tools, integrity rules, result release, accommodations such as extra time).
 - **SQL lab questions**: candidates write and run SQL against a sample database in the browser; answers are marked by comparing results with the model solution. Authors get a test bench (show tables, run the solution, verify).
 - **AI “generate a complete exam”**: questions across the certification's domains (including SQL lab tasks), catalogue copy, and timing/pass mark scaled from the official format.
+- **Cyber security terminal labs**: a `lab` question type with a real-feeling Linux terminal backed by a safe simulated machine (no shell on your server). Seed adds two labs and the free *Linux Incident Response Lab* exam.
 - `npm run seed` adds 6 SQL lab questions and three demo exams (a blueprint mock, a sectioned diagnostic, a draft practice test).
 
 ## Phase 5 highlights

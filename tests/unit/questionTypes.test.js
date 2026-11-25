@@ -18,7 +18,7 @@ const SAMPLES = {
 };
 
 describe('question type registry', () => {
-  test('covers all 12 types', () => expect(T.TYPE_KEYS).toHaveLength(12));
+  test('covers all 13 types', () => expect(T.TYPE_KEYS).toHaveLength(13));
 
   test('sql candidate view never includes the solution, check query or seed data', () => {
     const stored = T.toStored(T.normalise({ type: 'sql', ...SAMPLES.sql, check_sql: 'SELECT 1' }));

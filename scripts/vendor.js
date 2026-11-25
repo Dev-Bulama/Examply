@@ -20,6 +20,8 @@ const files = [
   [nm('@highlightjs', 'cdn-assets', 'highlight.min.js'), out('vendor', 'highlight', 'highlight.min.js')],
   [nm('@highlightjs', 'cdn-assets', 'styles', 'github.min.css'), out('vendor', 'highlight', 'github.min.css')],
   [nm('@highlightjs', 'cdn-assets', 'styles', 'github-dark.min.css'), out('vendor', 'highlight', 'github-dark.min.css')],
+  [nm('@xterm', 'xterm', 'lib', 'xterm.js'), out('vendor', 'xterm', 'xterm.js')],
+  [nm('@xterm', 'xterm', 'css', 'xterm.css'), out('vendor', 'xterm', 'xterm.css')],
   [nm('@fontsource-variable', 'inter', 'files', 'inter-latin-wght-normal.woff2'), out('fonts', 'inter-latin-wght-normal.woff2')],
   [nm('@fontsource-variable', 'inter', 'files', 'inter-latin-ext-wght-normal.woff2'), out('fonts', 'inter-latin-ext-wght-normal.woff2')],
 ];

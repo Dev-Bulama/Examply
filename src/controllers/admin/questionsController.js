@@ -125,6 +125,10 @@ async function renderForm(req, res, { question, authoring, meta, tags, errors = 
 
 async function newForm(req, res) {
   const type = req.query.type;
+  if (type === 'lab' && req.workspace && !req.workspace.limits.labs) {
+    req.flash('warning', 'Cyber security labs are not included in your plan. Upgrade to use them.');
+    return res.redirect('/admin/questions/new/choose');
+  }
   if (!types.TYPES[type]) return res.redirect(`/admin/questions/new/choose${req.query.parent ? `?parent=${intOrNull(req.query.parent)}` : ''}`);
   const scope = await repo.authorScope(req.user);
   if (scope && !scope.length) {
@@ -186,6 +190,7 @@ function targetStatus(req, question) {
 async function create(req, res) {
   const type = req.body.type;
   if (!types.TYPES[type]) throw badRequest('Unknown question type.');
+  if (type === 'lab' && req.workspace && !req.workspace.limits.labs) throw badRequest('Cyber security labs are not included in your plan.');
   const { meta, authoring, tags } = readForm(req, type);
   const scope = await repo.authorScope(req.user);
   const errors = [];

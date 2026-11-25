@@ -26,6 +26,7 @@
  *   answer (JSON) — the marking key; settings (JSON) — type options shown to the candidate.
  */
 const crypto = require('crypto');
+const labScenario = require('../labs/scenario');
 const { sanitizeRich, toPlainText } = require('../../utils/html');
 const { inlineToHtml, htmlToInline } = require('../../utils/inline');
 
@@ -42,6 +43,7 @@ const TYPES = {
   essay: { label: 'Essay (manual grading)', short: 'Essay', auto: false },
   case_study: { label: 'Case study / scenario group', short: 'Case', auto: false },
   sql: { label: 'SQL lab (write and run a query)', short: 'SQL', auto: true },
+  lab: { label: 'Cyber security lab (live terminal)', short: 'Lab', auto: true },
 };
 const TYPE_KEYS = Object.keys(TYPES);
 const BLOOM = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
@@ -123,6 +125,18 @@ function normalise(input) {
         column_names_matter: bool(a.column_names_matter),
         numeric_tolerance: num(a.numeric_tolerance) === null ? 0 : num(a.numeric_tolerance),
       };
+    case 'lab': {
+      let scenario = a.scenario;
+      if (typeof scenario === 'string') {
+        try {
+          scenario = JSON.parse(scenario);
+        } catch {
+          scenario = { __invalid: String(a.scenario).slice(0, 200000) };
+        }
+      }
+      scenario = scenario && typeof scenario === 'object' ? scenario : {};
+      return { ...base, scenario, marks: scenario.__invalid ? 1 : labScenario.totalMarks(scenario) || 1 };
+    }
     default:
       return base;
   }
@@ -237,6 +251,11 @@ function validate(q) {
       else if (q.threshold > total) add('threshold', `The threshold (${q.threshold}) is higher than the total keyword weight (${total}), so full marks could never be reached.`);
       break;
     }
+    case 'lab':
+      if (q.scenario.__invalid !== undefined) add('scenario', 'The scenario is not valid JSON.');
+      else labScenario.validate(q.scenario).forEach((e) => add(e.field, e.message));
+      if (JSON.stringify(q.scenario).length > 200000) add('scenario', 'The scenario is too large (200,000 characters at most).');
+      break;
     case 'sql':
       if (!q.schema_sql) add('schema_sql', 'Add the dataset schema (CREATE TABLE statements).');
       if (!q.solution_sql) add('solution_sql', 'Add the model solution query.');
@@ -308,6 +327,10 @@ function toStored(q) {
       settings.max_words = q.max_words;
       answer = { rubric_html: q.rubric_html || '' };
       break;
+    case 'lab':
+      settings.brief = labScenario.candidateBrief(q.scenario);
+      answer = { scenario: q.scenario };
+      break;
     case 'sql':
       settings.dialect = 'sqlite';
       settings.mode = q.mode;
@@ -346,6 +369,9 @@ function contentHash(q) {
     case 'numeric':
       parts.push(String(q.value));
       break;
+    case 'lab':
+      parts.push(JSON.stringify({ t: q.scenario.title, tasks: (q.scenario.tasks || []).map((t) => t.check) }));
+      break;
     case 'sql':
       parts.push(String(q.solution_sql).toLowerCase().replace(/\s+/g, ' ').trim());
       break;
@@ -383,6 +409,8 @@ function fromStored(version, options, answer, settings) {
       return { ...base, keywords: answer.keywords || [], threshold: answer.threshold, case_sensitive: !!settings.case_sensitive };
     case 'essay':
       return { ...base, min_words: settings.min_words ?? null, max_words: settings.max_words ?? null, rubric_html: answer.rubric_html || '' };
+    case 'lab':
+      return { ...base, scenario: answer.scenario || {} };
     case 'sql':
       return { ...base, mode: settings.mode || 'query', schema_sql: settings.schema_sql || '', seed_sql: settings.seed_sql || '', starter_sql: settings.starter_sql || '', solution_sql: answer.solution_sql || '', check_sql: answer.check_sql || '', order_matters: !!answer.order_matters, column_names_matter: !!answer.column_names_matter, numeric_tolerance: answer.numeric_tolerance || 0 };
     default:
@@ -440,6 +468,10 @@ function candidateView(version, options, settings, { optionOrder = null, shuffle
       view.settings.min_words = settings.min_words ?? null;
       view.settings.max_words = settings.max_words ?? null;
       break;
+    case 'lab':
+      // Brief and task list only — never the checks, flags or the machine's files.
+      view.settings.brief = settings.brief || { tasks: [] };
+      break;
     case 'sql':
       // The schema DDL and starter code only — never the seed rows' expected output, the solution or the check query.
       view.settings.mode = settings.mode || 'query';
@@ -478,6 +510,20 @@ function emptyAuthoring(type) {
       return { ...base, marks: 10, min_words: null, max_words: null, rubric_html: '' };
     case 'case_study':
       return { ...base, marks: 0 };
+    case 'lab':
+      return {
+        ...base,
+        scenario: {
+          title: 'Lab title',
+          hostname: 'web01',
+          user: 'analyst',
+          intro: 'Describe the situation the candidate is in.',
+          users: { analyst: { groups: ['analyst', 'sudo'] } },
+          files: {},
+          services: {},
+          tasks: [{ id: 'task1', title: 'Describe the first task', marks: 1, check: { type: 'flag_submitted', flag: 'FLAG{example}' } }],
+        },
+      };
     case 'sql':
       return { ...base, marks: 2, mode: 'query', schema_sql: '', seed_sql: '', starter_sql: '', solution_sql: '', check_sql: '', order_matters: false, column_names_matter: false, numeric_tolerance: 0 };
     default:

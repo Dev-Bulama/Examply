@@ -101,6 +101,7 @@ router.post('/questions/:id(\\d+)/delete', can('questions.delete'), h(qs.destroy
 // SQL lab (editor "Run" and preview)
 router.post('/sql/run', canAny('questions.create', 'questions.edit_any'), sqlLimiter(), h(sqlLab.runDraft));
 router.post('/questions/:id(\\d+)/sql/run', can('questions.view'), sqlLimiter(), h(sqlLab.runQuestion));
+router.post('/questions/:id(\\d+)/lab', can('questions.view'), sqlLimiter(), h(sqlLab.labPreview));
 
 // Commerce
 router.get('/products', can('products.manage'), h(com.products));
