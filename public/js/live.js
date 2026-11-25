@@ -106,6 +106,109 @@
     });
   }
 
+  // ================================================================ Game mode (shared)
+  var funNow = {};
+
+  /** Emoji reactions drift up the screen. */
+  function floatEmoji(emoji, name) {
+    var layer = $('[data-float]');
+    if (!layer || layer.childNodes.length > 40) return;
+    var f = el('span', 'float-up flex flex-col items-center');
+    f.appendChild(el('span', '', emoji));
+    if (name) f.appendChild(el('span', 'mt-0.5 rounded-full bg-black/40 px-2 text-[11px] font-semibold text-white', name));
+    f.style.left = 4 + Math.random() * 88 + '%';
+    f.style.setProperty('--sway', Math.round(Math.random() * 120 - 60) + 'px');
+    layer.appendChild(f);
+    setTimeout(function () {
+      f.remove();
+    }, 3300);
+  }
+
+  /** Achievement badge shout-outs. */
+  function hypeToast(h, dark) {
+    var box = $('[data-hype]');
+    if (!box) return;
+    // Phones get a compact pill (at most two at a time) so the question stays readable.
+    var t = el('div', 'hype-pop flex max-w-full items-center font-semibold shadow-pop ' + (dark ? 'gap-2 rounded-full bg-secondary-500/95 px-3 py-1 text-xs text-primary-950' : 'gap-3 rounded-xl border border-secondary-200 bg-white px-4 py-2.5 text-sm text-slate-900 dark:border-secondary-800 dark:bg-slate-900 dark:text-white'));
+    t.appendChild(el('span', dark ? 'text-base' : 'text-2xl', h.emoji));
+    t.appendChild(el('span', 'min-w-0 truncate', h.avatar + ' ' + h.nickname + ' ' + h.text));
+    box.appendChild(t);
+    while (box.childNodes.length > (dark ? 2 : 4)) box.firstChild.remove();
+    setTimeout(function () {
+      t.remove();
+    }, dark ? 3500 : 5000);
+  }
+
+  function bindFun(sock, dark) {
+    sock.on('react', function (r) {
+      floatEmoji(r.emoji, r.avatar + ' ' + r.nickname);
+      sfx.play('pop');
+    });
+    sock.on('hype', function (h) {
+      hypeToast(h, dark);
+      sfx.play('badge');
+    });
+  }
+
+  /** A live leaderboard that shows avatars and how far each player moved since the last update. */
+  function liveBoardList(list, rows, meId, dark) {
+    var prev = list._prev || {};
+    var next = {};
+    list.textContent = '';
+    rows.forEach(function (r) {
+      next[r.id] = r.rank;
+      var was = prev[r.id];
+      var li = el('li', 'lb-row flex items-center gap-3 rounded-xl px-4 py-2.5 ' + (dark ? (r.id === meId ? 'bg-secondary-500 text-primary-950' : 'bg-white/10') : r.rank === 1 ? 'bg-secondary-100 dark:bg-secondary-900/40' : 'bg-white shadow-card dark:bg-slate-900') + (was && was > r.rank ? ' rank-up' : ''));
+      li.appendChild(el('span', 'w-7 text-lg font-black tabular-nums', r.rank === 1 ? '👑' : String(r.rank)));
+      li.appendChild(el('span', 'text-xl', r.avatar || ''));
+      li.appendChild(el('span', 'min-w-0 flex-1 truncate font-semibold', r.nickname));
+      if (was && was !== r.rank) li.appendChild(el('span', 'text-xs font-bold ' + (was > r.rank ? 'text-emerald-600' : 'text-red-500'), (was > r.rank ? '▲' : '▼') + Math.abs(was - r.rank)));
+      if (r.streak > 2) li.appendChild(el('span', 'text-xs font-semibold', '🔥' + r.streak));
+      li.appendChild(el('span', 'font-mono font-bold tabular-nums', Number(r.score).toLocaleString('en')));
+      list.appendChild(li);
+    });
+    list._prev = next;
+  }
+
+  /** Race lanes in a stable order; racers glide along as progress changes. */
+  function raceLanes(list, rows, opts) {
+    var o = opts || {};
+    var els = list._els || (list._els = {});
+    var seen = {};
+    rows
+      .slice()
+      .sort(function (a, b) {
+        return a.id - b.id;
+      })
+      .forEach(function (r) {
+        seen[r.id] = true;
+        var lane = els[r.id];
+        if (!lane) {
+          lane = el('li', 'flex items-center gap-2');
+          lane._name = el('span', 'w-24 shrink-0 truncate text-xs font-semibold ' + (o.dark ? 'text-primary-100' : 'muted'));
+          lane._track = el('div', 'relative flex-1 rounded-full ' + (o.small ? 'h-6 ' : 'h-9 ') + (o.dark ? 'bg-white/10' : 'bg-slate-100 dark:bg-slate-800'));
+          lane._track.appendChild(el('span', 'absolute inset-y-0 right-1 grid place-items-center text-sm opacity-70', '🏁'));
+          lane._racer = el('span', 'racer ' + (o.small ? 'text-lg' : 'text-2xl'));
+          lane._track.appendChild(lane._racer);
+          lane.appendChild(lane._name);
+          lane.appendChild(lane._track);
+          els[r.id] = lane;
+        }
+        lane._name.textContent = r.nickname + (r.finished ? ' ✓' : '');
+        lane._racer.textContent = r.avatar;
+        lane._racer.style.left = Math.max(4, Math.min(94, r.pct)) + '%';
+        lane._track.classList.toggle('ring-2', !!r.me);
+        lane._track.classList.toggle('ring-secondary-400', !!r.me);
+        list.appendChild(lane); // keeps order; appending an existing node moves it
+      });
+    Object.keys(els).forEach(function (id) {
+      if (!seen[id]) {
+        els[id].remove();
+        delete els[id];
+      }
+    });
+  }
+
   // ================================================================ Host
   if (host) {
     var socket = window.io('/live', { auth: { session: Number(host.getAttribute('data-session')), host: host.getAttribute('data-token') }, withCredentials: true });
@@ -123,6 +226,36 @@
         send(act);
       });
     });
+    bindFun(socket, false);
+    $$('[data-fun]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        send('fun', { key: b.getAttribute('data-fun'), on: b.getAttribute('aria-pressed') !== 'true' });
+      });
+    });
+    function renderFun(s) {
+      var f = s.fun || {};
+      funNow = f;
+      var bar = $('[data-fun-bar]');
+      if (bar) bar.hidden = s.status === 'finished';
+      $$('[data-fun]').forEach(function (b) {
+        var on = !!f[b.getAttribute('data-fun')];
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        b.className = 'rounded-full border px-3 py-1 text-sm font-semibold transition ' + (on ? 'border-secondary-500 bg-secondary-500 text-primary-950' : 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800');
+      });
+      var running = s.status === 'running' || s.status === 'paused';
+      var showRace = running && !!s.race;
+      var showGlb = running && !!s.liveBoard && s.mode === 'host_paced';
+      var panel = $('[data-game-panel]');
+      panel.hidden = !(showRace || showGlb);
+      panel.classList.toggle('lg:grid-cols-[1.4fr_1fr]', showRace && showGlb);
+      $('[data-race-card]').hidden = !showRace;
+      $('[data-glb-card]').hidden = !showGlb;
+      if (showRace) {
+        raceLanes($('[data-race]'), s.race);
+        text('[data-race-note]', s.mode === 'host_paced' ? 'Moves with correct answers' : 'Moves with every answer');
+      }
+      if (showGlb) liveBoardList($('[data-glb]'), s.liveBoard);
+    }
     socket.on('connect_error', function () {
       setError('Reconnecting…');
     });
@@ -185,6 +318,7 @@
         hostKey = key;
       }
       renderAlerts(s);
+      renderFun(s);
       if (s.status === 'lobby' && s.players > hostPlayers) sfx.play('join');
       hostPlayers = s.players;
       text('[data-players]', String(s.players));
@@ -238,14 +372,17 @@
         (s.allPlayers || []).forEach(function (p) {
           var li = el('li', 'flex items-center gap-3 px-6 py-2.5 text-sm');
           li.appendChild(el('span', 'h-2 w-2 rounded-full ' + (p.connected ? 'bg-emerald-500' : 'bg-slate-300')));
-          li.appendChild(el('span', 'min-w-0 flex-1 truncate font-medium', p.nickname));
+          li.appendChild(el('span', 'min-w-0 flex-1 truncate font-medium', (p.avatar ? p.avatar + ' ' : '') + p.nickname));
           if (p.flags) li.appendChild(el('span', 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-950 dark:text-red-300', '⚠ ' + p.flags + (p.awaySec ? ' · ' + p.awaySec + 's away' : '')));
           li.appendChild(el('span', 'tabular-nums muted', p.finished ? 'Submitted ✓' : p.answered + ' of ' + s.total + ' answered'));
           pl.appendChild(li);
         });
-        leaderboardList($('[data-lb2]'), s.leaderboard || []);
+        var liveOn = !!s.liveBoard && s.status !== 'finished';
+        $('[data-lb2-live]').hidden = !liveOn;
+        if (liveOn) liveBoardList($('[data-lb2]'), s.liveBoard);
+        else leaderboardList($('[data-lb2]'), s.leaderboard || []);
         var lbNote = $('[data-lb2-note]');
-        if (lbNote) lbNote.textContent = (s.submitted || 0) + ' of ' + s.players + ' submitted. Scores and answers are revealed when the game ends — click End game when you are ready, or it ends by itself once everyone has submitted.';
+        if (lbNote) lbNote.textContent = (s.submitted || 0) + ' of ' + s.players + ' submitted. ' + (liveOn ? 'Live scores so far — players see this too, and answers lock once given. Answers are revealed when the game ends.' : 'Scores and answers are revealed when the game ends — click End game when you are ready, or it ends by itself once everyone has submitted.');
         if (s.status === 'finished') renderBoard(s, true);
         return;
       }
@@ -331,6 +468,55 @@
     psocket.on('connect', function () {
       setError('');
     });
+    bindFun(psocket, true);
+    var lastLiveRank = null;
+    var reactBar = $('[data-react-bar]');
+    function renderPlayerFun(s, me) {
+      var f = s.fun || {};
+      funNow = f;
+      var over = me.gameOver || s.status === 'finished';
+      var running = (s.status === 'running' || s.status === 'paused') && !over;
+      // Live rank strip
+      var strip = $('[data-live-strip]');
+      strip.hidden = !(running && me.live);
+      if (running && me.live) {
+        var pill = $('[data-live-rank]');
+        pill.textContent = '🏆 #' + me.live.rank + ' of ' + me.live.of;
+        if (lastLiveRank && me.live.rank < lastLiveRank) {
+          sfx.play('rankup');
+          pill.classList.remove('rank-up');
+          void pill.offsetWidth;
+          pill.classList.add('rank-up');
+        }
+        lastLiveRank = me.live.rank;
+        var top = $('[data-live-top]');
+        top.textContent = '';
+        (s.liveBoard || []).slice(0, 3).forEach(function (r) {
+          top.appendChild(el('li', 'truncate rounded-full px-2.5 py-1 ' + (r.id === me.id ? 'bg-secondary-500/30 font-bold' : 'bg-white/10'), ['🥇', '🥈', '🥉'][r.rank - 1] + ' ' + r.avatar + ' ' + r.nickname + ' · ' + Number(r.score).toLocaleString('en')));
+        });
+      } else lastLiveRank = null;
+      // Mini race
+      var mini = $('[data-race-mini]');
+      mini.hidden = !(running && me.raceNear);
+      if (running && me.raceNear) {
+        raceLanes($('[data-race-lanes]'), me.raceNear, { dark: true, small: true });
+        text('[data-race-place]', 'You are #' + me.racePlace + ' in the race');
+      }
+      // Reactions
+      var wantBar = !!f.reactions && !over && s.status !== 'finished';
+      reactBar.hidden = !wantBar;
+      if (wantBar && !reactBar.childNodes.length) {
+        (s.reactions || []).forEach(function (e) {
+          var b = el('button', 'grid h-11 w-11 place-items-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20 active:scale-90', e);
+          b.type = 'button';
+          b.setAttribute('aria-label', 'React ' + e);
+          b.addEventListener('click', function () {
+            psocket.emit('react', { emoji: e }, function () {});
+          });
+          reactBar.appendChild(b);
+        });
+      }
+    }
     psocket.on('kicked', function () {
       setError('The host removed you from this game.');
       show('wait');
@@ -363,14 +549,14 @@
     }
 
     function renderQuestion(q, ownPace) {
-      var key = q.index + ':' + q.type;
+      var key = q.index + ':' + q.type + ':' + (q.locked ? 'L' : '');
       show('question');
       text('[data-qnum]', 'Question ' + (q.index + 1) + ' of ' + q.total);
       var nav = $('[data-own-nav]');
       if (nav) nav.hidden = !ownPace;
       if (ownPace) {
         $('[data-nav-prev]').disabled = q.index <= 0;
-        text('[data-nav-hint]', q.response ? 'Answer saved — you can change it until you submit.' : 'Answers are revealed when the game ends.');
+        text('[data-nav-hint]', q.locked ? '🔒 Locked in — answers are final while the live leaderboard is on.' : q.response ? 'Answer saved — you can change it until you submit.' : funNow.leaderboard ? 'Live leaderboard is on: your first answer is final.' : 'Answers are revealed when the game ends.');
       }
       if (key === lastKey) return;
       lastKey = key;
@@ -391,8 +577,9 @@
         });
         q.options.forEach(function (o, i) {
           var on = !!chosen[o.key];
-          var b = el('button', 'tile min-h-[4.5rem] rounded-2xl p-4 text-left text-lg font-semibold text-white shadow-pop transition active:scale-[.98] ' + TILE[i % TILE.length] + (on ? ' ring-4 ring-white' : ''));
+          var b = el('button', 'tile min-h-[4.5rem] rounded-2xl p-4 text-left text-lg font-semibold text-white shadow-pop transition active:scale-[.98] ' + TILE[i % TILE.length] + (on ? ' ring-4 ring-white' : '') + (q.locked && !on ? ' opacity-40' : ''));
           b.type = 'button';
+          b.disabled = !!q.locked;
           b.setAttribute('aria-pressed', on ? 'true' : 'false');
           var inner = el('span', 'block');
           setStem(inner, o.html);
@@ -406,7 +593,7 @@
           });
           form.appendChild(b);
         });
-        if (multi) {
+        if (multi && !q.locked) {
           var go = el('button', 'rounded-2xl bg-white py-3 text-lg font-bold text-primary-900 sm:col-span-2', ownPace ? 'Save & next ▶' : 'Submit answer');
           go.type = 'button';
           go.addEventListener('click', function () {
@@ -427,12 +614,13 @@
           inp.inputMode = q.type === 'numeric' ? 'decimal' : 'text';
           inp.autocomplete = 'off';
           inp.value = q.type === 'numeric' ? prev.value || '' : (prev.blanks || [])[i] || '';
+          inp.disabled = !!q.locked;
           inputs.push(inp);
           form.appendChild(inp);
         }
         var send2 = el('button', 'rounded-2xl bg-secondary-500 py-3 text-lg font-bold text-primary-950 sm:col-span-2', ownPace ? 'Save & next ▶' : 'Submit answer');
         send2.type = 'submit';
-        form.appendChild(send2);
+        if (!q.locked) form.appendChild(send2);
         form.onsubmit = function (e) {
           e.preventDefault();
           var vals = inputs.map(function (x) {
@@ -441,7 +629,7 @@
           if (!vals.join('')) return setError('Type your answer first.');
           submit(q.type === 'numeric' ? { value: vals[0] } : { blanks: vals }, q.index);
         };
-        inputs[0].focus();
+        if (!q.locked) inputs[0].focus();
       }
     }
 
@@ -572,9 +760,11 @@
       var changed = key !== playerKey;
       playerKey = key;
       var ownPace = s.mode === 'player_paced';
+      renderPlayerFun(s, me);
       var scorePill = $('[data-me-score]');
-      if (scorePill) scorePill.hidden = ownPace && !me.gameOver;
+      if (scorePill) scorePill.hidden = ownPace && !me.gameOver && !me.live;
       if (!ownPace || me.gameOver) text('[data-me-score]', Number(me.score || 0).toLocaleString('en'));
+      else if (me.live) text('[data-me-score]', Number(me.live.score || 0).toLocaleString('en'));
 
       // -------- Own pace
       if (ownPace) {

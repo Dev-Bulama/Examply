@@ -23,6 +23,26 @@ const LIVE_TYPES = ['single_choice', 'multiple_response', 'true_false', 'numeric
 const DEFAULTS = { timer: 20, shuffle: false, show_answers: true, deadline: null, auto_advance: true, reveal_seconds: 5, leaderboard_seconds: 6, max_flags: 0 };
 const MAX_PLAYERS = 500;
 
+// ---------------------------------------------------------------- Game mode (host can switch each part on or off live)
+//   leaderboard  real-time ranking for everyone while playing (answers lock once given, so scores can't be probed)
+//   race         every player is a racer on a track, moving with their progress
+//   reactions    emoji reactions that float across every screen, plus achievement badges announced to the room
+const FUN_KEYS = ['leaderboard', 'race', 'reactions'];
+const REACTIONS = ['👏', '🔥', '😂', '😮', '🎉', '💯'];
+const AVATARS = ['🦊', '🐼', '🐯', '🦁', '🐸', '🐵', '🐧', '🦄', '🐙', '🐝', '🐨', '🐳', '🦉', '🐢', '🦋', '🐞', '🦖', '🐬', '🦩', '🐺'];
+const BADGES = {
+  first_blood: { emoji: '⚡', text: 'answered first' },
+  speedster: { emoji: '💨', text: 'answered 3 in a row in under 5 seconds' },
+  halfway: { emoji: '🚀', text: 'is halfway there' },
+  on_fire: { emoji: '🔥', text: 'is on fire — 3 correct in a row' },
+  first_finish: { emoji: '🏁', text: 'finished first' },
+};
+const avatarFor = (id) => AVATARS[Number(id) % AVATARS.length];
+const funOf = (sess) => {
+  const f = (sess.settings && sess.settings.fun) || {};
+  return { leaderboard: !!f.leaderboard, race: !!f.race, reactions: !!f.reactions };
+};
+
 class LiveError extends Error {
   constructor(message, status = 422) {
     super(message);
@@ -124,7 +144,7 @@ async function byPin(pin, knex = db()) {
 }
 
 /** Creates a session. kind: live | self_paced | homework. */
-async function createSession({ examId, hostId, kind = 'live', timer, allowGuests = false, shuffle = false, deadline = null, showAnswers = true, autoAdvance = true, revealSeconds = 5, leaderboardSeconds = 6, maxFlags = 0 }, knex = db()) {
+async function createSession({ examId, hostId, kind = 'live', timer, allowGuests = false, shuffle = false, deadline = null, showAnswers = true, autoAdvance = true, revealSeconds = 5, leaderboardSeconds = 6, maxFlags = 0, fun = {} }, knex = db()) {
   const exam = await knex('exams').where({ id: examId }).whereNull('deleted_at').first('id', 'title');
   if (!exam) throw new LiveError('Choose a quiz.');
   let qs = await liveQuestions(examId, knex);
@@ -146,7 +166,7 @@ async function createSession({ examId, hostId, kind = 'live', timer, allowGuests
     status: kind === 'homework' ? 'running' : 'lobby',
     phase: kind === 'homework' ? 'question' : 'lobby',
     allow_guests: !!allowGuests,
-    settings: toJson({ timer: t, shuffle: !!shuffle, show_answers: !!showAnswers, deadline: dl ? dl.toISOString() : null, kind, title: exam.title, auto_advance: !!autoAdvance, reveal_seconds: clampSec(revealSeconds, 5), leaderboard_seconds: clampSec(leaderboardSeconds, 6), max_flags: Math.min(50, Math.max(0, Math.round(Number(maxFlags) || 0))) }),
+    settings: toJson({ timer: t, shuffle: !!shuffle, show_answers: !!showAnswers, deadline: dl ? dl.toISOString() : null, kind, title: exam.title, auto_advance: !!autoAdvance, reveal_seconds: clampSec(revealSeconds, 5), leaderboard_seconds: clampSec(leaderboardSeconds, 6), max_flags: Math.min(50, Math.max(0, Math.round(Number(maxFlags) || 0))), fun: Object.fromEntries(FUN_KEYS.map((k) => [k, !!(fun || {})[k]])) }),
     question_ids: toJson(qs),
     started_at: kind === 'homework' ? now() : null,
   });
@@ -276,6 +296,7 @@ async function answerAtOwnPace(sess, player, i, response, knex) {
   const resp = normaliseResponse(v.type, response);
   const marked = await markItem({ type: v.type, marks: 1, answer: key, settings }, resp, { partialCredit: false, negative: 0 });
   const existing = await knex('live_answers').where({ player_id: player.id, question_index: i }).first('id');
+  if (existing && funOf(sess).leaderboard) throw new LiveError('The live leaderboard is on, so answers are final once given.');
   const startedAt = player.question_started_at && player.current_index === i ? new Date(player.question_started_at) : now();
   if (existing) await knex('live_answers').where({ id: existing.id }).update({ response: toJson(resp), is_correct: !!marked.correct });
   else {
@@ -289,7 +310,80 @@ async function answerAtOwnPace(sess, player, i, response, knex) {
   // Next: the following question if it is still open, otherwise the next open one, otherwise review & submit.
   const next = answered.length >= total ? total : !answered.includes(i + 1) && i + 1 < total ? i + 1 : nextOpen(answered, i, total);
   await knex('live_players').where({ id: player.id }).update({ current_index: next, question_started_at: now() });
-  return { saved: true, next };
+  const badges = existing ? [] : await awardBadges(sess, player, { answered: answered.length }, knex);
+  return badges.length ? { saved: true, next, badges } : { saved: true, next };
+}
+
+/**
+ * Achievement badges (game mode → reactions on). Each badge once per player; returned so the socket layer can
+ * announce them to the room. "On fire" reveals correctness, so it only runs with the live leaderboard on.
+ */
+async function awardBadges(sess, player, { answered = 0, submitted = false } = {}, knex = db()) {
+  const fun = funOf(sess);
+  if (!fun.reactions) return [];
+  const have = new Set(parseJson((await knex('live_players').where({ id: player.id }).first('badges')).badges, []) || []);
+  const won = [];
+  const give = (code) => {
+    if (!have.has(code)) {
+      have.add(code);
+      won.push(code);
+    }
+  };
+  const total = sess.question_ids.length;
+  if (submitted) {
+    const others = Number((await knex('live_players').where({ session_id: sess.id }).whereNot({ id: player.id }).whereNotNull('finished_at').count('* as n').first()).n);
+    if (!others) give('first_finish');
+  } else {
+    if (Number((await knex('live_answers').where({ session_id: sess.id }).count('* as n').first()).n) === 1) give('first_blood');
+    if (total >= 4 && answered === Math.ceil(total / 2)) give('halfway');
+    const recent = await knex('live_answers').where({ player_id: player.id }).orderBy('id', 'desc').limit(3).select('response_ms', 'is_correct');
+    if (recent.length === 3 && recent.every((a) => a.response_ms >= 900 && a.response_ms < 5000)) give('speedster');
+    if (fun.leaderboard && recent.length === 3 && recent.every((a) => a.is_correct)) give('on_fire');
+  }
+  if (!won.length) return [];
+  await knex('live_players').where({ id: player.id }).update({ badges: toJson([...have]) });
+  return won.map((code) => ({ code, ...BADGES[code] }));
+}
+
+/** The host switches a game-mode feature on or off at any time. */
+async function setFun(sess, key, on, knex = db()) {
+  if (!FUN_KEYS.includes(key)) throw new LiveError('Unknown game mode option.');
+  if (closed(sess)) throw new LiveError('This game has ended.');
+  const fun = { ...funOf(sess), [key]: !!on };
+  await knex('live_sessions').where({ id: sess.id }).update({ settings: toJson({ ...sess.settings, fun }), updated_at: now() });
+  return getSession(sess.id, knex);
+}
+
+/**
+ * Real-time standings. Own pace: provisional scores from the answers given so far (speed and streak bonuses as
+ * at submit). Presenter-paced: the running score. `pct` drives the race track: progress through the questions
+ * (own pace, which says nothing about correctness) or correct answers so far (presenter-paced, already revealed).
+ */
+async function standings(sess, knex = db()) {
+  const players = await knex('live_players').where({ session_id: sess.id, kicked: false }).select('id', 'nickname', 'score', 'streak', 'finished_at', 'connected');
+  const answers = await knex('live_answers').where({ session_id: sess.id }).orderBy('question_index').select('player_id', 'is_correct', 'response_ms');
+  const by = new Map(players.map((p) => [p.id, []]));
+  for (const a of answers) if (by.has(a.player_id)) by.get(a.player_id).push(a);
+  const total = sess.question_ids.length || 1;
+  const own = sess.mode === 'player_paced';
+  const rows = players.map((p) => {
+    const list = by.get(p.id);
+    let score = p.score;
+    let streak = p.streak;
+    if (own && !p.finished_at) {
+      score = 0;
+      streak = 0;
+      for (const a of list) {
+        streak = a.is_correct ? streak + 1 : 0;
+        score += points({ correct: !!a.is_correct, responseMs: a.response_ms, timerSec: sess.settings.timer, streak });
+      }
+    }
+    const right = list.filter((a) => a.is_correct).length;
+    const pct = Math.round(((own ? list.length : right) / total) * 100);
+    return { id: p.id, nickname: p.nickname, avatar: avatarFor(p.id), score, streak, answered: list.length, pct: Math.min(100, pct), finished: !!p.finished_at, connected: !!p.connected };
+  });
+  rows.sort((a, b) => b.score - a.score || b.answered - a.answered || a.id - b.id);
+  return rows.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
 // ---------------------------------------------------------------- Anti-cheat
@@ -373,12 +467,13 @@ async function scorePlayer(sess, player, knex) {
 async function submitPlayer(sess, player, knex = db(), { autoEnd = true } = {}) {
   if (player.finished_at) return { submitted: true };
   const { score, streak } = await scorePlayer(sess, player, knex);
+  const badges = autoEnd ? await awardBadges(sess, player, { submitted: true }, knex) : [];
   await knex('live_players').where({ id: player.id }).update({ score, streak, finished_at: now(), current_index: sess.question_ids.length });
   if (autoEnd && sess.settings.kind !== 'homework' && sess.status === 'running') {
     const left = Number((await knex('live_players').where({ session_id: sess.id, kicked: false }).whereNull('finished_at').count('* as n').first()).n);
     if (!left) await finish(sess, knex);
   }
-  return { submitted: true };
+  return badges.length ? { submitted: true, badges } : { submitted: true };
 }
 
 /** Each question with the player's answer, the correct answer and the explanation (only once the game is over). */
@@ -553,7 +648,18 @@ async function publicState(sess, knex = db()) {
     lobby: sess.phase === 'lobby' ? lb.all.map((p) => p.nickname).slice(-60) : [],
     question: null,
     reveal: null,
+    fun: funOf(sess),
+    reactions: REACTIONS,
+    liveBoard: null,
+    race: null,
   };
+  const playing = !closed(sess) && ['running', 'paused'].includes(sess.status);
+  if (playing && (out.fun.leaderboard || out.fun.race)) {
+    const rows = await standings(sess, knex);
+    Object.defineProperty(out, '_standings', { value: rows, enumerable: false }); // reused for every player's view
+    if (out.fun.leaderboard) out.liveBoard = rows.slice(0, 10).map((r) => ({ rank: r.rank, id: r.id, nickname: r.nickname, avatar: r.avatar, score: r.score, streak: r.streak }));
+    if (out.fun.race) out.race = rows.slice(0, 60).map((r) => ({ id: r.id, nickname: r.nickname, avatar: r.avatar, pct: r.pct, finished: r.finished }));
+  }
   if (sess.mode === 'host_paced' && sess.status !== 'lobby' && sess.current_index >= 0) {
     if (['question', 'reveal'].includes(sess.phase)) out.question = await playerQuestion(sess, sess.current_index, knex);
     if (sess.phase === 'reveal') out.reveal = await reveal(sess, sess.current_index, knex);
@@ -562,8 +668,27 @@ async function publicState(sess, knex = db()) {
 }
 
 /** Personal state for one player. */
-async function playerState(sess, player, knex = db()) {
-  if (sess.mode === 'player_paced') return ownPaceState(sess, player, knex);
+async function playerState(sess, player, knex = db(), pub = null) {
+  const me = await (sess.mode === 'player_paced' ? ownPaceState(sess, player, knex) : pacedState(sess, player, knex));
+  me.avatar = avatarFor(player.id);
+  const fun = funOf(sess);
+  if ((fun.leaderboard || fun.race) && !closed(sess) && ['running', 'paused'].includes(sess.status)) {
+    const rows = (pub && pub._standings) || (await standings(sess, knex));
+    const mine = rows.find((r) => r.id === player.id);
+    if (mine && fun.leaderboard) me.live = { rank: mine.rank, of: rows.length, score: mine.score, streak: mine.streak };
+    if (mine && fun.race) {
+      // The racers just ahead of and behind me, for the phone's mini track.
+      const byPct = rows.slice().sort((a, b) => b.pct - a.pct || a.id - b.id);
+      const at = byPct.findIndex((r) => r.id === player.id);
+      me.raceNear = byPct.slice(Math.max(0, at - 2), at + 3).map((r) => ({ id: r.id, nickname: r.nickname, avatar: r.avatar, pct: r.pct, me: r.id === player.id }));
+      me.racePlace = at + 1;
+    }
+  }
+  if (me.question && fun.leaderboard && me.question.response) me.question.locked = true;
+  return me;
+}
+
+async function pacedState(sess, player, knex) {
   const lb = await leaderboard(sess.id, 1000, knex);
   const rank = lb.all.findIndex((p) => p.id === player.id) + 1;
   const me = { id: player.id, nickname: player.nickname, score: player.score, streak: player.streak, rank, of: lb.total, answeredCurrent: false, last: null, question: null, finished: !!player.finished_at };
@@ -610,7 +735,7 @@ async function hostState(sess, knex = db()) {
   state.pin = sess.pin;
   const counts = Object.fromEntries((await knex('live_answers').where({ session_id: sess.id }).select('player_id').count('* as n').groupBy('player_id')).map((r) => [r.player_id, Number(r.n)]));
   const integ = Object.fromEntries((await knex('live_players').where({ session_id: sess.id }).select('id', 'flags', 'away_ms')).map((r) => [r.id, r]));
-  state.allPlayers = lb.all.map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, progress: p.current_index, answered: counts[p.id] || 0, finished: !!p.finished_at, connected: !!p.connected, flags: (integ[p.id] || {}).flags || 0, awaySec: Math.round(((integ[p.id] || {}).away_ms || 0) / 1000) }));
+  state.allPlayers = lb.all.map((p) => ({ id: p.id, avatar: avatarFor(p.id), nickname: p.nickname, score: p.score, progress: p.current_index, answered: counts[p.id] || 0, finished: !!p.finished_at, connected: !!p.connected, flags: (integ[p.id] || {}).flags || 0, awaySec: Math.round(((integ[p.id] || {}).away_ms || 0) / 1000) }));
   state.alerts = (await integritySummary(sess.id, knex)).slice(0, 15).map((a) => ({ id: a.id, nickname: a.nickname, label: a.label, type: a.type, away: a.details.away_ms ? Math.round(a.details.away_ms / 1000) : null, at: a.created_at }));
   state.maxFlags = Number(sess.settings.max_flags) || 0;
   state.submitted = state.allPlayers.filter((p) => p.finished).length;
@@ -664,6 +789,13 @@ module.exports = {
   next,
   prev,
   setAuto,
+  setFun,
+  standings,
+  awardBadges,
+  avatarFor,
+  FUN_KEYS,
+  REACTIONS,
+  BADGES,
   phaseEndsAt,
   review,
   recordIntegrity,

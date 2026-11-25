@@ -62,6 +62,7 @@ The client connects to `io('/live', { auth: { session: <sessionId>, host?: <host
 | `pause`, `resume` | none | Freezes or resumes the question timer |
 | `kick` | `{ playerId }` | Removes a player (they cannot rejoin) |
 | `end` | none | Finishes the game |
+| `fun` | `{ key: 'leaderboard' \| 'race' \| 'reactions', on }` | Game mode: switches a feature on or off (refused once the game has ended) |
 
 **Player → server:**
 
@@ -69,8 +70,11 @@ The client connects to `io('/live', { auth: { session: <sessionId>, host?: <host
 |---|---|---|
 | `answer` | `{ index, response }` (shapes as in the exam engine) | Presenter-paced: `{ ok, correct, points, score, streak }`. Own pace: `{ ok }`; answers can be changed until submit |
 | `goto` | `{ index }` | Own pace: move to a question |
-| `submit` | none | Own pace: submit; scores are computed now |
+| `submit` | none | Own pace: submit; scores are computed now. May return `badges` |
+| `react` | `{ emoji }` (one of 👏 🔥 😂 😮 🎉 💯) | `{ ok }` or `{ ok, throttled }` (one per 1.2 s); refused when reactions are off. Everyone receives `react` |
 | `integrity` | `{ type, details? }`: `tab_hidden`, `tab_return {away_ms}`, `window_blur {away_ms}`, `split_screen`, `screenshot_key`, `devtools`, `print`, `copy`, `paste`, `context_menu`, `offline` | `{ ok, flags, autoSubmitted }`. Hosts receive `alert`; at the session's `max_flags` the player's answers are submitted |
+
+Public state also carries `fun: { leaderboard, race, reactions }`, `reactions[]`, and while playing `liveBoard` (top 10 with live scores, when the leaderboard is on) and `race` (`{ id, nickname, avatar, pct, finished }`). A player's `me` adds `avatar`, `live: { rank, of, score, streak }`, `raceNear[]` and `racePlace`, and `question.locked` when an answer is final.
 
 **Server → clients:**
 
@@ -78,6 +82,8 @@ The client connects to `io('/live', { auth: { session: <sessionId>, host?: <host
 |---|---|---|
 | `host` | Host sockets | Public state plus `pin`, `allPlayers[]` (with `flags`, `awaySec`), `alerts[]` (latest 15), `maxFlags`, `live: { answered, counts }` |
 | `state` | Each player | `{ status, phase, index, total, endsAt, serverNow, question, reveal, leaderboard, me: { score, rank, streak, last, question? } }` |
+| `react` | Everyone in the room | `{ nickname, avatar, emoji }` |
+| `hype` | Everyone in the room | `{ nickname, avatar, code, emoji, text }`: an achievement badge (`first_blood`, `speedster`, `halfway`, `on_fire`, `first_finish`) |
 | `alert` | Host sockets | `{ nickname, type, label, flags, away, autoSubmitted }` (anti-cheat) |
 | `kicked` | The removed player | none |
 

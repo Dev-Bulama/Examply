@@ -59,7 +59,7 @@ async function broadcast(sessionId) {
         s.disconnect(true);
         continue;
       }
-      s.emit('state', { ...pub, me: await live.playerState(sess, p) });
+      s.emit('state', { ...pub, me: await live.playerState(sess, p, undefined, pub) });
     }
   }
 }
@@ -147,6 +147,12 @@ function registerLive(ns) {
       }
     };
 
+    // Game mode: achievement badges are announced to everyone in the room.
+    const announce = (player, out) => {
+      if (!out || !out.badges) return;
+      for (const b of out.badges) ns.to(`s:${sessionId}`).emit('hype', { nickname: player.nickname, avatar: live.avatarFor(player.id), code: b.code, emoji: b.emoji, text: b.text });
+    };
+
     if (role === 'host') {
       const act = (fn) =>
         guard(async (p) => {
@@ -164,6 +170,7 @@ function registerLive(ns) {
       socket.on('resume', act((s) => live.resume(s)));
       socket.on('kick', act((s, p) => live.kick(s, Number(p.playerId))));
       socket.on('end', act((s) => live.finish(s)));
+      socket.on('fun', act((s, p) => live.setFun(s, String(p.key || ''), !!p.on)));
     } else {
       socket.on(
         'answer',
@@ -172,6 +179,7 @@ function registerLive(ns) {
           const player = await db()('live_players').where({ id: playerId }).first();
           if (!player || player.kicked) throw new live.LiveError('You are no longer in this game.');
           const out = await live.answer(sess, player, { index: p.index, response: p.response });
+          announce(player, out);
           if (sess.mode === 'host_paced') await revealIfAllAnswered(sess);
           await broadcast(sessionId);
           return out;
@@ -183,9 +191,26 @@ function registerLive(ns) {
           const player = await db()('live_players').where({ id: playerId }).first();
           if (!player || player.kicked) throw new live.LiveError('You are no longer in this game.');
           const out = await fn(sess, player, p);
+          announce(player, out);
           await broadcast(sessionId);
           return out;
         });
+      // Game mode: emoji reactions float across every screen (at most one every 1.2 s per player).
+      socket.on(
+        'react',
+        guard(async (p) => {
+          const sess = await live.getSession(sessionId);
+          if (!sess || !sess.settings.fun || !sess.settings.fun.reactions) throw new live.LiveError('Reactions are off.');
+          if (!live.REACTIONS.includes(p.emoji)) throw new live.LiveError('Unknown reaction.');
+          const t = Date.now();
+          if (t - (socket.data.lastReact || 0) < 1200) return { throttled: true };
+          socket.data.lastReact = t;
+          const player = await db()('live_players').where({ id: playerId }).first('id', 'nickname', 'kicked');
+          if (!player || player.kicked) throw new live.LiveError('You are no longer in this game.');
+          ns.to(`s:${sessionId}`).emit('react', { nickname: player.nickname, avatar: live.avatarFor(player.id), emoji: p.emoji });
+          return {};
+        }),
+      );
       socket.on('goto', own((sess, player, p) => live.goTo(sess, player, p.index)));
       // Anti-cheat: the player's browser reports leaving, switching windows, screenshots, devtools…
       socket.on(

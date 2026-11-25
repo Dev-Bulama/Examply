@@ -20,10 +20,28 @@
         <a class="btn-secondary" href="/admin/live/<%= sess.id %>/report" data-report hidden>Full report</a>
       </div>
     </div>
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 pb-3" data-fun-bar hidden>
+      <span class="mr-1 text-xs font-semibold uppercase tracking-wider muted">🎮 Game mode</span>
+      <button type="button" class="fun-btn rounded-full border px-3 py-1 text-sm font-semibold" data-fun="leaderboard" aria-pressed="false" title="Everyone sees who is leading, live. Answers lock once given.">🏆 Live leaderboard</button>
+      <button type="button" class="fun-btn rounded-full border px-3 py-1 text-sm font-semibold" data-fun="race" aria-pressed="false" title="Players race along a track as they answer">🏁 Race track</button>
+      <button type="button" class="fun-btn rounded-full border px-3 py-1 text-sm font-semibold" data-fun="reactions" aria-pressed="false" title="Emoji reactions and achievement badges">🎉 Reactions &amp; badges</button>
+    </div>
     <div class="h-1 bg-slate-100 dark:bg-slate-800"><div class="h-1 bg-secondary-500 transition-all duration-500" data-bar style="width:0%"></div></div>
   </header>
 
   <p class="mx-auto max-w-7xl px-4 pt-3 text-sm text-red-600" data-error role="alert"></p>
+
+  <!-- Game mode: race track (and the live leaderboard during presenter-paced questions) -->
+  <section class="mx-auto grid max-w-7xl gap-6 px-4 pt-6 lg:grid-cols-[1.4fr_1fr]" data-game-panel hidden>
+    <div class="card card-body overflow-hidden" data-race-card hidden>
+      <div class="flex items-center justify-between"><h2 class="h2">🏁 Race to the finish</h2><span class="text-xs muted" data-race-note></span></div>
+      <ol class="mt-4 space-y-2" data-race></ol>
+    </div>
+    <div class="card card-body" data-glb-card hidden>
+      <div class="flex items-center justify-between"><h2 class="h2">🏆 Live leaderboard</h2><span class="badge-red animate-pulse">LIVE</span></div>
+      <ol class="mt-4 space-y-2" data-glb></ol>
+    </div>
+  </section>
 
   <!-- Lobby -->
   <section class="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1fr_1.2fr]" data-view="lobby" hidden>
@@ -59,7 +77,7 @@
   <!-- Player-paced progress -->
   <section class="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-2" data-view="selfpaced" hidden>
     <div class="card"><div class="card-body pb-0"><h2 class="h2">Progress</h2></div><ul class="divide-y divide-slate-100 dark:divide-slate-800" data-progress-list></ul></div>
-    <div class="card card-body"><h2 class="h2">Leaderboard</h2><p class="mt-1 text-sm muted" data-lb2-note></p><ol class="mt-4 space-y-2" data-lb2></ol></div>
+    <div class="card card-body"><div class="flex items-center justify-between"><h2 class="h2">Leaderboard</h2><span class="badge-red animate-pulse" data-lb2-live hidden>LIVE</span></div><p class="mt-1 text-sm muted" data-lb2-note></p><ol class="mt-4 space-y-2" data-lb2></ol></div>
   </section>
 <!-- Anti-cheat: live alerts from players' devices -->
 <aside class="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-red-200 bg-white shadow-pop dark:border-red-900 dark:bg-slate-900" data-alerts-panel hidden aria-live="polite">
@@ -67,6 +85,9 @@
   <ol class="max-h-64 space-y-1 overflow-y-auto p-3 text-sm" data-alerts-list></ol>
 </aside>
 <div class="pointer-events-none fixed inset-x-0 top-20 z-50 flex flex-col items-center gap-2 px-4" data-alert-toasts></div>
+<!-- Game mode: floating reactions and badge shout-outs -->
+<div class="pointer-events-none fixed inset-0 z-30 overflow-hidden" data-float aria-hidden="true"></div>
+<div class="pointer-events-none fixed bottom-4 left-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2" data-hype aria-live="polite"></div>
 </div>
 <script src="/socket.io/socket.io.min.js"></script>
 <script src="/js/live-sounds.js?v=<%= assetVersion %>"></script>

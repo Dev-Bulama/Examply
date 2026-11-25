@@ -29,6 +29,12 @@
       <%- include('../../partials/field', { name: 'leaderboard_seconds', label: 'Show leaderboard for (s)', type: 'number', value: old.leaderboard_seconds || 6, min: 1, max: 30 }) %>
     </div>
     <%- include('../../partials/field', { name: 'deadline', label: 'Homework deadline', type: 'datetime-local', hint: 'Only for homework. Players can join until then.' }) %>
+    <fieldset class="rounded-lg border border-secondary-200 bg-secondary-50/60 p-3 dark:border-secondary-900 dark:bg-secondary-950/30">
+      <legend class="px-1 text-sm font-semibold">🎮 Game mode <span class="font-normal muted">— you can switch these on or off during the game</span></legend>
+      <%- include('../../partials/field', { name: 'fun_leaderboard', label: '🏆 Live leaderboard: everyone sees who is leading in real time', type: 'checkbox', value: old.fun_leaderboard, hint: 'In live games, answers lock once given while this is on (so nobody can test answers against their score).' }) %>
+      <%- include('../../partials/field', { name: 'fun_race', label: '🏁 Race track: players race to the finish as they answer', type: 'checkbox', value: old.fun_race === undefined ? '1' : old.fun_race }) %>
+      <%- include('../../partials/field', { name: 'fun_reactions', label: '🎉 Reactions & badges: emoji reactions and achievement shout-outs', type: 'checkbox', value: old.fun_reactions === undefined ? '1' : old.fun_reactions }) %>
+    </fieldset>
     <%- include('../../partials/field', { name: 'max_flags', label: 'Anti-cheat: submit a player automatically after this many warnings', type: 'number', value: old.max_flags === undefined ? 5 : old.max_flags, min: 0, max: 50, hint: 'Leaving the game, switching windows, split screen, screenshots, developer tools and copy/paste are always reported to you live. 0 = report only, never auto-submit.' }) %>
     <%- include('../../partials/field', { name: 'allow_guests', label: 'Let people join without an account (nickname only)', type: 'checkbox', value: old.allow_guests }) %>
     <%- include('../../partials/field', { name: 'shuffle', label: 'Shuffle the question order', type: 'checkbox', value: old.shuffle }) %>

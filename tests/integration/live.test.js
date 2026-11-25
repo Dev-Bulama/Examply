@@ -307,6 +307,88 @@ describe('own-pace live game (the default)', () => {
   });
 });
 
+describe('game mode', () => {
+  test('the host switches on a live leaderboard, race and reactions; answers lock; badges are announced', async () => {
+    const t = await csrf(adminAgent, '/admin/live');
+    const res = await adminAgent.post('/admin/live').type('form').send({ _csrf: t, exam_id: examId, timer: '30', allow_guests: ['0', '1'], fun_race: ['0', '1'], fun_reactions: ['0', '1'] });
+    let sess = await live.getSession(Number(res.headers.location.split('/').pop()));
+    expect(sess.settings.fun).toEqual({ leaderboard: false, race: true, reactions: true });
+    const a = await live.join(sess, { nickname: 'Chidi' });
+    const b = await live.join(sess, { nickname: 'Dayo' });
+    const hostS = await connect({ session: sess.id, host: live.hostToken(sess.id, sess.host_id) });
+    const aS = await connect({ session: sess.id }, `lp_${sess.id}=${a.token}`);
+    const bS = await connect({ session: sess.id }, `lp_${sess.id}=${b.token}`);
+    await emit(hostS, 'start');
+
+    // Reactions reach everyone (including the host) and are rate limited.
+    const seen = nextEvent(hostS, 'react');
+    expect((await emit(aS, 'react', { emoji: '🔥' })).ok).toBe(true);
+    expect(await seen).toMatchObject({ nickname: 'Chidi', emoji: '🔥' });
+    expect((await emit(aS, 'react', { emoji: '🔥' })).throttled).toBe(true);
+    expect((await emit(bS, 'react', { emoji: '<b>' })).ok).toBe(false);
+
+    // First answer in the room earns a badge, announced to everyone.
+    const hype = nextEvent(bS, 'hype');
+    const r1 = await emit(aS, 'answer', { index: 0, response: { selected: 'B' } });
+    expect(r1.badges.map((x) => x.code)).toEqual(['first_blood']);
+    expect(await hype).toMatchObject({ nickname: 'Chidi', code: 'first_blood' });
+
+    // Race: progress only (no scores) while the leaderboard is off.
+    sess = await live.getSession(sess.id);
+    let pub = await live.publicState(sess);
+    expect(pub.liveBoard).toBeNull();
+    expect(pub.race.find((r) => r.nickname === 'Chidi').pct).toBe(33);
+    let me = await live.playerState(sess, await db()('live_players').where({ id: a.player.id }).first(), undefined, pub);
+    expect(me).not.toHaveProperty('live');
+    expect(me.racePlace).toBe(1);
+    expect(JSON.stringify(pub)).not.toMatch(/"score"/);
+    // Without the live leaderboard, answers can still be changed.
+    await emit(aS, 'goto', { index: 0 });
+    expect((await emit(aS, 'answer', { index: 0, response: { selected: 'B' } })).ok).toBe(true);
+
+    // The host switches the live leaderboard on mid-game.
+    expect((await emit(hostS, 'fun', { key: 'leaderboard', on: true })).ok).toBe(true);
+    expect((await emit(hostS, 'fun', { key: 'nope', on: true })).ok).toBe(false);
+    await emit(bS, 'answer', { index: 0, response: { selected: 'A' } }); // wrong
+    sess = await live.getSession(sess.id);
+    pub = await live.publicState(sess);
+    expect(pub.liveBoard.map((r) => r.nickname)).toEqual(['Chidi', 'Dayo']);
+    expect(pub.liveBoard[0].score).toBeGreaterThan(500);
+    expect(pub.liveBoard[1].score).toBe(0);
+    me = await live.playerState(sess, await db()('live_players').where({ id: b.player.id }).first(), undefined, pub);
+    expect(me.live).toMatchObject({ rank: 2, of: 2, score: 0 });
+    // Answers are now final once given.
+    await emit(aS, 'goto', { index: 0 });
+    me = await live.playerState(sess, await db()('live_players').where({ id: a.player.id }).first());
+    expect(me.question.locked).toBe(true);
+    const again = await emit(aS, 'answer', { index: 0, response: { selected: 'A' } });
+    expect(again.ok).toBe(false);
+    expect(again.error).toMatch(/final/);
+
+    // Final scores match the live ones; the first to submit gets a badge; the game still ends normally.
+    await emit(aS, 'answer', { index: 1, response: { selected: 'Z' } });
+    await emit(aS, 'answer', { index: 2, response: { value: '4' } });
+    expect((await emit(aS, 'submit')).badges.map((x) => x.code)).toContain('first_finish');
+    expect((await emit(bS, 'submit')).badges).toBeUndefined();
+    const over = await live.getSession(sess.id);
+    expect(over.status).toBe('finished');
+    const endPub = await live.publicState(over);
+    expect(endPub.liveBoard).toBeNull();
+    expect(endPub.leaderboard[0].nickname).toBe('Chidi');
+    expect((await emit(hostS, 'fun', { key: 'race', on: false })).ok).toBe(false); // game over
+    [hostS, aS, bS].forEach((x) => x.close());
+  });
+
+  test('reactions are refused when the host has them off', async () => {
+    const sess = await live.createSession({ examId, hostId: admin.id, kind: 'self_paced', timer: 30, allowGuests: true });
+    const { token } = await live.join(sess, { nickname: 'Quiet' });
+    const p = await connect({ session: sess.id }, `lp_${sess.id}=${token}`);
+    expect((await emit(p, 'react', { emoji: '👏' })).ok).toBe(false);
+    expect((await live.publicState(sess)).fun).toEqual({ leaderboard: false, race: false, reactions: false });
+    p.close();
+  });
+});
+
 describe('anti-cheat in live games', () => {
   test('leaving or switching windows alerts the host live; too many warnings submit the player', async () => {
     const sess = await live.createSession({ examId, hostId: admin.id, kind: 'self_paced', timer: 30, allowGuests: true, maxFlags: 2 });

@@ -120,6 +120,19 @@
       tone({ f: 988, d: 0.12, type: 'square', v: 0.16 });
       tone({ f: 740, at: 0.14, d: 0.18, type: 'square', v: 0.16 });
     },
+    pop: function () {
+      tone({ f: 880, to: 1320, d: 0.07, type: 'sine', v: 0.1 });
+    },
+    badge: function () {
+      [79, 83, 86, 91].forEach(function (m, i) {
+        tone({ f: hz(m), at: i * 0.06, d: 0.25, type: 'triangle', v: 0.16 });
+      });
+      noise({ f: 8000, filter: 'highpass', at: 0.18, d: 0.3, v: 0.05 });
+    },
+    rankup: function () {
+      tone({ f: hz(72), d: 0.12, type: 'square', v: 0.1 });
+      tone({ f: hz(79), at: 0.1, d: 0.22, type: 'square', v: 0.12 });
+    },
     tick: function () {
       tone({ f: 1250, d: 0.05, type: 'square', v: 0.08 });
     },

@@ -63,6 +63,7 @@ async function create(req, res) {
       showAnswers: on(b.show_answers),
       autoAdvance: on(b.auto_advance),
       maxFlags: b.max_flags,
+      fun: { leaderboard: on(b.fun_leaderboard), race: on(b.fun_race), reactions: on(b.fun_reactions) },
       revealSeconds: b.reveal_seconds,
       leaderboardSeconds: b.leaderboard_seconds,
       deadline: b.deadline || null,
