@@ -36,11 +36,12 @@ function securityHeaders() {
         mediaSrc: ["'self'", 'blob:'],
         workerSrc: ["'self'", 'blob:'],
         manifestSrc: ["'self'"],
-        ...(env.isProduction ? { upgradeInsecureRequests: [] } : {}),
+        // Only when the site really is on HTTPS — otherwise a site opened over http before SSL is set up loses its CSS/JS.
+        ...(env.isProduction && /^https:/.test(env.APP_URL) ? { upgradeInsecureRequests: [] } : {}),
       },
     },
     crossOriginEmbedderPolicy: false,
-    hsts: env.isProduction ? { maxAge: 15552000, includeSubDomains: true } : false,
+    hsts: env.isProduction && /^https:/.test(env.APP_URL) ? { maxAge: 15552000, includeSubDomains: true } : false,
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   });
   return [nonce, h];

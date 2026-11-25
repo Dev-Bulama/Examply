@@ -84,6 +84,7 @@ function startPoller({ intervalMs = 3000 } = {}) {
   if (pollTimer) return;
   const tick = async () => {
     if (polling) return;
+    if (!require('../system').isInstalled()) return; // no tables before install
     polling = true;
     try {
       await runDueJobs({ limit: 25, timeBudgetMs: 10000 });

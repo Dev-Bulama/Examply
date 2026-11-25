@@ -9,11 +9,31 @@
         </li>
       <% } %>
       <% row(checks.node.ok, `Node.js ${checks.node.value}`, checks.node.ok ? null : `Supported versions: ${checks.node.need}. Change it in hPanel → Node.js.`) %>
-      <% row(checks.database.ok, checks.database.ok ? `Database connected (${checks.database.version})` : 'Database connection', checks.database.ok ? null : `${checks.database.error}. Check DB_HOST, DB_PORT, DB_USER, DB_PASSWORD and DB_NAME in the environment variables, then reload this page.`) %>
+      <% row(checks.database.ok, checks.database.ok ? `Database connected (${checks.database.version})` : 'Database connection', checks.database.ok ? null : (/^NOT_CONFIGURED/.test(checks.database.error) ? 'Not set up yet — enter the details below.' : `${checks.database.error}. Check the details below.`)) %>
       <% row(checks.storage.ok, 'storage/ folder is writable', checks.storage.ok ? null : checks.storage.problems.join('; ')) %>
     </ul>
   </div>
 </div>
+
+<% if (!checks.database.ok) { %>
+<form method="post" action="/install/database" class="card mb-6" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="card-body space-y-5">
+    <div>
+      <h2 class="h3">Database</h2>
+      <p class="mt-1 text-sm muted">Create a MySQL database and user in hPanel → <strong>Databases → MySQL Databases</strong> (give the user all privileges), then enter them here. They are saved on the server outside the app folder, so redeploys keep them.</p>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div class="sm:col-span-2"><%- include('../partials/field', { name: 'db_host', label: 'Host', value: dbDefaults.db_host, required: true, hint: 'Usually localhost on Hostinger.' }) %></div>
+      <%- include('../partials/field', { name: 'db_port', label: 'Port', type: 'number', value: dbDefaults.db_port, required: true }) %>
+    </div>
+    <%- include('../partials/field', { name: 'db_name', label: 'Database name', value: dbDefaults.db_name, required: true, hint: 'For example u123456789_examply' }) %>
+    <%- include('../partials/field', { name: 'db_user', label: 'Database user', value: dbDefaults.db_user, required: true, autocomplete: 'off' }) %>
+    <%- include('../partials/field', { name: 'db_password', label: 'Database password', type: 'password', autocomplete: 'off' }) %>
+    <button type="submit" class="btn-primary w-full" data-loading-text="Connecting…">Connect database</button>
+  </div>
+</form>
+<% } %>
 
 <% if (ready) { %>
 <form method="post" action="/install" class="card" novalidate>
@@ -23,7 +43,7 @@
       <h2 class="h3">2. Site</h2>
       <p class="mt-1 text-sm muted">You can change these later in Settings.</p>
     </div>
-    <%- include('../partials/field', { name: 'site_name', label: 'Site name', value: 'Skillscore Assess', required: true, maxlength: 120 }) %>
+    <%- include('../partials/field', { name: 'site_name', label: 'Site name', value: siteName, required: true, maxlength: 120 }) %>
     <%- include('../partials/field', { name: 'timezone', label: 'Timezone', type: 'select', value: defaultTimezone, options: timezones.map(function (t) { return { value: t, label: t.replace(/_/g, ' ') }; }), hint: 'Dates are shown in this timezone; they are stored in UTC.' }) %>
     <div class="border-t border-slate-200 pt-5 dark:border-slate-800">
       <h2 class="h3">3. Super Admin account</h2>
@@ -33,9 +53,13 @@
     <%- include('../partials/field', { name: 'admin_email', label: 'Email', type: 'email', required: true, autocomplete: 'email' }) %>
     <%- include('../partials/field', { name: 'admin_password', label: 'Password', type: 'password', required: true, autocomplete: 'new-password', hint: policyText }) %>
     <%- include('../partials/field', { name: 'admin_password_confirmation', label: 'Confirm password', type: 'password', required: true, autocomplete: 'new-password' }) %>
+    <div class="border-t border-slate-200 pt-5 dark:border-slate-800">
+      <h2 class="h3">4. Content</h2>
+      <label class="mt-3 flex items-start gap-3 text-sm"><input type="checkbox" name="demo" value="1" class="checkbox mt-0.5" checked> <span><span class="font-medium">Load starter content</span><span class="block muted">Categories, certifications, sample questions, SQL and cyber security labs, ready-to-take exams and company plans — so every feature works straight away. You can edit or delete any of it later.</span></span></label>
+    </div>
     <button type="submit" class="btn-primary w-full" data-loading-text="Installing… this can take a minute">Install now</button>
   </div>
 </form>
-<% } else { %>
+<% } else if (checks.database.ok) { %>
   <div class="alert-warning"><%- include('../partials/icon', { name: 'warning', cls: 'h-5 w-5 shrink-0' }) %><p>Fix the items above, then <a class="font-semibold underline" href="/install">reload this page</a>.</p></div>
 <% } %>

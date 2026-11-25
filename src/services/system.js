@@ -12,7 +12,8 @@ let installedCache = null;
 
 function isInstalled() {
   if (installedCache === true) return true;
-  installedCache = fs.existsSync(installLockPath());
+  // The runtime config survives redeploys that replace the app folder (and storage/installed.lock with it).
+  installedCache = fs.existsSync(installLockPath()) || (!process.env.JEST_WORKER_ID && !!require('../config/runtime').read().INSTALLED_AT);
   return installedCache;
 }
 
@@ -62,6 +63,7 @@ async function install({ siteName, timezone, adminName, adminEmail, adminPasswor
   }
   await settings.setMany({ 'general.site_name': siteName, 'general.timezone': timezone, 'general.contact_email': adminEmail, 'system.installed_at': new Date().toISOString() }, { userId: admin.id, knex });
   fs.writeFileSync(installLockPath(), JSON.stringify({ installed_at: new Date().toISOString(), admin: admin.email }, null, 2));
+  if (!process.env.JEST_WORKER_ID) require('../config/runtime').write({ INSTALLED_AT: new Date().toISOString() });
   installedCache = true;
   return admin;
 }

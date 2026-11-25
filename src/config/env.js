@@ -3,7 +3,21 @@
 const path = require('path');
 const { z } = require('zod');
 
-require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true });
+const runtime = require('./runtime');
+
+/**
+ * Sources, highest priority first: real environment variables → .env → runtime config (written by the app:
+ * generated secrets, installer database settings) → deploy/defaults.env (committed production defaults).
+ */
+function loadSources() {
+  require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true });
+  runtime.apply();
+  if (process.env.NODE_ENV !== 'test') {
+    require('dotenv').config({ path: path.join(__dirname, '..', '..', 'deploy', 'defaults.env'), quiet: true });
+    runtime.ensureSecrets();
+  }
+}
+loadSources();
 
 const bool = (def) =>
   z
@@ -45,9 +59,11 @@ const schema = z.object({
     .min(24, 'CRON_TOKEN must be at least 24 characters.'),
   DB_HOST: z.string().default('127.0.0.1'),
   DB_PORT: z.coerce.number().int().positive().default(3306),
-  DB_USER: z.string({ required_error: 'DB_USER is required.' }).min(1),
+  DB_USER: z.string().default(''),
   DB_PASSWORD: z.string().default(''),
-  DB_NAME: z.string({ required_error: 'DB_NAME is required.' }).min(1),
+  DB_NAME: z.string().default(''),
+  SETUP_TOKEN: optionalString,
+  APP_NAME: optionalString,
   DB_POOL_MAX: z.coerce.number().int().min(2).max(100).default(10),
   DEFAULT_TIMEZONE: z
     .string()
@@ -79,6 +95,7 @@ function loadEnv(source = process.env) {
   const env = parsed.data;
   env.isProduction = env.NODE_ENV === 'production';
   env.isTest = env.NODE_ENV === 'test';
+  env.dbConfigured = !!(env.DB_USER && env.DB_NAME);
   env.rootDir = path.join(__dirname, '..', '..');
   env.storageDir = env.STORAGE_PATH ? path.resolve(env.STORAGE_PATH) : path.join(env.rootDir, 'storage');
   return Object.freeze(env);
@@ -90,4 +107,11 @@ function getEnv() {
   return cached;
 }
 
-module.exports = { getEnv, loadEnv, schema };
+/** Re-reads the sources after the installer saved new settings (e.g. database credentials). */
+function reloadEnv() {
+  cached = undefined;
+  runtime.apply();
+  return getEnv();
+}
+
+module.exports = { getEnv, loadEnv, reloadEnv, schema };

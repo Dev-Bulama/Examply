@@ -1,5 +1,42 @@
 # Deploying on Hostinger hPanel (Node.js hosting)
 
+## Quick start — examply.ng in about 10 minutes
+
+The app now configures itself: with **no environment variables at all** it starts, generates its own secrets
+(saved in `~/.examply/app.env`, outside the app folder so redeploys keep them) and opens the installer, which
+asks for the database and the admin account and can load starter content (exams, SQL and cyber labs, plans).
+Production defaults for `https://examply.ng` are committed in `deploy/defaults.env`.
+
+1. **Database** — hPanel → Databases → MySQL Databases: create a database and a user with all privileges. Note the
+   names (Hostinger prefixes them, e.g. `u123456789_examply`).
+2. **Node.js app** — hPanel → Websites → examply.ng → **Node.js** (Business/Cloud plans):
+   - Node.js version **20** (or 22); framework/preset "Express" or "Other";
+   - deploy from GitHub (`dev-bulama/examply`, the branch you want) or upload a ZIP without `node_modules`;
+   - **Entry / startup file:** `server.js`; **build command:** none (leave empty or `npm install`);
+   - **Environment variables:** paste the lines from the private `.env.examply` file you were given (at least
+     `SETUP_TOKEN`; adding `APP_KEY` here is the safest way to keep it forever).
+3. **Deploy / Restart.** Open `https://examply.ng` → it redirects to `/install`. Enter the setup token, the
+   database details (host `localhost`), then the site name and Super Admin, keep **Load starter content** ticked
+   and click **Install now**.
+4. **SSL** — hPanel → Security → SSL: install the free certificate for examply.ng and www.examply.ng.
+5. **Cron** — hPanel → Advanced → Cron Jobs, every 5 minutes:
+   `wget -q -O /dev/null "https://examply.ng/cron/run?token=YOUR_CRON_TOKEN"` (the value in `.env.examply`).
+6. Sign in, enrol 2FA, then Admin → Settings: Email (SMTP), Payments (Paystack keys, bank account), AI (Claude or
+   OpenAI key).
+
+### If examply.ng shows 404
+
+- **No Node.js app is attached to the domain**, or the domain still points at an empty `public_html` (Hostinger's
+  default 404). In hPanel the domain must be the Node.js app's domain — not a plain website.
+- **The deployment failed**: open the Node.js app's *Deployments / Logs*. `npm install` must succeed and the log
+  should end with `Examply … listening on port …`.
+- **Wrong entry file**: it must be `server.js` at the repository root.
+- **DNS**: the domain's A record must point to the Hostinger server shown in hPanel (propagation can take a few hours).
+- Check `https://examply.ng/healthz` — `{"ok":true,...}` means the app is running.
+
+---
+
+
 This guide covers everything the platform needs as of Phase 1. Later phases add sections, such as the Paystack webhook (Phase 6).
 
 ## 1. Create the database

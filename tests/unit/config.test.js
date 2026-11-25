@@ -18,7 +18,9 @@ describe('environment validation', () => {
   });
   test('explains every missing or invalid variable', () => {
     expect(() => loadEnv({ ...good, APP_KEY: 'short' })).toThrow(/APP_KEY must be 32 bytes/);
-    expect(() => loadEnv({ ...good, DB_USER: undefined })).toThrow(/DB_USER/);
+    // Database settings may come from the /install wizard instead, so they are optional here.
+    expect(loadEnv({ ...good, DB_USER: undefined }).dbConfigured).toBe(false);
+    expect(loadEnv(good).dbConfigured).toBe(true);
     expect(() => loadEnv({ ...good, DEFAULT_TIMEZONE: 'Nowhere/City' })).toThrow(/timezone/);
     expect(() => loadEnv({ ...good, PORT: 'abc' })).toThrow(/PORT/);
   });
@@ -99,5 +101,43 @@ describe('audit scrubbing', () => {
       totp_secret_enc: '[redacted]',
       nested: { current_password: '[redacted]', name: 'ok' },
     });
+  });
+});
+
+describe('runtime config file', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const runtime = require('../../src/config/runtime');
+  let dir;
+  let saved;
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'));
+    saved = { ...process.env };
+    process.env.RUNTIME_CONFIG = path.join(dir, 'app.env');
+  });
+  afterEach(() => {
+    process.env = saved;
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('generates missing secrets once and keeps them private', () => {
+    delete process.env.APP_KEY;
+    delete process.env.SESSION_SECRET;
+    delete process.env.CRON_TOKEN;
+    expect(runtime.ensureSecrets().sort()).toEqual(['APP_KEY', 'CRON_TOKEN', 'SESSION_SECRET']);
+    const key = process.env.APP_KEY;
+    expect(Buffer.from(key, 'base64')).toHaveLength(32);
+    expect(runtime.ensureSecrets()).toEqual([]);
+    expect(runtime.read().APP_KEY).toBe(key);
+    expect(fs.statSync(process.env.RUNTIME_CONFIG).mode & 0o077).toBe(0);
+  });
+
+  test('round-trips values with spaces and symbols; never overrides real env vars', () => {
+    runtime.write({ DB_PASSWORD: 'p@ss "w=rd" #1', DB_NAME: 'u1_examply' });
+    expect(runtime.read()).toMatchObject({ DB_PASSWORD: 'p@ss "w=rd" #1', DB_NAME: 'u1_examply' });
+    process.env.DB_NAME = 'from-env';
+    runtime.apply();
+    expect(process.env.DB_NAME).toBe('from-env');
   });
 });

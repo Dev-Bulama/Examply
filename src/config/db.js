@@ -49,7 +49,9 @@ async function closeDb() {
 }
 
 /** Returns null when the DB is reachable, otherwise a human-readable error message. */
-async function checkConnection(knex = db()) {
+async function checkConnection(knex) {
+  if (!knex && !getEnv().dbConfigured) return 'NOT_CONFIGURED: no database settings yet';
+  knex = knex || db();
   try {
     await knex.raw('select 1 as ok');
     return null;

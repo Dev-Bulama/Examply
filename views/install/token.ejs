@@ -1,0 +1,9 @@
+<form method="post" action="/install/database" class="card" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="card-body space-y-4">
+    <h2 class="h3">Setup token</h2>
+    <p class="text-sm muted">This server has a <code>SETUP_TOKEN</code>. Enter it to continue the installation.</p>
+    <%- include('../partials/field', { name: 'setup_token', label: 'Setup token', type: 'password', required: true, autocomplete: 'off' }) %>
+    <button type="submit" class="btn-primary w-full">Continue</button>
+  </div>
+</form>

@@ -57,6 +57,7 @@ function startScheduler() {
   if (cronTask) return;
   cronTask = cron.schedule('* * * * *', async () => {
     if (running) return;
+    if (!require('../system').isInstalled()) return; // no tables before install
     running = true;
     try {
       await runScheduled({ timeBudgetMs: 40000 });

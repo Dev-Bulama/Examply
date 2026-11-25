@@ -13,7 +13,7 @@ const MySQLStore = MySQLStoreFactory(session);
  */
 function createSessionMiddleware() {
   const env = getEnv();
-  const cookie = { httpOnly: true, sameSite: 'lax', secure: env.isProduction, maxAge: null };
+  const cookie = { httpOnly: true, sameSite: 'lax', secure: env.isProduction ? 'auto' : false, maxAge: null };
   const base = { name: 'ssa.sid', secret: env.SESSION_SECRET, resave: false, saveUninitialized: false, rolling: true, proxy: true, cookie };
 
   const memory = session({ ...base, store: new session.MemoryStore() });
@@ -22,6 +22,7 @@ function createSessionMiddleware() {
 
   const getMysql = () => {
     if (!mysqlMiddleware) {
+      const env = getEnv(); // re-read: the installer may have saved database settings since boot
       store = new MySQLStore({
         host: env.DB_HOST,
         port: env.DB_PORT,
