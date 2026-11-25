@@ -18,24 +18,32 @@
 
     <section class="mx-auto flex w-full max-w-3xl flex-1 flex-col" data-view="question" hidden>
       <div class="flex items-center justify-between gap-3 text-sm text-primary-100">
-        <span class="flex items-center gap-2"><button type="button" class="rounded-full bg-white/10 px-3 py-1 font-semibold hover:bg-white/20" data-prev hidden>◀ Previous</button><span data-qnum></span></span>
+        <span data-qnum></span>
         <span class="rounded-full bg-white/10 px-3 py-1 font-mono font-semibold tabular-nums" data-countdown>--</span>
       </div>
       <div class="question-body mt-4 rounded-2xl bg-white p-5 text-lg font-semibold text-slate-900 shadow-pop sm:text-xl" data-stem></div>
       <form class="mt-5 grid flex-1 content-start gap-3 sm:grid-cols-2" data-answer-form></form>
+      <div class="mt-5 flex items-center justify-between gap-3" data-own-nav hidden>
+        <button type="button" class="rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/20 disabled:opacity-40" data-nav-prev>◀ Previous</button>
+        <span class="text-xs text-primary-200" data-nav-hint>Your answer is saved. You can change it until you submit.</span>
+        <button type="button" class="rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" data-nav-skip>Skip ▶</button>
+      </div>
     </section>
 
-    <section class="mx-auto w-full max-w-3xl" data-view="review" hidden>
-      <div class="flex items-center justify-between text-sm text-primary-100"><span data-review-num></span><span class="rounded-full px-3 py-1 font-semibold" data-review-result></span></div>
-      <div class="question-body mt-4 rounded-2xl bg-white p-5 text-lg font-semibold text-slate-900 shadow-pop" data-review-stem></div>
-      <ul class="mt-4 grid gap-2 sm:grid-cols-2" data-review-options></ul>
-      <p class="mt-3 text-sm text-primary-100" data-review-text></p>
-      <div class="mt-3 rounded-xl bg-white/10 p-4 text-sm" data-review-explain hidden></div>
-      <div class="mt-6 flex flex-wrap gap-2">
-        <button type="button" class="rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" data-review-prev>◀ Previous</button>
-        <button type="button" class="rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" data-review-next>Next ▶</button>
-        <button type="button" class="ml-auto rounded-lg bg-secondary-500 px-4 py-2 font-bold text-primary-950" data-review-back>Back to the current question</button>
-      </div>
+    <section class="m-auto w-full max-w-xl text-center" data-view="submit" hidden>
+      <p class="text-5xl" aria-hidden="true">📝</p>
+      <h2 class="mt-4 text-2xl font-bold">Review &amp; submit</h2>
+      <p class="mt-2 text-primary-100" data-submit-summary></p>
+      <p class="mt-1 text-sm text-primary-200">Tap a number to go back and change an answer.</p>
+      <div class="mt-6 flex flex-wrap justify-center gap-2" data-submit-grid></div>
+      <button type="button" class="mt-8 w-full rounded-2xl bg-secondary-500 py-4 text-lg font-black text-primary-950 shadow-pop hover:brightness-105" data-submit-btn>Submit my answers</button>
+    </section>
+
+    <section class="m-auto max-w-md text-center" data-view="waiting" hidden>
+      <p class="text-6xl" aria-hidden="true">✅</p>
+      <h2 class="mt-4 text-2xl font-bold">Answers submitted!</h2>
+      <p class="mt-2 text-primary-100">Your answers, the correct ones and the leaderboard appear here as soon as the game ends.</p>
+      <p class="mt-6 text-sm text-primary-200" data-waiting-count></p>
     </section>
 
     <section class="m-auto max-w-md text-center" data-view="locked" hidden>
@@ -51,11 +59,15 @@
       <p class="mt-6 text-primary-100" data-result-rank></p>
     </section>
 
-    <section class="m-auto w-full max-w-md text-center" data-view="final" hidden>
+    <section class="m-auto w-full max-w-2xl text-center" data-view="final" hidden>
       <p class="text-6xl" aria-hidden="true" data-final-emoji>🏁</p>
       <h2 class="mt-4 text-3xl font-black" data-final-title>Game over</h2>
       <p class="mt-2 text-lg text-secondary-200" data-final-score></p>
       <ol class="mt-8 space-y-2 text-left" data-final-lb></ol>
+      <div class="mt-10 text-left" data-final-results-wrap hidden>
+        <h3 class="text-xl font-bold">Your answers</h3>
+        <ol class="mt-4 space-y-4" data-final-results></ol>
+      </div>
       <a href="/play" class="mt-8 inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">Join another game</a>
     </section>
   </main>

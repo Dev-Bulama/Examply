@@ -229,45 +229,102 @@ describe('auto-advance and previous', () => {
     p.close();
   });
 
-  test('self-paced players can look back at answered questions only', async () => {
-    const sess = await live.createSession({ examId, hostId: admin.id, kind: 'self_paced', timer: 30, allowGuests: true, showAnswers: true });
-    const { player, token } = await live.join(sess, { nickname: 'Looker' });
+});
+
+describe('own-pace live game (the default)', () => {
+  const tfKeyOf = async (sess, i) => (await db()('question_options').where({ question_version_id: sess.question_ids[i].v }).where('content_html', 'like', '%True%').first('option_key')).option_key;
+
+  test('players move on by themselves, see no right/wrong, can go back and change answers, then everyone sees results at the end', async () => {
+    const t = await csrf(adminAgent, '/admin/live');
+    const res = await adminAgent.post('/admin/live').type('form').send({ _csrf: t, exam_id: examId, timer: '30', allow_guests: ['0', '1'] }); // no kind → the default
+    const sess = await live.getSession(Number(res.headers.location.split('/').pop()));
+    expect(sess.mode).toBe('player_paced');
+    expect(sess.settings.kind).toBe('self_paced');
+    const a = await live.join(sess, { nickname: 'Amaka' });
+    const b = await live.join(sess, { nickname: 'Bayo' });
+    const hostS = await connect({ session: sess.id, host: live.hostToken(sess.id, sess.host_id) });
+    const aS = await connect({ session: sess.id }, `lp_${sess.id}=${a.token}`);
+    const bS = await connect({ session: sess.id }, `lp_${sess.id}=${b.token}`);
+    await emit(hostS, 'start');
+
+    // Amaka answers Q1 wrongly: no correctness in the reply, and she is moved to Q2 straight away.
+    const r1 = await emit(aS, 'answer', { index: 0, response: { selected: 'A' } });
+    expect(r1).toEqual({ ok: true, saved: true, next: 1 });
+    let st = await live.playerState(await live.getSession(sess.id), await db()('live_players').where({ id: a.player.id }).first());
+    expect(st.question.index).toBe(1);
+    expect(st).not.toHaveProperty('score');
+    expect(JSON.stringify(st)).not.toMatch(/"correct"|answerKey|explanation/);
+    // Bayo has not moved: players are independent.
+    expect((await db()('live_players').where({ id: b.player.id }).first()).current_index).toBe(0);
+
+    // Previous: Amaka goes back to Q1, sees her saved answer and changes it to the right one.
+    await emit(aS, 'goto', { index: 0 });
+    st = await live.playerState(await live.getSession(sess.id), await db()('live_players').where({ id: a.player.id }).first());
+    expect(st.question.response).toEqual({ selected: 'A' });
+    expect((await emit(aS, 'answer', { index: 0, response: { selected: 'B' } })).next).toBe(1);
+    await emit(aS, 'answer', { index: 1, response: { selected: await tfKeyOf(sess, 1) } });
+    const last = await emit(aS, 'answer', { index: 2, response: { value: '4' } });
+    expect(last.next).toBe(3); // all answered → review & submit screen
+    st = await live.playerState(await live.getSession(sess.id), await db()('live_players').where({ id: a.player.id }).first());
+    expect(st.atReview).toBe(true);
+    expect(st.answered).toEqual([0, 1, 2]);
+
+    // Amaka submits: she waits; nothing is revealed while Bayo is still playing.
+    await emit(aS, 'submit');
+    st = await live.playerState(await live.getSession(sess.id), await db()('live_players').where({ id: a.player.id }).first());
+    expect(st).toMatchObject({ finished: true, gameOver: false, results: null });
+    expect((await emit(aS, 'answer', { index: 0, response: { selected: 'A' } })).ok).toBe(false); // final once submitted
+    expect((await live.publicState(await live.getSession(sess.id))).leaderboard).toEqual([]);
+
+    // Bayo answers one question and submits → everyone has submitted → the game ends by itself.
+    await emit(bS, 'answer', { index: 0, response: { selected: 'C' } });
+    await emit(bS, 'submit');
+    const over = await live.getSession(sess.id);
+    expect(over.status).toBe('finished');
+
+    // Results: every question with the player's answer, the correct one and the explanation; scores and ranks.
+    const ra = await live.playerState(over, await db()('live_players').where({ id: a.player.id }).first());
+    expect(ra.gameOver).toBe(true);
+    expect(ra.rank).toBe(1);
+    expect(ra.score).toBeGreaterThan(1500);
+    expect(ra.results.map((r) => r.correct)).toEqual([true, true, true]);
+    expect(ra.results[0]).toMatchObject({ response: { selected: 'B' }, answerKey: { correct: ['B'] } });
+    const rb = await live.playerState(over, await db()('live_players').where({ id: b.player.id }).first());
+    expect(rb.results.map((r) => (r.response ? r.correct : null))).toEqual([false, null, null]);
+    expect(rb.score).toBe(0);
+    [hostS, aS, bS].forEach((x) => x.close());
+  });
+
+  test('ending the game submits everyone still playing', async () => {
+    const sess = await live.createSession({ examId, hostId: admin.id, kind: 'self_paced', timer: 30, allowGuests: true });
+    const { player } = await live.join(sess, { nickname: 'Late' });
     await live.start(sess);
-    const s2 = await live.getSession(sess.id);
-    await expect(live.review(s2, await db()('live_players').where({ id: player.id }).first(), 0)).rejects.toThrow(/answered/);
-    await live.answer(s2, await db()('live_players').where({ id: player.id }).first(), { index: 0, response: { selected: 'A' } });
-    const p = await connect({ session: sess.id }, `lp_${sess.id}=${token}`);
-    const res = await emit(p, 'review', { index: 0 });
-    expect(res.ok).toBe(true);
-    expect(res.review).toMatchObject({ correct: false, points: 0, response: { selected: 'A' } });
-    expect(res.review.answerKey.correct).toEqual(['B']);
-    expect((await emit(p, 'review', { index: 1 })).ok).toBe(false); // not answered yet
-    p.close();
+    await live.answer(await live.getSession(sess.id), await db()('live_players').where({ id: player.id }).first(), { index: 0, response: { selected: 'B' } });
+    await live.finish(await live.getSession(sess.id));
+    const p = await db()('live_players').where({ id: player.id }).first();
+    expect(p.finished_at).not.toBeNull();
+    expect(p.score).toBeGreaterThan(0);
   });
 });
 
 describe('self-paced homework', () => {
-  test('players move at their own pace until the deadline', async () => {
+  test('homework stays open until the deadline, then shows results', async () => {
     await expect(live.createSession({ examId, hostId: admin.id, kind: 'homework', timer: 30 })).rejects.toThrow(/deadline/);
     const sess = await live.createSession({ examId, hostId: admin.id, kind: 'homework', timer: 30, allowGuests: true, deadline: new Date(Date.now() + 3600e3).toISOString() });
     expect(sess.status).toBe('running');
     const { player } = await live.join(sess, { nickname: 'Chidi' });
-    let me = await live.playerState(sess, player);
-    expect(me.question.index).toBe(0);
-    await live.answer(sess, player, { index: 0, response: { selected: 'B' } });
-    await expect(live.answer(sess, await db()('live_players').where({ id: player.id }).first(), { index: 0, response: { selected: 'B' } })).rejects.toThrow(/current question/);
-    let p = await db()('live_players').where({ id: player.id }).first();
-    await live.answer(sess, p, { index: 1, response: { selected: 'B' } });
-    p = await db()('live_players').where({ id: player.id }).first();
-    await live.answer(sess, p, { index: 2, response: { value: '4' } });
-    p = await db()('live_players').where({ id: player.id }).first();
-    expect(p.finished_at).not.toBeNull();
-    me = await live.playerState(sess, p);
-    expect(me.finished).toBe(true);
-    expect(me.question).toBeNull();
-    // After the deadline nobody can join.
+    await live.answer(sess, await db()('live_players').where({ id: player.id }).first(), { index: 0, response: { selected: 'B' } });
+    await live.submitPlayer(sess, await db()('live_players').where({ id: player.id }).first());
+    expect((await live.getSession(sess.id)).status).toBe('running'); // homework does not end when one person submits
+    let me = await live.playerState(sess, await db()('live_players').where({ id: player.id }).first());
+    expect(me).toMatchObject({ finished: true, gameOver: false });
+    // After the deadline: nobody can join, and results appear.
     await db()('live_sessions').where({ id: sess.id }).update({ settings: JSON.stringify({ ...sess.settings, deadline: new Date(Date.now() - 1000).toISOString() }) });
-    await expect(live.join(await live.getSession(sess.id), { nickname: 'Late' })).rejects.toThrow(/ended/);
+    const after = await live.getSession(sess.id);
+    await expect(live.join(after, { nickname: 'Late' })).rejects.toThrow(/ended/);
+    me = await live.playerState(after, await db()('live_players').where({ id: player.id }).first());
+    expect(me.gameOver).toBe(true);
+    expect(me.results[0].correct).toBe(true);
   });
 
   test('a 6-digit PIN typed into the workspace join page goes to the live quiz', async () => {

@@ -222,9 +222,7 @@ async function answer(sess, player, { index, response }, knex = db()) {
     startedAt = new Date(sess.question_started_at);
     if (Date.now() > startedAt.getTime() + sess.settings.timer * 1000 + 1500) throw new LiveError('Time is up for this question.');
   } else {
-    if (sess.status !== 'running') throw new LiveError('The game has not started yet.');
-    if (i !== player.current_index) throw new LiveError('Answer the current question.');
-    startedAt = player.question_started_at ? new Date(player.question_started_at) : now();
+    return answerAtOwnPace(sess, player, i, response, knex);
   }
   const ref = sess.question_ids[i];
   if (!ref) throw new LiveError('No such question.');
@@ -247,6 +245,108 @@ async function answer(sess, player, { index, response }, knex = db()) {
     await trx('live_players').where({ id: player.id }).update(patch);
   });
   return { correct, points: pts, score: player.score + pts, streak };
+}
+
+// ---------------------------------------------------------------- Own-pace play (the default "live" game)
+//
+// Each player moves independently. Answers can be changed (with Previous) until the player submits; nothing
+// tells them whether an answer is right. Scores are calculated at submit, and every player sees their answers
+// with the correct ones only when the game ends.
+
+async function answeredIndexes(playerId, knex) {
+  return (await knex('live_answers').where({ player_id: playerId }).orderBy('question_index').pluck('question_index')).map(Number);
+}
+
+/** The next unanswered question after `from` (wrapping round), or `total` (= the review & submit screen). */
+function nextOpen(answered, from, total) {
+  const done = new Set(answered);
+  for (let k = 1; k <= total; k += 1) {
+    const i = (from + k) % total;
+    if (!done.has(i)) return i;
+  }
+  return total;
+}
+
+async function answerAtOwnPace(sess, player, i, response, knex) {
+  if (sess.status !== 'running') throw new LiveError('The game has not started yet.');
+  if (player.finished_at) throw new LiveError('You have already submitted your answers.');
+  const ref = sess.question_ids[i];
+  if (!ref) throw new LiveError('No such question.');
+  const { v, answer: key, settings } = await loadVersion(ref.v, knex);
+  const resp = normaliseResponse(v.type, response);
+  const marked = await markItem({ type: v.type, marks: 1, answer: key, settings }, resp, { partialCredit: false, negative: 0 });
+  const existing = await knex('live_answers').where({ player_id: player.id, question_index: i }).first('id');
+  const startedAt = player.question_started_at && player.current_index === i ? new Date(player.question_started_at) : now();
+  if (existing) await knex('live_answers').where({ id: existing.id }).update({ response: toJson(resp), is_correct: !!marked.correct });
+  else await knex('live_answers').insert({ session_id: sess.id, player_id: player.id, question_index: i, question_id: ref.q, question_version_id: ref.v, response: toJson(resp), is_correct: !!marked.correct, points: 0, response_ms: Math.min(Math.max(0, Date.now() - startedAt.getTime()), 2147483647) });
+  const answered = await answeredIndexes(player.id, knex);
+  const total = sess.question_ids.length;
+  // Next: the following question if it is still open, otherwise the next open one, otherwise review & submit.
+  const next = answered.length >= total ? total : !answered.includes(i + 1) && i + 1 < total ? i + 1 : nextOpen(answered, i, total);
+  await knex('live_players').where({ id: player.id }).update({ current_index: next, question_started_at: now() });
+  return { saved: true, next };
+}
+
+/** Moves a player to question `index` (or `total` for the review & submit screen). */
+async function goTo(sess, player, index) {
+  const total = sess.question_ids.length;
+  const i = Math.max(0, Math.min(total, Number(index) || 0));
+  if (player.finished_at) throw new LiveError('You have already submitted your answers.');
+  if (sess.status !== 'running') throw new LiveError('The game has not started yet.');
+  await db()('live_players').where({ id: player.id }).update({ current_index: i, question_started_at: now() });
+  return { at: i };
+}
+
+/** Final score for one player: speed and streak bonuses are applied in question order. */
+async function scorePlayer(sess, player, knex) {
+  const rows = await knex('live_answers').where({ player_id: player.id }).orderBy('question_index');
+  let streak = 0;
+  let best = 0;
+  let total = 0;
+  for (const a of rows) {
+    streak = a.is_correct ? streak + 1 : 0;
+    best = Math.max(best, streak);
+    const pts = points({ correct: !!a.is_correct, responseMs: a.response_ms, timerSec: sess.settings.timer, streak });
+    total += pts;
+    if (pts !== a.points) await knex('live_answers').where({ id: a.id }).update({ points: pts });
+  }
+  return { score: total, streak: best };
+}
+
+/** A player submits: answers become final. When everyone in a live game has submitted, the game ends. */
+async function submitPlayer(sess, player, knex = db(), { autoEnd = true } = {}) {
+  if (player.finished_at) return { submitted: true };
+  const { score, streak } = await scorePlayer(sess, player, knex);
+  await knex('live_players').where({ id: player.id }).update({ score, streak, finished_at: now(), current_index: sess.question_ids.length });
+  if (autoEnd && sess.settings.kind !== 'homework' && sess.status === 'running') {
+    const left = Number((await knex('live_players').where({ session_id: sess.id, kicked: false }).whereNull('finished_at').count('* as n').first()).n);
+    if (!left) await finish(sess, knex);
+  }
+  return { submitted: true };
+}
+
+/** Each question with the player's answer, the correct answer and the explanation (only once the game is over). */
+async function resultsFor(sess, player, knex) {
+  const answers = await knex('live_answers').where({ player_id: player.id }).select('question_index', 'response', 'is_correct', 'points');
+  const byIndex = new Map(answers.map((a) => [Number(a.question_index), a]));
+  const out = [];
+  for (let i = 0; i < sess.question_ids.length; i += 1) {
+    const q = await playerQuestion(sess, i, knex);
+    const r = await reveal(sess, i, knex);
+    const a = byIndex.get(i);
+    out.push({
+      index: i,
+      stem_html: q.stem_html,
+      type: q.type,
+      options: q.options,
+      response: a ? parseJson(a.response, {}) : null,
+      correct: a ? !!a.is_correct : false,
+      points: a ? a.points : 0,
+      // The correct answer is always shown at the end; the explanation only when the host chose to show it.
+      answerKey: { correct: r.correct, correctText: r.correctText, explanation_html: sess.settings.show_answers ? r.explanation_html : null },
+    });
+  }
+  return out;
 }
 
 function normaliseResponse(type, r) {
@@ -354,6 +454,10 @@ async function kick(sess, playerId, knex = db()) {
 }
 
 async function finish(sess, knex = db()) {
+  if (sess.mode === 'player_paced') {
+    const open = await knex('live_players').where({ session_id: sess.id, kicked: false }).whereNull('finished_at');
+    for (const p of open) await submitPlayer(sess, p, knex, { autoEnd: false });
+  }
   return update(sess, { status: 'finished', phase: 'podium', ended_at: now() }, knex);
 }
 
@@ -389,7 +493,7 @@ async function publicState(sess, knex = db()) {
     pausedRemainingMs: sess.status === 'paused' ? sess.settings.paused_remaining_ms : null,
     deadline: sess.settings.deadline,
     players: lb.total,
-    leaderboard: ['leaderboard', 'podium'].includes(sess.phase) || sess.mode === 'player_paced' ? lb.top : [],
+    leaderboard: ['leaderboard', 'podium'].includes(sess.phase) || (sess.mode === 'player_paced' && closed(sess)) ? lb.top : [],
     lobby: sess.phase === 'lobby' ? lb.all.map((p) => p.nickname).slice(-60) : [],
     question: null,
     reveal: null,
@@ -403,6 +507,7 @@ async function publicState(sess, knex = db()) {
 
 /** Personal state for one player. */
 async function playerState(sess, player, knex = db()) {
+  if (sess.mode === 'player_paced') return ownPaceState(sess, player, knex);
   const lb = await leaderboard(sess.id, 1000, knex);
   const rank = lb.all.findIndex((p) => p.id === player.id) + 1;
   const me = { id: player.id, nickname: player.nickname, score: player.score, streak: player.streak, rank, of: lb.total, answeredCurrent: false, last: null, question: null, finished: !!player.finished_at };
@@ -417,12 +522,40 @@ async function playerState(sess, player, knex = db()) {
 }
 
 /** Extra detail for the host: who has answered, live distribution, every player's progress. */
+async function ownPaceState(sess, player, knex) {
+  const total = sess.question_ids.length;
+  const over = closed(sess);
+  if (over && !player.finished_at) {
+    await submitPlayer(sess, player, knex, { autoEnd: false }); // deadline passed: answers so far count
+    player = await knex('live_players').where({ id: player.id }).first();
+  }
+  const me = { id: player.id, nickname: player.nickname, total, finished: !!player.finished_at, gameOver: over, question: null, answered: [], atReview: false, results: null, submittedCount: 0 };
+  if (over) {
+    const lb = await leaderboard(sess.id, 1000, knex);
+    Object.assign(me, { score: player.score, streak: player.streak, rank: lb.all.findIndex((p) => p.id === player.id) + 1, of: lb.total, results: await resultsFor(sess, player, knex) });
+    return me;
+  }
+  me.answered = await answeredIndexes(player.id, knex);
+  me.submittedCount = Number((await knex('live_players').where({ session_id: sess.id, kicked: false }).whereNotNull('finished_at').count('* as n').first()).n);
+  if (player.finished_at || sess.status !== 'running') return me;
+  if (player.current_index >= total) {
+    me.atReview = true;
+    return me;
+  }
+  me.question = await playerQuestion(sess, player.current_index, knex);
+  const mine = await knex('live_answers').where({ player_id: player.id, question_index: player.current_index }).first('response');
+  me.question.response = mine ? parseJson(mine.response, {}) : null;
+  return me;
+}
+
 async function hostState(sess, knex = db()) {
   const state = await publicState(sess, knex);
   const lb = await leaderboard(sess.id, 1000, knex);
   state.pin = sess.pin;
-  state.allPlayers = lb.all.map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, progress: p.current_index, finished: !!p.finished_at, connected: !!p.connected }));
-  state.leaderboard = lb.all.slice(0, 10).map((p, i) => ({ rank: i + 1, id: p.id, nickname: p.nickname, score: p.score, streak: p.streak }));
+  const counts = Object.fromEntries((await knex('live_answers').where({ session_id: sess.id }).select('player_id').count('* as n').groupBy('player_id')).map((r) => [r.player_id, Number(r.n)]));
+  state.allPlayers = lb.all.map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, progress: p.current_index, answered: counts[p.id] || 0, finished: !!p.finished_at, connected: !!p.connected }));
+  state.submitted = state.allPlayers.filter((p) => p.finished).length;
+  state.leaderboard = sess.mode === 'player_paced' && !closed(sess) ? [] : lb.all.slice(0, 10).map((p, i) => ({ rank: i + 1, id: p.id, nickname: p.nickname, score: p.score, streak: p.streak }));
   if (sess.mode === 'host_paced' && sess.current_index >= 0 && sess.status !== 'lobby') {
     const r = await reveal(sess, sess.current_index, knex);
     state.live = { answered: r.answered, counts: r.counts };
@@ -474,6 +607,9 @@ module.exports = {
   setAuto,
   phaseEndsAt,
   review,
+  goTo,
+  submitPlayer,
+  answeredIndexes,
   pause,
   resume,
   kick,

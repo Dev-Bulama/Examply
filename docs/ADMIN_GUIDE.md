@@ -59,16 +59,13 @@ A company that buys a plan gets a private workspace. Its managers invite staff a
 
 ## 9. Live quiz
 
-1. **Live quiz → New session:** pick an exam with a fixed question list. The usable types are single and multiple choice, true/false, numeric and fill in the blank. Then choose how people play:
-   - **Live:** you run it from the host screen on a projector.
-   - **Self-paced:** players move at their own speed.
-   - **Homework:** self-paced with a deadline; no host screen is needed.
-2. Allow guests (nickname only) or require sign-in, set the seconds per question, and optionally shuffle.
-3. **Host screen:** shows the PIN, a QR code and the join link (`/play`). Players appear in the lobby; click **Start**.
-   - **Auto-advance** (on by default; set the seconds when you create the session): each question reveals when time is up or everyone has answered, then the leaderboard shows, then the next question opens, with no clicking. **Auto: on/off** pauses it at any time, and **Next** still works by hand.
-   - **◀ Previous** returns to the previous question's results; moving forward re-opens the next question (answers already given still count once). You can also pause the timer, remove a player or end the game.
-   - **Game sounds** (original, generated in the browser): lobby music, join pops, question start, last-5-second ticks, correct and wrong cues, a reveal sting, the leaderboard roll and a podium fanfare. The 🔊 button mutes them on that device.
-   - **Self-paced and homework:** players see "Correct +950" for a moment and the next question appears by itself; **◀ Previous** lets them look back at questions they've already answered (read-only, with the explanation if you chose to show answers).
+1. **Live quiz → New session:** pick an exam with a fixed question list (single and multiple choice, true/false, numeric, fill in the blank), then choose how people play:
+   - **Live game (recommended, the default):** after you click **Start**, everyone answers at their own pace. Answering moves a player straight to the next question, with no right/wrong shown. **◀ Previous** and **Skip ▶** let them move around and change answers; at the end they review and **Submit**. Nothing is revealed until the game ends, which happens when everyone has submitted or when you click **End game**. Then every player sees each question with their answer, the correct answer and the explanation, plus their score, rank and the leaderboard.
+   - **Presenter-paced:** everyone answers the same question together on the big screen, with reveals and a leaderboard after each question. Auto-advance (on by default) moves through them, and the host has **◀ Previous**, **Auto: on/off** and pause.
+   - **Homework:** like a live game, but open until a deadline; results appear after the deadline.
+2. Allow guests (nickname only) or require sign-in, set the seconds per question (faster correct answers earn a bonus), and optionally shuffle.
+3. **Host screen:** shows the PIN, a QR code and the join link (`/play`). In a live game it shows each player's progress (answers given, submitted ✓); scores stay hidden until the end so nothing gives answers away.
+   - **Game sounds** (original, generated in the browser, loud with a limiter): lobby music, join pops, question start, answer taps, countdown ticks (presenter-paced), and a fanfare for the results. 🔊 mutes them on that device.
 4. **Report:** per player and per question, with CSV export.
 
 ## 10. Analytics

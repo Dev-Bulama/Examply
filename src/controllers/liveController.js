@@ -13,7 +13,11 @@ const base = () => String(getEnv().APP_URL).replace(/\/$/, '');
 const crumbs = (...extra) => [{ label: 'Admin', href: '/admin' }, { label: 'Live quiz', href: '/admin/live' }, ...extra];
 /** Checkbox fields post a hidden "0" plus "1" when ticked. */
 const on = (v) => [].concat(v === undefined ? [] : v).includes('1');
-const KINDS = { live: 'Live (host-paced)', self_paced: 'Self-paced (players move at their own speed)', homework: 'Homework (self-paced with a deadline)' };
+const KINDS = {
+  self_paced: 'Live game — everyone answers at their own pace; answers and scores are revealed when the game ends (recommended)',
+  live: 'Presenter-paced — everyone answers each question together on the big screen',
+  homework: 'Homework — at their own pace, with a deadline; results after the deadline',
+};
 
 async function loadOwn(req) {
   const sess = await live.getSession(Number(req.params.id));
@@ -52,7 +56,7 @@ async function create(req, res) {
     const sess = await live.createSession({
       examId: Number(b.exam_id),
       hostId: req.user.id,
-      kind: KINDS[b.kind] ? b.kind : 'live',
+      kind: KINDS[b.kind] ? b.kind : 'self_paced',
       timer: b.timer,
       allowGuests: on(b.allow_guests),
       shuffle: on(b.shuffle),

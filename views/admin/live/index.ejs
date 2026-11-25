@@ -18,12 +18,12 @@
       <legend class="label">How will people play?</legend>
       <div class="mt-2 space-y-2">
         <% Object.entries(KINDS).forEach(function (k, i) { %>
-        <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><input type="radio" name="kind" value="<%= k[0] %>" class="mt-0.5 text-primary-600" <%= ((old.kind || 'live') === k[0]) ? 'checked' : '' %>> <span><%= k[1] %></span></label>
+        <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><input type="radio" name="kind" value="<%= k[0] %>" class="mt-0.5 text-primary-600" <%= ((old.kind || 'self_paced') === k[0]) ? 'checked' : '' %>> <span><%= k[1] %></span></label>
         <% }) %>
       </div>
     </fieldset>
     <%- include('../../partials/field', { name: 'timer', label: 'Seconds per question', type: 'number', value: old.timer || 20, min: 5, max: 240, hint: 'Faster correct answers earn more points.' }) %>
-    <%- include('../../partials/field', { name: 'auto_advance', label: 'Move on automatically (live games)', type: 'checkbox', value: old.auto_advance === undefined ? '1' : old.auto_advance, hint: 'After each question: show the answer, then the leaderboard, then the next question — no clicking needed. You can pause it or go back on the host screen.' }) %>
+    <%- include('../../partials/field', { name: 'auto_advance', label: 'Move on automatically (presenter-paced games)', type: 'checkbox', value: old.auto_advance === undefined ? '1' : old.auto_advance, hint: 'After each question: show the answer, then the leaderboard, then the next question — no clicking needed. You can pause it or go back on the host screen.' }) %>
     <div class="grid grid-cols-2 gap-3">
       <%- include('../../partials/field', { name: 'reveal_seconds', label: 'Show answer for (s)', type: 'number', value: old.reveal_seconds || 5, min: 1, max: 30 }) %>
       <%- include('../../partials/field', { name: 'leaderboard_seconds', label: 'Show leaderboard for (s)', type: 'number', value: old.leaderboard_seconds || 6, min: 1, max: 30 }) %>
@@ -50,7 +50,7 @@
           <tr>
             <td class="font-medium"><%= s.exam_title %><% if (s.host_id !== user.id) { %><span class="block text-xs muted">Host: <%= s.host_name %></span><% } %></td>
             <td class="font-mono"><%= s.pin %></td>
-            <td class="text-sm"><%= { live: 'Live', self_paced: 'Self-paced', homework: 'Homework' }[kind] %></td>
+            <td class="text-sm"><%= { live: 'Presenter-paced', self_paced: 'Live game', homework: 'Homework' }[kind] %></td>
             <td><span class="<%= { lobby: 'badge-amber', running: 'badge-green', paused: 'badge-amber', finished: 'badge-gray', cancelled: 'badge-gray' }[s.status] %>"><%= s.status %></span></td>
             <td class="text-right tabular-nums"><%= s.players %></td>
             <td class="whitespace-nowrap text-sm muted"><%= fmt.dateTime(s.created_at) %></td>

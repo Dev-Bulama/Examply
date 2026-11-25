@@ -13,6 +13,8 @@
 
   var AC = window.AudioContext || window.webkitAudioContext;
   var KEY = 'examply.liveSound';
+  var LOUD = 1.6; // master level (was 0.6)
+  var BOOST = 1.7; // every cue
   var muted = false;
   try {
     muted = localStorage.getItem(KEY) === 'off';
@@ -30,11 +32,19 @@
     if (!AC) return null;
     if (!ctx) {
       ctx = new AC();
+      // Loud and punchy, with a compressor/limiter so it never distorts on phone speakers.
+      var comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -14;
+      comp.knee.value = 8;
+      comp.ratio.value = 6;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.2;
+      comp.connect(ctx.destination);
       master = ctx.createGain();
-      master.gain.value = muted ? 0 : 0.6;
-      master.connect(ctx.destination);
+      master.gain.value = muted ? 0 : LOUD;
+      master.connect(comp);
       musicGain = ctx.createGain();
-      musicGain.gain.value = 0.22;
+      musicGain.gain.value = 0.5;
       musicGain.connect(master);
     }
     if (ctx.state === 'suspended') ctx.resume();
@@ -63,7 +73,7 @@
     o.type = opts.type || 'sine';
     o.frequency.setValueAtTime(opts.f, t);
     if (opts.to) o.frequency.exponentialRampToValueAtTime(opts.to, t + (opts.d || 0.2));
-    var v = opts.v === undefined ? 0.3 : opts.v;
+    var v = Math.min(0.95, (opts.v === undefined ? 0.3 : opts.v) * BOOST);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(v, t + (opts.a || 0.01));
     g.gain.exponentialRampToValueAtTime(0.0001, t + (opts.d || 0.2));
@@ -88,7 +98,7 @@
     if (opts.to) f.frequency.exponentialRampToValueAtTime(opts.to, t + (opts.d || 0.3));
     var g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(opts.v || 0.2, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(Math.min(0.95, (opts.v || 0.2) * BOOST), t + 0.03);
     g.gain.exponentialRampToValueAtTime(0.0001, t + (opts.d || 0.3));
     src.connect(f);
     f.connect(g);
@@ -207,7 +217,7 @@
     } catch (e) {
       /* ignore */
     }
-    if (master) master.gain.value = muted ? 0 : 0.6;
+    if (master) master.gain.value = muted ? 0 : LOUD;
     if (muted && current) {
       clearInterval(current.timer);
       current = null;

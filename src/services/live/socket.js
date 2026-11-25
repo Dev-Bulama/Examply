@@ -177,15 +177,17 @@ function registerLive(ns) {
           return out;
         }),
       );
-      socket.on(
-        'review',
+      const own = (fn) =>
         guard(async (p) => {
           const sess = await live.getSession(sessionId);
           const player = await db()('live_players').where({ id: playerId }).first();
           if (!player || player.kicked) throw new live.LiveError('You are no longer in this game.');
-          return { review: await live.review(sess, player, p.index) };
-        }),
-      );
+          const out = await fn(sess, player, p);
+          await broadcast(sessionId);
+          return out;
+        });
+      socket.on('goto', own((sess, player, p) => live.goTo(sess, player, p.index)));
+      socket.on('submit', own((sess, player) => live.submitPlayer(sess, player)));
     }
 
     socket.on('disconnect', async () => {
