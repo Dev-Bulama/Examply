@@ -27,6 +27,19 @@ Production defaults for `https://examply.ng` are committed in `deploy/defaults.e
 6. Sign in, enrol 2FA, then Admin → Settings: Email (SMTP), Payments (Paystack keys, bank account), AI (Claude or
    OpenAI key).
 
+### Deploys must never ask for setup again
+
+Hostinger's Node.js hosting replaces the server's files on every deploy, so only two things survive: **hPanel
+environment variables** and **the database**. EXAMPLY is built around that:
+
+- Put `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` and `DB_PASSWORD` in hPanel → Node.js → Environment variables
+  (the database step of the installer shows these lines for you to copy). Keep `APP_KEY` there too — it must never
+  change, because it decrypts your saved Paystack, email and AI keys.
+- On start-up the app recognises an existing installation **from the database** and never shows the installer again.
+  If the database details are missing, it asks only for them, says "Existing installation found", and you sign in.
+- Uploaded files (question images, logos, avatars, payment receipts) are also stored in the database and restored
+  automatically after each deploy.
+
 ### If examply.ng shows 404
 
 - **No Node.js app is attached to the domain**, or the domain still points at an empty `public_html` (Hostinger's

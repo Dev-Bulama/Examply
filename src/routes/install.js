@@ -104,8 +104,26 @@ router.post(
         req.log && req.log.error({ err: err.message }, 'post-reconnect sync failed');
       }
     }
-    req.flash('success', installed ? 'Database reconnected. The site is back.' : 'Database connected and saved.');
-    return res.redirect(home);
+    // An existing installation in this database? Then there is nothing else to set up.
+    const existing = !installed && (await system.detectInstalled());
+    if (existing) {
+      try {
+        await db().migrate.latest();
+        await system.syncSystemData();
+        await require('../services/fileStore').restoreMissing();
+      } catch (err) {
+        req.log && req.log.error({ err: err.message }, 'post-detect sync failed');
+      }
+      if (req.app.locals.resetSessionStore) await req.app.locals.resetSessionStore();
+    }
+    // Show the exact environment lines once, so hPanel keeps them across every future deploy.
+    return res.render('install/permanent', {
+      layout: 'layouts/install',
+      title: 'Make it permanent',
+      lines: [`DB_HOST=${v.db_host}`, `DB_PORT=${v.db_port}`, `DB_NAME=${v.db_name}`, `DB_USER=${v.db_user}`, `DB_PASSWORD=${v.db_password}`],
+      heading: installed ? 'Database reconnected — the site is back' : existing ? 'Existing installation found' : 'Database connected',
+      next: installed ? { href: '/', label: 'Go to the site' } : existing ? { href: '/login?installed=1', label: 'Sign in' } : { href: '/install', label: 'Continue the installation' },
+    });
   }),
 );
 

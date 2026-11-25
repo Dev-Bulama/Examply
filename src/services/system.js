@@ -68,4 +68,29 @@ async function install({ siteName, timezone, adminName, adminEmail, adminPasswor
   return admin;
 }
 
-module.exports = { isInstalled, resetInstalledCache, syncSystemData, requirements, install };
+/**
+ * The database is the source of truth: if it already holds an EXAMPLY installation, mark this server as
+ * installed (hosts that wipe the file system on every deploy would otherwise show the installer again).
+ */
+async function detectInstalled(knex = db()) {
+  if (isInstalled()) return true;
+  if (!require('../config/env').getEnv().dbConfigured) return false;
+  try {
+    if (!(await knex.schema.hasTable('settings'))) return false;
+    const row = await knex('settings').where({ key: 'system.installed_at' }).first('value');
+    const admin = await knex('user_roles as ur').join('roles as r', 'r.id', 'ur.role_id').where('r.slug', 'super_admin').first('ur.user_id');
+    if (!row || !admin) return false;
+    try {
+      ensureStorage();
+      fs.writeFileSync(installLockPath(), JSON.stringify({ installed_at: new Date().toISOString(), via: 'database' }, null, 2));
+    } catch {
+      /* read-only storage: the in-memory flag below still applies */
+    }
+    installedCache = true;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { detectInstalled, isInstalled, resetInstalledCache, syncSystemData, requirements, install };

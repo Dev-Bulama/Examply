@@ -29,11 +29,17 @@ async function boot() {
   const server = http.createServer(app);
   realtime.attach(server, app);
 
+  // A redeploy may have wiped the file system: recognise an existing installation from the database.
+  await system.detectInstalled().catch(() => false);
   if (system.isInstalled()) {
     try {
       // Pick up new permissions / templates shipped with an update; run pending migrations.
       await db().migrate.latest();
       await system.syncSystemData();
+      // Put uploaded files back if the deploy removed them (in the background; never blocks start-up).
+      require('./src/services/fileStore')
+        .restoreMissing()
+        .catch((err) => logger.warn({ err: err.message }, 'file restore failed'));
     } catch (err) {
       logger.error({ err: err.message }, 'Boot-time database sync failed — check DB credentials in the environment');
     }

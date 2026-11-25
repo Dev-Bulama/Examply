@@ -43,12 +43,14 @@ function saveImage(file, { dir, allowed = ['png', 'jpg', 'webp'], visibility = '
   const folder = storagePath('uploads', visibility, dir);
   fs.mkdirSync(folder, { recursive: true });
   fs.writeFileSync(path.join(folder, name), file.buffer, { mode: 0o644 });
+  require('./fileStore').persist(path.join(folder, name)); // database copy survives redeploys (never throws)
   return name;
 }
 
 function removeStored(name, { dir, visibility = 'public' }) {
   if (!name || !/^[a-f0-9]{32}\.[a-z]{2,4}$/.test(name)) return;
   fs.rm(storagePath('uploads', visibility, dir, name), { force: true }, () => {});
+  require('./fileStore').remove(storagePath('uploads', visibility, dir, name));
 }
 
 module.exports = { sniff, memoryUpload, saveImage, removeStored };

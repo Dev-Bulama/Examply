@@ -123,6 +123,7 @@ async function saveImage(buffer, name, importId, userId) {
   const dir = storagePath('uploads', 'private', 'questions');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, file), buffer);
+  await require('../fileStore').persist(path.join(dir, file));
   const { imageSize } = require('../../controllers/admin/questionsController');
   const dims = imageSize(buffer, kind.ext);
   await db()('question_media').insert({ uuid, import_id: importId, uploaded_by: userId, path: file, original_name: String(name).slice(0, 255), mime: kind.mime, size_bytes: buffer.length, width: dims.width, height: dims.height });

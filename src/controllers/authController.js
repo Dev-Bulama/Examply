@@ -51,7 +51,7 @@ async function sendVerification(user) {
 // ---------------------------------------------------------------- Login
 
 function showLogin(req, res) {
-  if (req.query.installed) res.locals.flash.push({ type: 'success', message: 'Installation complete. Sign in with your Super Admin account.' });
+  if (req.query.installed) res.locals.flash.push({ type: 'success', message: 'Setup complete. Sign in with your Super Admin account.' });
   res.render('auth/login', { title: 'Sign in', layout: 'layouts/auth', locked: null });
 }
 

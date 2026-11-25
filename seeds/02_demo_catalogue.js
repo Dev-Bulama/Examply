@@ -149,6 +149,7 @@ exports.seed = async function seed(knex) {
     fs.mkdirSync(dir, { recursive: true });
     const buf = architectureDiagram();
     fs.writeFileSync(path.join(dir, `${diagramUuid}.png`), buf);
+    await require('../src/services/fileStore').persist(path.join(dir, `${diagramUuid}.png`), knex);
     await knex('question_media').insert({ uuid: diagramUuid, uploaded_by: author ? author.id : null, path: `${diagramUuid}.png`, original_name: 'three-tier-architecture.png', mime: 'image/png', size_bytes: buf.length, width: 800, height: 450, alt: 'Three-tier architecture diagram' });
   }
 

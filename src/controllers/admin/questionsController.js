@@ -426,6 +426,7 @@ async function uploadMedia(req, res) {
   const file = `${uuid}.${kind.ext}`;
   fs.mkdirSync(MEDIA_DIR(), { recursive: true });
   fs.writeFileSync(path.join(MEDIA_DIR(), file), req.file.buffer);
+  await require('../../services/fileStore').persist(path.join(MEDIA_DIR(), file));
   const dims = imageSize(req.file.buffer, kind.ext);
   await db()('question_media').insert({ uuid, uploaded_by: req.user.id, path: file, original_name: String(req.file.originalname || '').slice(0, 255), mime: kind.mime, size_bytes: req.file.size, width: dims.width, height: dims.height, alt: null });
   return res.json({ uuid, url: `/qmedia/${uuid}`, width: dims.width, height: dims.height });

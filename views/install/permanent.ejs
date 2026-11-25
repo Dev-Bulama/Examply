@@ -1,0 +1,12 @@
+<div class="card">
+  <div class="card-body space-y-5">
+    <div>
+      <span class="badge-green"><%= heading %></span>
+      <h2 class="h3 mt-3">Do this once so deploys never ask again</h2>
+      <p class="mt-2 text-sm muted">Your host replaces the server's files on every deploy, so these details must live in hPanel. Add the lines below in <strong>hPanel → Websites → examply.ng → Node.js → Environment variables</strong> (one variable per line), save, and you will never see this setup again.</p>
+    </div>
+    <pre class="select-all overflow-x-auto rounded-lg bg-slate-900 p-4 text-sm leading-relaxed text-slate-100" aria-label="Environment variables to add in hPanel"><%= lines.join('\n') %></pre>
+    <p class="text-xs muted">This page shows your database password because you just typed it. It is not shown again or stored anywhere else in the browser. Close it after copying.</p>
+    <a class="btn-primary w-full" href="<%= next.href %>"><%= next.label %></a>
+  </div>
+</div>
