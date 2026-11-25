@@ -1,0 +1,30 @@
+<div class="card mb-6">
+  <div class="card-body">
+    <span class="badge-red">Database unavailable</span>
+    <h2 class="h3 mt-3">The site cannot reach its database</h2>
+    <p class="mt-2 text-sm"><%= reason %> <span class="muted">(<%= code %>)</span></p>
+    <p class="mt-2 text-sm muted">Visitors see this page until it is fixed. Nothing has been lost: your data stays in the database.</p>
+  </div>
+</div>
+<% if (canReconnect) { %>
+<form method="post" action="/install/database" class="card" novalidate>
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="card-body space-y-5">
+    <div>
+      <h2 class="h3">Reconnect the database</h2>
+      <p class="mt-1 text-sm muted">Use the details from hPanel → Databases → MySQL Databases. They are saved on the server in a place redeploys do not erase.</p>
+    </div>
+    <%- include('../partials/field', { name: 'setup_token', label: 'Setup token (SETUP_TOKEN)', type: 'password', required: true, autocomplete: 'off' }) %>
+    <div class="grid gap-4 sm:grid-cols-3">
+      <div class="sm:col-span-2"><%- include('../partials/field', { name: 'db_host', label: 'Host', value: dbDefaults.db_host, required: true }) %></div>
+      <%- include('../partials/field', { name: 'db_port', label: 'Port', type: 'number', value: dbDefaults.db_port, required: true }) %>
+    </div>
+    <%- include('../partials/field', { name: 'db_name', label: 'Database name', value: dbDefaults.db_name, required: true }) %>
+    <%- include('../partials/field', { name: 'db_user', label: 'Database user', value: dbDefaults.db_user, required: true, autocomplete: 'off' }) %>
+    <%- include('../partials/field', { name: 'db_password', label: 'Database password', type: 'password', autocomplete: 'off' }) %>
+    <button type="submit" class="btn-primary w-full" data-loading-text="Connecting…">Reconnect</button>
+  </div>
+</form>
+<% } else { %>
+<div class="alert-warning"><p>To fix it, add <code>DB_NAME</code>, <code>DB_USER</code> and <code>DB_PASSWORD</code> (and <code>DB_HOST=localhost</code>) in hPanel → Node.js → Environment variables, then restart the app. Adding <code>SETUP_TOKEN</code> there lets you reconnect from this page next time.</p></div>
+<% } %>

@@ -90,7 +90,11 @@ function createApp() {
     }),
   );
 
-  app.get('/healthz', (req, res) => res.json({ ok: true, installed: system.isInstalled() }));
+  app.get('/healthz', async (req, res) => {
+    const installed = system.isInstalled();
+    const health = installed ? await require('./services/dbHealth').check() : null;
+    res.set('Cache-Control', 'no-store').json({ ok: !health || health.ok, installed, database: health ? (health.ok ? 'ok' : health.code) : 'not installed', node: process.versions.node });
+  });
   routes.mountPreSession(app);
 
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
@@ -100,10 +104,12 @@ function createApp() {
 
   const sessionMiddleware = createSessionMiddleware();
   app.locals.closeSessionStore = sessionMiddleware.close;
+  app.locals.resetSessionStore = sessionMiddleware.reset;
   app.use(sessionMiddleware);
   app.use(flash);
   app.use(csrfLocals);
   app.use(csrfProtection);
+  app.use(require('./middleware/dbGuard').dbGuard);
   app.use(installGuard);
 
   routes.mountInstall(app);

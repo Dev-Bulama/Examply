@@ -58,6 +58,7 @@ function startScheduler() {
   cronTask = cron.schedule('* * * * *', async () => {
     if (running) return;
     if (!require('../system').isInstalled()) return; // no tables before install
+    if (!(await require('../dbHealth').check()).ok) return; // database down: wait for it, do not spam the log
     running = true;
     try {
       await runScheduled({ timeBudgetMs: 40000 });

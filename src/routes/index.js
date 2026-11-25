@@ -15,7 +15,7 @@ function mountPreSession(app) {
   app.get('/theme.css', async (req, res, next) => {
     try {
       let brand = { primary: settings.DEFINITIONS['branding.primary_color'].default, secondary: settings.DEFINITIONS['branding.secondary_color'].default };
-      if (system.isInstalled()) {
+      if (system.isInstalled() && (await require('../services/dbHealth').check()).ok) {
         await settings.ensureLoaded();
         brand = { primary: settings.getSync('branding.primary_color'), secondary: settings.getSync('branding.secondary_color') };
       }

@@ -85,6 +85,7 @@ function startPoller({ intervalMs = 3000 } = {}) {
   const tick = async () => {
     if (polling) return;
     if (!require('../system').isInstalled()) return; // no tables before install
+    if (!(await require('../dbHealth').check()).ok) return; // database down: wait for it, do not spam the log
     polling = true;
     try {
       await runDueJobs({ limit: 25, timeBudgetMs: 10000 });

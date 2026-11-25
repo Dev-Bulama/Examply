@@ -63,16 +63,20 @@ router.post(
   '/install/database',
   authLimiter(),
   asyncHandler(async (req, res) => {
+    const installed = system.isInstalled();
+    const home = installed ? '/' : '/install';
+    // Reconnecting an installed site always needs the SETUP_TOKEN (never open to anonymous visitors).
+    if (installed && !getEnv().SETUP_TOKEN) return res.status(403).send('Set SETUP_TOKEN in the environment to reconnect from the browser.');
     if (!tokenOk(req)) {
       req.flash('danger', 'That setup token is not correct.');
-      return res.redirect('/install');
+      return res.redirect(home);
     }
-    if (req.body.setup_token && !req.body.db_host) return res.redirect('/install');
+    if (req.body.setup_token && !req.body.db_host && !installed) return res.redirect(home);
     const parsed = dbSchema.safeParse(req.body);
     if (!parsed.success) {
       req.setFormState(req.body, fieldErrors(parsed.error));
       req.flash('danger', 'Please fill in every database field.');
-      return res.redirect('/install');
+      return res.redirect(home);
     }
     const v = parsed.data;
     const probe = knexFactory(knexConfig({ ...getEnv(), DB_HOST: v.db_host, DB_PORT: v.db_port, DB_USER: v.db_user, DB_PASSWORD: v.db_password, DB_NAME: v.db_name, DB_POOL_MAX: 2 }));
@@ -81,17 +85,27 @@ router.post(
     if (error) {
       req.setFormState({ ...req.body, db_password: '' }, {});
       req.flash('danger', `Could not connect: ${error}`);
-      return res.redirect('/install');
+      return res.redirect(home);
     }
     const saved = runtime.write({ DB_HOST: v.db_host, DB_PORT: v.db_port, DB_USER: v.db_user, DB_PASSWORD: v.db_password, DB_NAME: v.db_name });
     if (!saved) {
       req.flash('danger', 'Connected, but the settings could not be saved: no writable location for the runtime config. Add the DB_* variables in hPanel → Node.js → Environment variables instead.');
-      return res.redirect('/install');
+      return res.redirect(home);
     }
     await closeDb();
     reloadEnv();
-    req.flash('success', 'Database connected and saved.');
-    return res.redirect('/install');
+    require('../services/dbHealth').reset();
+    if (req.app.locals.resetSessionStore) await req.app.locals.resetSessionStore();
+    if (installed) {
+      try {
+        await db().migrate.latest();
+        await system.syncSystemData();
+      } catch (err) {
+        req.log && req.log.error({ err: err.message }, 'post-reconnect sync failed');
+      }
+    }
+    req.flash('success', installed ? 'Database reconnected. The site is back.' : 'Database connected and saved.');
+    return res.redirect(home);
   }),
 );
 

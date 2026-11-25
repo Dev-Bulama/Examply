@@ -41,9 +41,23 @@ function createSessionMiddleware() {
     return mysqlMiddleware;
   };
 
-  const middleware = (req, res, next) => (system.isInstalled() ? getMysql()(req, res, next) : memory(req, res, next));
+  const dbHealth = require('../services/dbHealth');
+  const middleware = (req, res, next) => {
+    if (!system.isInstalled()) return memory(req, res, next);
+    return dbHealth
+      .check()
+      .then((h) => (h.ok ? getMysql() : memory)(req, res, next))
+      .catch(next);
+  };
   middleware.close = async () => {
     if (store) await store.close();
+  };
+  /** After the database settings change: drop the old store so the next request connects with the new ones. */
+  middleware.reset = async () => {
+    const old = store;
+    store = null;
+    mysqlMiddleware = null;
+    if (old) await old.close().catch(() => {});
   };
   return middleware;
 }
