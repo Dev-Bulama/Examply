@@ -69,26 +69,33 @@ function clearTimer(id) {
   timers.delete(id);
 }
 
-/** Host-paced: reveal automatically when the timer runs out. */
+/**
+ * Host-paced timing: a question reveals when its timer ends; with auto-advance on, the reveal moves to the
+ * leaderboard and the leaderboard to the next question (or the podium) after a few seconds each.
+ */
 function schedule(sess) {
   clearTimer(sess.id);
-  if (sess.mode !== 'host_paced' || sess.status !== 'running' || sess.phase !== 'question') return;
-  const due = new Date(sess.question_started_at).getTime() + sess.settings.timer * 1000 + 600;
-  const index = sess.current_index;
+  const live = require('./index');
+  const due = live.phaseEndsAt(sess);
+  if (!due) return;
+  const { current_index: index, phase } = sess;
   timers.set(
     sess.id,
-    setTimeout(() => autoReveal(sess.id, index).catch((err) => getLogger().warn({ err: err.message }, 'live auto-reveal failed')), Math.max(0, due - Date.now())),
+    setTimeout(() => autoStep(sess.id, index, phase).catch((err) => getLogger().warn({ err: err.message }, 'live auto-advance failed')), Math.max(0, due + (phase === 'question' ? 600 : 0) - Date.now())),
   );
 }
 
-async function autoReveal(sessionId, index) {
+/** Advances one step if the game is still where the timer expected it to be. */
+async function autoStep(sessionId, index, phase) {
   const live = require('./index');
   const sess = await live.getSession(sessionId);
-  if (sess && sess.status === 'running' && sess.phase === 'question' && sess.current_index === index) {
-    await live.next(sess);
-    await broadcast(sessionId);
-  }
+  if (!sess || sess.status !== 'running' || sess.current_index !== index || sess.phase !== phase) return;
+  const fresh = await live.next(sess);
+  await broadcast(sessionId);
+  schedule(fresh);
 }
+
+const autoReveal = (sessionId, index) => autoStep(sessionId, index, 'question');
 
 /** Host-paced: when everyone still in the game has answered, reveal straight away. */
 async function revealIfAllAnswered(sess) {
@@ -127,9 +134,7 @@ function registerLive(ns) {
   ns.on('connection', async (socket) => {
     const { sessionId, role, playerId } = socket.data;
     socket.join(`s:${sessionId}`);
-    if (role === 'player') await db()('live_players').where({ id: playerId }).update({ connected: true });
-    if (role === 'host' && !timers.has(sessionId)) schedule(await live.getSession(sessionId)); // e.g. after a restart
-    await broadcast(sessionId);
+    // Handlers are attached synchronously below, before any await, so no event sent right after connecting is lost.
 
     const guard = (fn) => async (payload, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
@@ -148,12 +153,13 @@ function registerLive(ns) {
           const sess = await live.getSession(sessionId);
           const after = await fn(sess, p);
           const fresh = after && after.id ? after : await live.getSession(sessionId);
-          if (fresh.status !== 'running' || fresh.phase !== 'question') clearTimer(sessionId);
-          else schedule(fresh);
+          schedule(fresh); // clears the timer when nothing should happen on its own
           await broadcast(sessionId);
         });
       socket.on('start', act((s) => live.start(s)));
       socket.on('next', act((s) => live.next(s)));
+      socket.on('prev', act((s) => live.prev(s)));
+      socket.on('auto', act((s, p) => live.setAuto(s, !!p.on)));
       socket.on('pause', act((s) => live.pause(s)));
       socket.on('resume', act((s) => live.resume(s)));
       socket.on('kick', act((s, p) => live.kick(s, Number(p.playerId))));
@@ -171,6 +177,15 @@ function registerLive(ns) {
           return out;
         }),
       );
+      socket.on(
+        'review',
+        guard(async (p) => {
+          const sess = await live.getSession(sessionId);
+          const player = await db()('live_players').where({ id: playerId }).first();
+          if (!player || player.kicked) throw new live.LiveError('You are no longer in this game.');
+          return { review: await live.review(sess, player, p.index) };
+        }),
+      );
     }
 
     socket.on('disconnect', async () => {
@@ -180,6 +195,12 @@ function registerLive(ns) {
       }
       broadcast(sessionId).catch(() => {});
     });
+
+    (async () => {
+      if (role === 'player') await db()('live_players').where({ id: playerId }).update({ connected: true });
+      if (!timers.has(sessionId)) schedule(await live.getSession(sessionId)); // e.g. after a restart
+      await broadcast(sessionId);
+    })().catch((err) => getLogger().warn({ err: err.message }, 'live connect sync failed'));
   });
 }
 

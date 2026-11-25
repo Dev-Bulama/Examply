@@ -57,6 +57,9 @@ async function create(req, res) {
       allowGuests: on(b.allow_guests),
       shuffle: on(b.shuffle),
       showAnswers: on(b.show_answers),
+      autoAdvance: on(b.auto_advance),
+      revealSeconds: b.reveal_seconds,
+      leaderboardSeconds: b.leaderboard_seconds,
       deadline: b.deadline || null,
     });
     await audit.record(req, 'live.create', { entityType: 'live_session', entityId: sess.id, after: { pin: sess.pin, kind: sess.settings.kind, exam_id: sess.exam_id } });

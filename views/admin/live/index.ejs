@@ -23,6 +23,11 @@
       </div>
     </fieldset>
     <%- include('../../partials/field', { name: 'timer', label: 'Seconds per question', type: 'number', value: old.timer || 20, min: 5, max: 240, hint: 'Faster correct answers earn more points.' }) %>
+    <%- include('../../partials/field', { name: 'auto_advance', label: 'Move on automatically (live games)', type: 'checkbox', value: old.auto_advance === undefined ? '1' : old.auto_advance, hint: 'After each question: show the answer, then the leaderboard, then the next question — no clicking needed. You can pause it or go back on the host screen.' }) %>
+    <div class="grid grid-cols-2 gap-3">
+      <%- include('../../partials/field', { name: 'reveal_seconds', label: 'Show answer for (s)', type: 'number', value: old.reveal_seconds || 5, min: 1, max: 30 }) %>
+      <%- include('../../partials/field', { name: 'leaderboard_seconds', label: 'Show leaderboard for (s)', type: 'number', value: old.leaderboard_seconds || 6, min: 1, max: 30 }) %>
+    </div>
     <%- include('../../partials/field', { name: 'deadline', label: 'Homework deadline', type: 'datetime-local', hint: 'Only for homework. Players can join until then.' }) %>
     <%- include('../../partials/field', { name: 'allow_guests', label: 'Let people join without an account (nickname only)', type: 'checkbox', value: old.allow_guests }) %>
     <%- include('../../partials/field', { name: 'shuffle', label: 'Shuffle the question order', type: 'checkbox', value: old.shuffle }) %>

@@ -38,8 +38,20 @@
 
   var offset = 0; // server clock − local clock
   var endsAt = null;
+  var nextAt = null; // host-paced auto-advance: when the reveal / leaderboard moves on
   var paused = null;
+  var lastTick = null;
+  var sfx = window.LiveSfx || { play: function () {}, music: function () {}, bindToggle: function () {} };
+  $$('[data-sound]').forEach(function (b) {
+    sfx.bindToggle(b);
+  });
   setInterval(function () {
+    var n = $('[data-next-in]');
+    if (n) {
+      var nl = nextAt ? Math.max(0, Math.ceil((nextAt - (Date.now() + offset)) / 1000)) : null;
+      n.hidden = nl === null;
+      if (nl !== null) n.textContent = 'Next in ' + nl + 's';
+    }
     var c = $('[data-countdown]');
     if (!c) return;
     if (paused !== null) {
@@ -55,11 +67,14 @@
     var left = Math.max(0, Math.ceil((endsAt - (Date.now() + offset)) / 1000));
     c.textContent = left + 's';
     c.classList.toggle('text-red-500', left <= 5);
+    if (left > 0 && left <= 5 && left !== lastTick) sfx.play(left <= 3 ? 'tickLast' : 'tick');
+    lastTick = left;
   }, 200);
 
   function syncClock(s) {
     if (s.serverNow) offset = s.serverNow - Date.now();
     endsAt = s.endsAt ? new Date(s.endsAt).getTime() : null;
+    nextAt = s.phase !== 'question' && s.phaseEndsAt ? new Date(s.phaseEndsAt).getTime() : null;
     paused = s.status === 'paused' ? Number(s.pausedRemainingMs) || 0 : null;
     var bar = $('[data-bar]');
     if (bar && s.total) {
@@ -104,6 +119,7 @@
       b.addEventListener('click', function () {
         var act = b.getAttribute('data-act');
         if (act === 'end' && !window.confirm('End the game for everyone now?')) return;
+        if (act === 'auto') return send('auto', { on: b.getAttribute('aria-pressed') !== 'true' });
         send(act);
       });
     });
@@ -114,8 +130,29 @@
       setError('');
     });
 
+    var hostKey = null;
+    var hostPlayers = 0;
     socket.on('host', function (s) {
       syncClock(s);
+      // Game sounds follow the phase.
+      var key = s.status + ':' + s.phase + ':' + s.index;
+      if (key !== hostKey) {
+        if (s.status === 'lobby') sfx.music('lobby');
+        else if (s.status === 'finished' || s.phase === 'podium') {
+          sfx.music(null);
+          sfx.play('fanfare');
+        } else if (s.mode === 'player_paced') sfx.music('question');
+        else if (s.phase === 'question') {
+          sfx.play('start');
+          sfx.music('question');
+        } else if (s.phase === 'reveal') {
+          sfx.music(null);
+          sfx.play('reveal');
+        } else if (s.phase === 'leaderboard') sfx.play('leaderboard');
+        hostKey = key;
+      }
+      if (s.status === 'lobby' && s.players > hostPlayers) sfx.play('join');
+      hostPlayers = s.players;
       text('[data-players]', String(s.players));
       text('[data-progress]', s.status === 'lobby' ? 'Lobby' : s.status === 'finished' ? 'Finished' : s.mode === 'host_paced' ? 'Question ' + (s.index + 1) + ' of ' + s.total : 'Self-paced');
       var btn = function (name, on) {
@@ -128,6 +165,15 @@
       btn('pause', s.mode === 'host_paced' && s.status === 'running' && s.phase === 'question');
       btn('resume', s.status === 'paused');
       btn('end', running || s.status === 'lobby');
+      var hostPaced = s.mode === 'host_paced' && running;
+      btn('prev', hostPaced && (s.index > 0 || s.phase !== 'question'));
+      btn('auto', hostPaced);
+      var autoBtn = $('[data-act="auto"]');
+      if (autoBtn) {
+        autoBtn.setAttribute('aria-pressed', s.autoAdvance ? 'true' : 'false');
+        autoBtn.textContent = s.autoAdvance ? 'Auto: on' : 'Auto: off';
+        autoBtn.title = s.autoAdvance ? 'Moving on automatically — click to stop and control it yourself' : 'Click to move on automatically again';
+      }
       $('[data-report]').hidden = s.status !== 'finished';
       var nextBtn = $('[data-act="next"]');
       if (nextBtn) nextBtn.textContent = s.phase === 'question' ? 'Show answer' : s.phase === 'reveal' ? 'Leaderboard' : s.index + 1 >= s.total ? 'Final results' : 'Next question';
@@ -236,6 +282,12 @@
     var psocket = window.io('/live', { auth: { session: Number(play.getAttribute('data-session')) }, withCredentials: true });
     var lastKey = null;
     var sending = false;
+    var mode = null;
+    var lastState = null;
+    var feedbackUntil = 0;
+    var reviewing = null; // index being reviewed (self-paced)
+    var current = 0; // the player's current question index (self-paced)
+    var playerKey = null;
 
     psocket.on('connect_error', function (err) {
       setError(err && err.message === 'join_first' ? 'Your place in this game has expired. Join again.' : 'Reconnecting…');
@@ -258,15 +310,95 @@
         sending = false;
         if (!res || !res.ok) return setError((res && res.error) || 'Could not send your answer.');
         if (navigator.vibrate) navigator.vibrate(res.correct ? 40 : [30, 60, 30]);
+        if (mode === 'player_paced') {
+          // Quick feedback, then the next question appears by itself.
+          sfx.play(res.correct ? 'correct' : 'wrong');
+          showResult(res.correct, res.points, res.streak, null);
+          feedbackUntil = Date.now() + 1600;
+          setTimeout(function () {
+            if (lastState && reviewing === null) renderState(lastState);
+          }, 1650);
+        } else sfx.play('locked');
       });
     }
+
+    function showResult(right, points, streak, me, timedOut) {
+      show('result');
+      text('[data-result-emoji]', timedOut ? '⌛' : right ? '✅' : '❌');
+      text('[data-result-title]', timedOut ? "Time's up" : right ? 'Correct!' : 'Not this time');
+      text('[data-result-points]', right ? '+' + points + ' points' + (streak > 1 ? ' · 🔥 streak ' + streak : '') : 'Keep going — the next one is yours.');
+      text('[data-result-rank]', me ? rankText(me) : '');
+    }
+
+    // ---- Self-paced: look back at answered questions (read-only)
+    function openReview(index) {
+      reviewing = index;
+      psocket.emit('review', { index: index }, function (res) {
+        if (!res || !res.ok) {
+          reviewing = null;
+          return setError((res && res.error) || 'Could not open that question.');
+        }
+        var r = res.review;
+        show('review');
+        text('[data-review-num]', 'Question ' + (index + 1) + ' of ' + r.question.total + ' (already answered)');
+        var badge = $('[data-review-result]');
+        badge.textContent = r.correct ? '✅ +' + r.points : '❌ 0';
+        badge.className = 'rounded-full px-3 py-1 font-semibold ' + (r.correct ? 'bg-emerald-500/20 text-emerald-100' : 'bg-red-500/20 text-red-100');
+        setStem($('[data-review-stem]'), r.question.stem_html);
+        var ul = $('[data-review-options]');
+        ul.textContent = '';
+        var mine = [].concat((r.response && r.response.selected) || []);
+        var keys = (r.answerKey && r.answerKey.correct) || [];
+        (r.question.options || []).forEach(function (o, i) {
+          var isMine = mine.indexOf(o.key) >= 0;
+          var isRight = keys.indexOf(o.key) >= 0;
+          var li = el('li', 'flex items-center gap-3 rounded-xl p-3 text-white ' + TILE[i % TILE.length] + (isMine || isRight ? '' : ' opacity-50'));
+          var body = el('span', 'min-w-0 flex-1');
+          setStem(body, o.html);
+          li.appendChild(body);
+          if (isMine) li.appendChild(el('span', 'rounded-full bg-black/25 px-2 py-0.5 text-xs font-semibold', 'Your answer'));
+          if (isRight) li.appendChild(el('span', 'rounded-full bg-white/25 px-2 py-0.5 text-xs font-semibold', '✓ Correct'));
+          ul.appendChild(li);
+        });
+        var t = '';
+        if (!r.question.options && r.response) t = 'Your answer: ' + (r.response.value || (r.response.blanks || []).join(' / '));
+        if (r.answerKey && r.answerKey.correctText) t += (t ? ' · ' : '') + 'Correct answer: ' + r.answerKey.correctText;
+        text('[data-review-text]', t);
+        var ex = $('[data-review-explain]');
+        if (r.answerKey && r.answerKey.explanation_html) {
+          ex.hidden = false;
+          setStem(ex, r.answerKey.explanation_html);
+        } else ex.hidden = true;
+        $('[data-review-prev]').disabled = index <= 0;
+        $('[data-review-prev]').classList.toggle('opacity-40', index <= 0);
+        $('[data-review-next]').hidden = index + 1 >= current;
+      });
+    }
+    var prevBtn = $('[data-prev]');
+    if (prevBtn)
+      prevBtn.addEventListener('click', function () {
+        if (current > 0) openReview(current - 1);
+      });
+    $('[data-review-prev]').addEventListener('click', function () {
+      if (reviewing > 0) openReview(reviewing - 1);
+    });
+    $('[data-review-next]').addEventListener('click', function () {
+      if (reviewing + 1 < current) openReview(reviewing + 1);
+    });
+    $('[data-review-back]').addEventListener('click', function () {
+      reviewing = null;
+      lastKey = null;
+      if (lastState) renderState(lastState);
+    });
 
     function renderQuestion(q) {
       var key = q.index + ':' + q.type;
       show('question');
       text('[data-qnum]', 'Question ' + (q.index + 1) + ' of ' + q.total);
+      if (prevBtn) prevBtn.hidden = !(mode === 'player_paced' && q.index > 0);
       if (key === lastKey) return; // keep any half-typed answer
       lastKey = key;
+      sfx.play('start');
       setStem($('[data-stem]'), q.stem_html);
       var form = $('[data-answer-form]');
       form.textContent = '';
@@ -334,10 +466,27 @@
     }
 
     psocket.on('state', function (s) {
+      lastState = s;
+      mode = s.mode;
       syncClock(s);
+      if (s.me && s.me.question) current = s.me.question.index;
+      else if (s.me && s.me.finished) current = s.total;
+      if (reviewing !== null && s.status !== 'finished') return; // let the player finish looking back
+      if (Date.now() < feedbackUntil && s.mode === 'player_paced' && !(s.me && s.me.finished)) return; // feedback first
+      renderState(s);
+    });
+
+    function renderState(s) {
       var me = s.me || {};
+      var key = s.status + ':' + s.phase + ':' + s.index + ':' + (me.finished ? 'done' : '');
+      var changed = key !== playerKey;
+      playerKey = key;
       text('[data-me-score]', Number(me.score || 0).toLocaleString('en'));
       if (s.status === 'finished' || s.phase === 'podium' || me.finished) {
+        if (changed) {
+          sfx.music(null);
+          sfx.play(me.rank && me.rank <= 3 ? 'fanfare' : 'end');
+        }
         show('final');
         var finished = s.status === 'finished' || s.phase === 'podium';
         text('[data-final-title]', finished ? (me.rank === 1 ? 'You won!' : 'Game over') : 'All done!');
@@ -347,10 +496,12 @@
         return;
       }
       if (s.status === 'lobby') {
+        sfx.music('lobby');
         show('wait');
         text('[data-wait-text]', s.players + ' player' + (s.players === 1 ? '' : 's') + ' in the lobby. Waiting for the host to start…');
         return;
       }
+      sfx.music(null);
       if (s.mode === 'player_paced') {
         if (me.question) renderQuestion(me.question);
         return;
@@ -369,13 +520,12 @@
       }
       lastKey = null;
       // reveal / leaderboard
-      show('result');
       var last = me.last && s.index >= 0 ? me.last : null;
       var right = last && last.correct;
-      text('[data-result-emoji]', !me.answeredCurrent && s.phase === 'reveal' ? '⌛' : right ? '✅' : '❌');
-      text('[data-result-title]', !me.answeredCurrent && s.phase === 'reveal' ? "Time's up" : right ? 'Correct!' : 'Not this time');
-      text('[data-result-points]', right ? '+' + last.points + ' points' + (me.streak > 1 ? ' · 🔥 streak ' + me.streak : '') : 'Keep going — the next one is yours.');
-      text('[data-result-rank]', rankText(me));
-    });
+      var timedOut = !me.answeredCurrent && s.phase === 'reveal';
+      if (changed && s.phase === 'reveal') sfx.play(right ? 'correct' : 'wrong');
+      if (changed && s.phase === 'leaderboard') sfx.play('leaderboard');
+      showResult(right, last ? last.points : 0, me.streak, me, timedOut);
+    }
   }
 })();

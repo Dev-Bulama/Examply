@@ -1,6 +1,7 @@
 <div id="live-play" class="flex min-h-screen flex-col bg-gradient-to-b from-primary-900 to-primary-950 text-white" data-session="<%= sess.id %>">
   <header class="flex items-center gap-3 px-4 py-3">
     <p class="min-w-0 flex-1 truncate text-sm font-semibold"><%= sess.settings.title %></p>
+    <button type="button" class="rounded-full bg-white/10 px-2.5 py-1 text-sm" data-sound aria-pressed="true">🔊</button>
     <span class="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold" data-me-name><%= player.nickname %></span>
     <span class="rounded-full bg-secondary-500 px-3 py-1 text-sm font-bold tabular-nums text-primary-950" data-me-score>0</span>
   </header>
@@ -16,9 +17,25 @@
     </section>
 
     <section class="mx-auto flex w-full max-w-3xl flex-1 flex-col" data-view="question" hidden>
-      <div class="flex items-center justify-between text-sm text-primary-100"><span data-qnum></span><span class="rounded-full bg-white/10 px-3 py-1 font-mono font-semibold tabular-nums" data-countdown>--</span></div>
+      <div class="flex items-center justify-between gap-3 text-sm text-primary-100">
+        <span class="flex items-center gap-2"><button type="button" class="rounded-full bg-white/10 px-3 py-1 font-semibold hover:bg-white/20" data-prev hidden>◀ Previous</button><span data-qnum></span></span>
+        <span class="rounded-full bg-white/10 px-3 py-1 font-mono font-semibold tabular-nums" data-countdown>--</span>
+      </div>
       <div class="question-body mt-4 rounded-2xl bg-white p-5 text-lg font-semibold text-slate-900 shadow-pop sm:text-xl" data-stem></div>
       <form class="mt-5 grid flex-1 content-start gap-3 sm:grid-cols-2" data-answer-form></form>
+    </section>
+
+    <section class="mx-auto w-full max-w-3xl" data-view="review" hidden>
+      <div class="flex items-center justify-between text-sm text-primary-100"><span data-review-num></span><span class="rounded-full px-3 py-1 font-semibold" data-review-result></span></div>
+      <div class="question-body mt-4 rounded-2xl bg-white p-5 text-lg font-semibold text-slate-900 shadow-pop" data-review-stem></div>
+      <ul class="mt-4 grid gap-2 sm:grid-cols-2" data-review-options></ul>
+      <p class="mt-3 text-sm text-primary-100" data-review-text></p>
+      <div class="mt-3 rounded-xl bg-white/10 p-4 text-sm" data-review-explain hidden></div>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <button type="button" class="rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" data-review-prev>◀ Previous</button>
+        <button type="button" class="rounded-lg bg-white/10 px-4 py-2 font-semibold hover:bg-white/20" data-review-next>Next ▶</button>
+        <button type="button" class="ml-auto rounded-lg bg-secondary-500 px-4 py-2 font-bold text-primary-950" data-review-back>Back to the current question</button>
+      </div>
     </section>
 
     <section class="m-auto max-w-md text-center" data-view="locked" hidden>
@@ -44,4 +61,5 @@
   </main>
 </div>
 <script src="/socket.io/socket.io.min.js"></script>
+<script src="/js/live-sounds.js?v=<%= assetVersion %>"></script>
 <script src="/js/live.js?v=<%= assetVersion %>"></script>

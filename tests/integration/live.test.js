@@ -193,6 +193,59 @@ describe('a host-paced game over Socket.IO', () => {
   });
 });
 
+describe('auto-advance and previous', () => {
+  test('a host-paced game moves on by itself; the host can go back and switch auto-advance off', async () => {
+    const sess = await live.createSession({ examId, hostId: admin.id, kind: 'live', timer: 30, allowGuests: true, autoAdvance: true, revealSeconds: 1, leaderboardSeconds: 1 });
+    expect(sess.settings).toMatchObject({ auto_advance: true, reveal_seconds: 1, leaderboard_seconds: 1 });
+    const { token } = await live.join(sess, { nickname: 'Auto' });
+    const hostS = await connect({ session: sess.id, host: live.hostToken(sess.id, sess.host_id) });
+    const p = await connect({ session: sess.id }, `lp_${sess.id}=${token}`);
+    await emit(hostS, 'start');
+    // Answering reveals at once; then leaderboard and the next question follow with no clicks.
+    const nextQ = nextEvent(p, 'state', (st) => st.phase === 'question' && st.index === 1);
+    await emit(p, 'answer', { index: 0, response: { selected: 'B' } });
+    expect((await live.getSession(sess.id)).phase).toBe('reveal');
+    const st1 = await nextQ;
+    expect(st1.autoAdvance).toBe(true);
+    // Previous: back to question 1's results (read-only).
+    expect((await emit(hostS, 'prev')).ok).toBe(true);
+    let cur = await live.getSession(sess.id);
+    expect([cur.phase, cur.current_index]).toEqual(['reveal', 0]);
+    // Switch auto-advance off: the reveal now waits for the host.
+    await emit(hostS, 'auto', { on: false });
+    cur = await live.getSession(sess.id);
+    expect(cur.settings.auto_advance).toBe(false);
+    expect(live.phaseEndsAt(cur)).toBeNull();
+    await new Promise((r) => setTimeout(r, 1300));
+    expect((await live.getSession(sess.id)).phase).toBe('reveal');
+    // Forward again by hand: leaderboard → question 2 re-opens; the earlier answer stays counted once.
+    await emit(hostS, 'next');
+    await emit(hostS, 'next');
+    cur = await live.getSession(sess.id);
+    expect([cur.phase, cur.current_index]).toEqual(['question', 1]);
+    expect(Number((await db()('live_answers').where({ session_id: sess.id }).count('* as n').first()).n)).toBe(1);
+    await emit(hostS, 'end');
+    hostS.close();
+    p.close();
+  });
+
+  test('self-paced players can look back at answered questions only', async () => {
+    const sess = await live.createSession({ examId, hostId: admin.id, kind: 'self_paced', timer: 30, allowGuests: true, showAnswers: true });
+    const { player, token } = await live.join(sess, { nickname: 'Looker' });
+    await live.start(sess);
+    const s2 = await live.getSession(sess.id);
+    await expect(live.review(s2, await db()('live_players').where({ id: player.id }).first(), 0)).rejects.toThrow(/answered/);
+    await live.answer(s2, await db()('live_players').where({ id: player.id }).first(), { index: 0, response: { selected: 'A' } });
+    const p = await connect({ session: sess.id }, `lp_${sess.id}=${token}`);
+    const res = await emit(p, 'review', { index: 0 });
+    expect(res.ok).toBe(true);
+    expect(res.review).toMatchObject({ correct: false, points: 0, response: { selected: 'A' } });
+    expect(res.review.answerKey.correct).toEqual(['B']);
+    expect((await emit(p, 'review', { index: 1 })).ok).toBe(false); // not answered yet
+    p.close();
+  });
+});
+
 describe('self-paced homework', () => {
   test('players move at their own pace until the deadline', async () => {
     await expect(live.createSession({ examId, hostId: admin.id, kind: 'homework', timer: 30 })).rejects.toThrow(/deadline/);

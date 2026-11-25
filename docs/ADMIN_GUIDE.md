@@ -64,7 +64,11 @@ A company that buys a plan gets a private workspace. Its managers invite staff a
    - **Self-paced:** players move at their own speed.
    - **Homework:** self-paced with a deadline; no host screen is needed.
 2. Allow guests (nickname only) or require sign-in, set the seconds per question, and optionally shuffle.
-3. **Host screen:** shows the PIN, a QR code and the join link (`/play`). Players appear in the lobby; click **Start**. Each question shows a countdown and live answer counts. It reveals automatically when time is up or everyone has answered. Then show the leaderboard and move to the next question, ending on a podium. You can also pause, remove a player or end the game.
+3. **Host screen:** shows the PIN, a QR code and the join link (`/play`). Players appear in the lobby; click **Start**.
+   - **Auto-advance** (on by default; set the seconds when you create the session): each question reveals when time is up or everyone has answered, then the leaderboard shows, then the next question opens, with no clicking. **Auto: on/off** pauses it at any time, and **Next** still works by hand.
+   - **◀ Previous** returns to the previous question's results; moving forward re-opens the next question (answers already given still count once). You can also pause the timer, remove a player or end the game.
+   - **Game sounds** (original, generated in the browser): lobby music, join pops, question start, last-5-second ticks, correct and wrong cues, a reveal sting, the leaderboard roll and a podium fanfare. The 🔊 button mutes them on that device.
+   - **Self-paced and homework:** players see "Correct +950" for a moment and the next question appears by itself; **◀ Previous** lets them look back at questions they've already answered (read-only, with the explanation if you chose to show answers).
 4. **Report:** per player and per question, with CSV export.
 
 ## 10. Analytics

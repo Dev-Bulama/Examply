@@ -20,7 +20,7 @@ const types = require('../questions/types');
 const { markItem } = require('../grading/strategies');
 
 const LIVE_TYPES = ['single_choice', 'multiple_response', 'true_false', 'numeric', 'fill_blank'];
-const DEFAULTS = { timer: 20, shuffle: false, show_answers: true, deadline: null };
+const DEFAULTS = { timer: 20, shuffle: false, show_answers: true, deadline: null, auto_advance: true, reveal_seconds: 5, leaderboard_seconds: 6 };
 const MAX_PLAYERS = 500;
 
 class LiveError extends Error {
@@ -124,7 +124,7 @@ async function byPin(pin, knex = db()) {
 }
 
 /** Creates a session. kind: live | self_paced | homework. */
-async function createSession({ examId, hostId, kind = 'live', timer, allowGuests = false, shuffle = false, deadline = null, showAnswers = true }, knex = db()) {
+async function createSession({ examId, hostId, kind = 'live', timer, allowGuests = false, shuffle = false, deadline = null, showAnswers = true, autoAdvance = true, revealSeconds = 5, leaderboardSeconds = 6 }, knex = db()) {
   const exam = await knex('exams').where({ id: examId }).whereNull('deleted_at').first('id', 'title');
   if (!exam) throw new LiveError('Choose a quiz.');
   let qs = await liveQuestions(examId, knex);
@@ -146,7 +146,7 @@ async function createSession({ examId, hostId, kind = 'live', timer, allowGuests
     status: kind === 'homework' ? 'running' : 'lobby',
     phase: kind === 'homework' ? 'question' : 'lobby',
     allow_guests: !!allowGuests,
-    settings: toJson({ timer: t, shuffle: !!shuffle, show_answers: !!showAnswers, deadline: dl ? dl.toISOString() : null, kind, title: exam.title }),
+    settings: toJson({ timer: t, shuffle: !!shuffle, show_answers: !!showAnswers, deadline: dl ? dl.toISOString() : null, kind, title: exam.title, auto_advance: !!autoAdvance, reveal_seconds: clampSec(revealSeconds, 5), leaderboard_seconds: clampSec(leaderboardSeconds, 6) }),
     question_ids: toJson(qs),
     started_at: kind === 'homework' ? now() : null,
   });
@@ -259,9 +259,57 @@ function normaliseResponse(type, r) {
 
 // ---------------------------------------------------------------- Host actions
 
+const clampSec = (v, d) => Math.min(30, Math.max(1, Math.round(Number(v) || d)));
+
+/** Writes a patch; entering a new phase records when it started (drives auto-advance and the countdowns). */
 async function update(sess, patch, knex) {
-  await knex('live_sessions').where({ id: sess.id }).update({ ...patch, updated_at: now() });
+  const out = { ...patch };
+  if ((patch.phase && patch.phase !== sess.phase) || patch.current_index !== undefined) {
+    const base = patch.settings ? JSON.parse(patch.settings) : sess.settings;
+    out.settings = toJson({ ...base, phase_started_at: now().toISOString() });
+  }
+  await knex('live_sessions').where({ id: sess.id }).update({ ...out, updated_at: now() });
   return getSession(sess.id, knex);
+}
+
+/** Host-paced: step back to the previous question's results (it re-opens when the game moves forward again). */
+async function prev(sess, knex = db()) {
+  if (sess.mode !== 'host_paced') throw new LiveError('Players move at their own pace in this game.');
+  if (!['running', 'paused'].includes(sess.status)) throw new LiveError('The game is not running.');
+  const target = sess.phase === 'question' ? sess.current_index - 1 : sess.phase === 'leaderboard' ? sess.current_index : sess.current_index - 1;
+  if (target < 0) throw new LiveError('This is the first question.');
+  const { paused_remaining_ms: _p, ...rest } = sess.settings;
+  return update(sess, { status: 'running', phase: 'reveal', current_index: target, settings: toJson(rest) }, knex);
+}
+
+/** Turns host-paced auto-advance on or off. */
+async function setAuto(sess, on, knex = db()) {
+  return update(sess, { settings: toJson({ ...sess.settings, auto_advance: !!on, phase_started_at: now().toISOString() }) }, knex);
+}
+
+/** When the current phase ends on its own (null = waits for the host). */
+function phaseEndsAt(sess) {
+  if (sess.mode !== 'host_paced' || sess.status !== 'running') return null;
+  if (sess.phase === 'question') return sess.question_started_at ? new Date(sess.question_started_at).getTime() + sess.settings.timer * 1000 : null;
+  if (!sess.settings.auto_advance || !sess.settings.phase_started_at) return null;
+  const startedAt = new Date(sess.settings.phase_started_at).getTime();
+  if (sess.phase === 'reveal') return startedAt + sess.settings.reveal_seconds * 1000;
+  if (sess.phase === 'leaderboard') return startedAt + sess.settings.leaderboard_seconds * 1000;
+  return null;
+}
+
+/** Self-paced: a player looks back at a question they already answered (read-only). */
+async function review(sess, player, index, knex = db()) {
+  const i = Number(index);
+  if (!(i >= 0 && i < player.current_index)) throw new LiveError('You can only look back at questions you have answered.');
+  const q = await playerQuestion(sess, i, knex);
+  const a = await knex('live_answers').where({ player_id: player.id, question_index: i }).first('response', 'is_correct', 'points');
+  const out = { question: q, response: a ? parseJson(a.response, {}) : null, correct: a ? !!a.is_correct : false, points: a ? a.points : 0, answerKey: null };
+  if (sess.settings.show_answers) {
+    const r = await reveal(sess, i, knex);
+    out.answerKey = { correct: r.correct, correctText: r.correctText, explanation_html: r.explanation_html };
+  }
+  return out;
 }
 
 async function start(sess, knex = db()) {
@@ -335,6 +383,8 @@ async function publicState(sess, knex = db()) {
     index: sess.current_index,
     total: sess.question_ids.length,
     endsAt: endsAt(sess),
+    phaseEndsAt: phaseEndsAt(sess) ? new Date(phaseEndsAt(sess)).toISOString() : null,
+    autoAdvance: !!sess.settings.auto_advance,
     serverNow: Date.now(),
     pausedRemainingMs: sess.status === 'paused' ? sess.settings.paused_remaining_ms : null,
     deadline: sess.settings.deadline,
@@ -420,6 +470,10 @@ module.exports = {
   points,
   start,
   next,
+  prev,
+  setAuto,
+  phaseEndsAt,
+  review,
   pause,
   resume,
   kick,
