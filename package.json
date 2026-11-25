@@ -13,13 +13,14 @@
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
     "seed": "knex seed:run",
-    "build:css": "tailwindcss -c tailwind/tailwind.config.js -i tailwind/input.css -o public/css/app.css --minify",
-    "watch:css": "tailwindcss -c tailwind/tailwind.config.js -i tailwind/input.css -o public/css/app.css --watch",
+    "build:css": "node scripts/build-css.js",
+    "watch:css": "node scripts/build-css.js --watch",
     "vendor": "node scripts/vendor.js",
     "key:generate": "node scripts/generate-key.js",
     "cron": "node scripts/cron.js",
     "create-admin": "node scripts/create-admin.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "build": "node scripts/build-css.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.13.0",

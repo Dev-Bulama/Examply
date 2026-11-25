@@ -12,7 +12,8 @@ Production defaults for `https://examply.ng` are committed in `deploy/defaults.e
 2. **Node.js app** — hPanel → Websites → examply.ng → **Node.js** (Business/Cloud plans):
    - Node.js version **22** (recommended; 20 also works); framework/preset "Express" or "Other";
    - deploy from GitHub (`dev-bulama/examply`, the branch you want) or upload a ZIP without `node_modules`;
-   - **Entry / startup file:** `server.js`; **build command:** none (leave empty or `npm install`);
+   - **Entry / startup file:** `server.js`; **build command:** leave it empty, or `npm run build` (both work: the
+     CSS is pre-built and committed, so the build step just confirms it);
    - **Environment variables:** import the private `examply-hpanel.env` file you were given (plain `KEY=VALUE`
      lines; `.env.examply` is the same with explanations). It sets the URL, secrets, `SETUP_TOKEN`, timezone and
      `STORAGE_PATH=~/examply-storage`, which keeps uploads and certificates outside the app folder so redeploys never
