@@ -20,7 +20,7 @@ const types = require('../questions/types');
 const { markItem } = require('../grading/strategies');
 
 const LIVE_TYPES = ['single_choice', 'multiple_response', 'true_false', 'numeric', 'fill_blank'];
-const DEFAULTS = { timer: 20, shuffle: false, show_answers: true, deadline: null, auto_advance: true, reveal_seconds: 5, leaderboard_seconds: 6 };
+const DEFAULTS = { timer: 20, shuffle: false, show_answers: true, deadline: null, auto_advance: true, reveal_seconds: 5, leaderboard_seconds: 6, max_flags: 0 };
 const MAX_PLAYERS = 500;
 
 class LiveError extends Error {
@@ -124,7 +124,7 @@ async function byPin(pin, knex = db()) {
 }
 
 /** Creates a session. kind: live | self_paced | homework. */
-async function createSession({ examId, hostId, kind = 'live', timer, allowGuests = false, shuffle = false, deadline = null, showAnswers = true, autoAdvance = true, revealSeconds = 5, leaderboardSeconds = 6 }, knex = db()) {
+async function createSession({ examId, hostId, kind = 'live', timer, allowGuests = false, shuffle = false, deadline = null, showAnswers = true, autoAdvance = true, revealSeconds = 5, leaderboardSeconds = 6, maxFlags = 0 }, knex = db()) {
   const exam = await knex('exams').where({ id: examId }).whereNull('deleted_at').first('id', 'title');
   if (!exam) throw new LiveError('Choose a quiz.');
   let qs = await liveQuestions(examId, knex);
@@ -146,7 +146,7 @@ async function createSession({ examId, hostId, kind = 'live', timer, allowGuests
     status: kind === 'homework' ? 'running' : 'lobby',
     phase: kind === 'homework' ? 'question' : 'lobby',
     allow_guests: !!allowGuests,
-    settings: toJson({ timer: t, shuffle: !!shuffle, show_answers: !!showAnswers, deadline: dl ? dl.toISOString() : null, kind, title: exam.title, auto_advance: !!autoAdvance, reveal_seconds: clampSec(revealSeconds, 5), leaderboard_seconds: clampSec(leaderboardSeconds, 6) }),
+    settings: toJson({ timer: t, shuffle: !!shuffle, show_answers: !!showAnswers, deadline: dl ? dl.toISOString() : null, kind, title: exam.title, auto_advance: !!autoAdvance, reveal_seconds: clampSec(revealSeconds, 5), leaderboard_seconds: clampSec(leaderboardSeconds, 6), max_flags: Math.min(50, Math.max(0, Math.round(Number(maxFlags) || 0))) }),
     question_ids: toJson(qs),
     started_at: kind === 'homework' ? now() : null,
   });
@@ -278,13 +278,69 @@ async function answerAtOwnPace(sess, player, i, response, knex) {
   const existing = await knex('live_answers').where({ player_id: player.id, question_index: i }).first('id');
   const startedAt = player.question_started_at && player.current_index === i ? new Date(player.question_started_at) : now();
   if (existing) await knex('live_answers').where({ id: existing.id }).update({ response: toJson(resp), is_correct: !!marked.correct });
-  else await knex('live_answers').insert({ session_id: sess.id, player_id: player.id, question_index: i, question_id: ref.q, question_version_id: ref.v, response: toJson(resp), is_correct: !!marked.correct, points: 0, response_ms: Math.min(Math.max(0, Date.now() - startedAt.getTime()), 2147483647) });
+  else {
+    const ms = Math.min(Math.max(0, Date.now() - startedAt.getTime()), 2147483647);
+    await knex('live_answers').insert({ session_id: sess.id, player_id: player.id, question_index: i, question_id: ref.q, question_version_id: ref.v, response: toJson(resp), is_correct: !!marked.correct, points: 0, response_ms: ms });
+    // Faster than anyone can read the question: worth a look (a bot or a shared answer key).
+    if (ms < 900) await recordIntegrity(sess, player, 'fast_answer', { question: i + 1, ms }, knex, { count: false });
+  }
   const answered = await answeredIndexes(player.id, knex);
   const total = sess.question_ids.length;
   // Next: the following question if it is still open, otherwise the next open one, otherwise review & submit.
   const next = answered.length >= total ? total : !answered.includes(i + 1) && i + 1 < total ? i + 1 : nextOpen(answered, i, total);
   await knex('live_players').where({ id: player.id }).update({ current_index: next, question_started_at: now() });
   return { saved: true, next };
+}
+
+// ---------------------------------------------------------------- Anti-cheat
+
+const INTEGRITY_TYPES = ['tab_hidden', 'tab_return', 'window_blur', 'split_screen', 'screenshot_key', 'devtools', 'print', 'copy', 'paste', 'context_menu', 'offline', 'fast_answer'];
+const INTEGRITY_LABELS = {
+  tab_hidden: 'left the game (switched tab or app)',
+  tab_return: 'came back after leaving',
+  window_blur: 'switched to another window',
+  split_screen: 'used split screen or a small window',
+  screenshot_key: 'pressed a screenshot key',
+  devtools: 'tried to open developer tools',
+  print: 'tried to print',
+  copy: 'tried to copy',
+  paste: 'tried to paste',
+  context_menu: 'right-clicked',
+  offline: 'went offline',
+  fast_answer: 'answered faster than the question can be read',
+  auto_submitted: 'was submitted automatically (too many warnings)',
+};
+
+/**
+ * Records one anti-cheat signal from a player. Returns { flags, autoSubmitted }. "tab_return" and
+ * "window_blur" add the time away; "tab_return" does not count as a second flag (the leave already did).
+ */
+async function recordIntegrity(sess, player, type, details, knex = db(), { count = true } = {}) {
+  if (!INTEGRITY_TYPES.includes(type)) throw new LiveError('Unknown event.');
+  if (player.finished_at || closed(sess)) return { flags: player.flags, ignored: true };
+  const d = details && typeof details === 'object' ? details : {};
+  const awayMs = Math.min(Math.max(0, Number(d.away_ms) || 0), 3600000);
+  const clean = { away_ms: awayMs || undefined, question: d.question, ms: d.ms, width: d.width, screen: d.screen };
+  await knex('live_integrity_events').insert({ session_id: sess.id, player_id: player.id, type, details: toJson(clean) });
+  const counts = count && type !== 'tab_return' && type !== 'offline';
+  const patch = {};
+  if (counts) patch.flags = knex.raw('flags + 1');
+  if (awayMs) patch.away_ms = knex.raw('LEAST(away_ms + ?, 2000000000)', [awayMs]);
+  if (Object.keys(patch).length) await knex('live_players').where({ id: player.id }).update(patch);
+  const fresh = await knex('live_players').where({ id: player.id }).first();
+  let autoSubmitted = false;
+  const max = Number(sess.settings.max_flags) || 0;
+  if (counts && max && fresh.flags >= max && sess.mode === 'player_paced' && !fresh.finished_at && sess.status === 'running') {
+    await knex('live_integrity_events').insert({ session_id: sess.id, player_id: player.id, type: 'auto_submitted', details: toJson({ flags: fresh.flags }) });
+    await submitPlayer(sess, fresh, knex);
+    autoSubmitted = true;
+  }
+  return { flags: fresh.flags, awayMs: fresh.away_ms, autoSubmitted, label: INTEGRITY_LABELS[type] };
+}
+
+async function integritySummary(sessionId, knex = db()) {
+  const rows = await knex('live_integrity_events as e').join('live_players as p', 'p.id', 'e.player_id').where('e.session_id', sessionId).orderBy('e.id', 'desc').limit(200).select('e.id', 'e.type', 'e.details', 'e.created_at', 'p.nickname', 'p.id as player_id');
+  return rows.map((r) => ({ ...r, details: parseJson(r.details, {}), label: INTEGRITY_LABELS[r.type] || r.type }));
 }
 
 /** Moves a player to question `index` (or `total` for the review & submit screen). */
@@ -553,7 +609,10 @@ async function hostState(sess, knex = db()) {
   const lb = await leaderboard(sess.id, 1000, knex);
   state.pin = sess.pin;
   const counts = Object.fromEntries((await knex('live_answers').where({ session_id: sess.id }).select('player_id').count('* as n').groupBy('player_id')).map((r) => [r.player_id, Number(r.n)]));
-  state.allPlayers = lb.all.map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, progress: p.current_index, answered: counts[p.id] || 0, finished: !!p.finished_at, connected: !!p.connected }));
+  const integ = Object.fromEntries((await knex('live_players').where({ session_id: sess.id }).select('id', 'flags', 'away_ms')).map((r) => [r.id, r]));
+  state.allPlayers = lb.all.map((p) => ({ id: p.id, nickname: p.nickname, score: p.score, progress: p.current_index, answered: counts[p.id] || 0, finished: !!p.finished_at, connected: !!p.connected, flags: (integ[p.id] || {}).flags || 0, awaySec: Math.round(((integ[p.id] || {}).away_ms || 0) / 1000) }));
+  state.alerts = (await integritySummary(sess.id, knex)).slice(0, 15).map((a) => ({ id: a.id, nickname: a.nickname, label: a.label, type: a.type, away: a.details.away_ms ? Math.round(a.details.away_ms / 1000) : null, at: a.created_at }));
+  state.maxFlags = Number(sess.settings.max_flags) || 0;
   state.submitted = state.allPlayers.filter((p) => p.finished).length;
   state.leaderboard = sess.mode === 'player_paced' && !closed(sess) ? [] : lb.all.slice(0, 10).map((p, i) => ({ rank: i + 1, id: p.id, nickname: p.nickname, score: p.score, streak: p.streak }));
   if (sess.mode === 'host_paced' && sess.current_index >= 0 && sess.status !== 'lobby') {
@@ -575,7 +634,7 @@ async function report(sessionId, knex = db()) {
   const rows = players.map((p, i) => {
     const list = byPlayer.get(p.id);
     const right = list.filter((a) => a.is_correct).length;
-    return { rank: i + 1, nickname: p.nickname, score: p.score, correct: right, answered: list.length, total, accuracy: list.length ? Math.round((right / total) * 100) : 0, avgSeconds: list.length ? Math.round(list.reduce((s, a) => s + a.response_ms, 0) / list.length / 100) / 10 : null, kicked: !!p.kicked };
+    return { rank: i + 1, nickname: p.nickname, score: p.score, correct: right, answered: list.length, total, accuracy: list.length ? Math.round((right / total) * 100) : 0, avgSeconds: list.length ? Math.round(list.reduce((s, a) => s + a.response_ms, 0) / list.length / 100) / 10 : null, kicked: !!p.kicked, flags: p.flags || 0, awaySec: Math.round((p.away_ms || 0) / 1000) };
   });
   const stems = await knex('question_versions').whereIn('id', sess.question_ids.map((q) => q.v)).select('id', 'stem_html', 'type');
   const stemBy = new Map(stems.map((s) => [s.id, s]));
@@ -585,7 +644,7 @@ async function report(sessionId, knex = db()) {
     const s = stemBy.get(ref.v) || {};
     return { index: i, questionId: ref.q, type: s.type, stem: String(s.stem_html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160), answered: list.length, correctPct: list.length ? Math.round((right / list.length) * 100) : null, avgSeconds: list.length ? Math.round(list.reduce((s2, a) => s2 + a.response_ms, 0) / list.length / 100) / 10 : null };
   });
-  return { session: sess, players: rows, questions };
+  return { session: sess, players: rows, questions, integrity: await integritySummary(sessionId, knex) };
 }
 
 module.exports = {
@@ -607,6 +666,10 @@ module.exports = {
   setAuto,
   phaseEndsAt,
   review,
+  recordIntegrity,
+  integritySummary,
+  INTEGRITY_TYPES,
+  INTEGRITY_LABELS,
   goTo,
   submitPlayer,
   answeredIndexes,

@@ -62,6 +62,7 @@ async function create(req, res) {
       shuffle: on(b.shuffle),
       showAnswers: on(b.show_answers),
       autoAdvance: on(b.auto_advance),
+      maxFlags: b.max_flags,
       revealSeconds: b.reveal_seconds,
       leaderboardSeconds: b.leaderboard_seconds,
       deadline: b.deadline || null,
@@ -100,7 +101,7 @@ async function report(req, res) {
 async function reportCsv(req, res) {
   const sess = await loadOwn(req);
   const r = await live.report(sess.id);
-  const rows = [['Rank', 'Nickname', 'Score', 'Correct', 'Answered', 'Questions', 'Accuracy %', 'Avg seconds', 'Removed'], ...r.players.map((p) => [p.rank, p.nickname, p.score, p.correct, p.answered, p.total, p.accuracy, p.avgSeconds ?? '', p.kicked ? 'yes' : ''])];
+  const rows = [['Rank', 'Nickname', 'Score', 'Correct', 'Answered', 'Questions', 'Accuracy %', 'Avg seconds', 'Anti-cheat warnings', 'Seconds away', 'Removed'], ...r.players.map((p) => [p.rank, p.nickname, p.score, p.correct, p.answered, p.total, p.accuracy, p.avgSeconds ?? '', p.flags, p.awaySec, p.kicked ? 'yes' : ''])];
   res.set('Content-Type', 'text/csv; charset=utf-8').attachment(`live-${sess.pin}-${sess.id}.csv`);
   res.send(`﻿${stringify(rows)}`);
 }

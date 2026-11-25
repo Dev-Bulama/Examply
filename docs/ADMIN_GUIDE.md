@@ -45,7 +45,9 @@ This guide covers running the platform day to day. Every screen is in the admin 
 2. **Builder tabs:** content (a fixed list, sections or **blueprint rules** that draw random questions per domain), timing, scoring (pass mark, negative marking, partial credit, scaled scores), bands, delivery (shuffling, navigation, calculator, notepad, calm background music), integrity, access, certificate and release of results. The instructions candidates see are generated from these settings.
 3. **Publish:** the pre-publish checklist blocks problems, such as not enough questions for a rule or a missing pass mark. Publishing creates a version, and later edits only apply after you publish again.
 4. **Attempts:** you set the number allowed, the cooldown and the availability window. Grant extra attempts to individuals from **Attempts & results**.
-5. **Grading queue:** essays and anything needing a person. Release withheld results here.
+5. **Anti-cheat (Integrity tab):** turn on recording of tab switches, set a limit, full screen, and copy/paste blocking. Candidates are warned on screen each time they leave the exam, switch windows, use split screen, press screenshot keys, open developer tools or print. Each event lowers the attempt's integrity score; when it drops below 70 the exam's author and the organisation's managers get a **Possible cheating** notification (once per attempt). Going over the limit submits the attempt automatically and alerts them too.
+6. **Live monitor** (Attempts → Live monitor): everyone taking an exam right now, their progress, time left, time away and integrity score, with alerts as they happen (red pop-up and a beep; the 🔊 button turns the beep off). Click an alert for the attempt's full timeline.
+7. **Grading queue:** essays and anything needing a person. Release withheld results here.
 
 ## 7. Selling exams
 
@@ -66,7 +68,8 @@ A company that buys a plan gets a private workspace. Its managers invite staff a
 2. Allow guests (nickname only) or require sign-in, set the seconds per question (faster correct answers earn a bonus), and optionally shuffle.
 3. **Host screen:** shows the PIN, a QR code and the join link (`/play`). In a live game it shows each player's progress (answers given, submitted ✓); scores stay hidden until the end so nothing gives answers away.
    - **Game sounds** (original, generated in the browser, loud with a limiter): lobby music, join pops, question start, answer taps, countdown ticks (presenter-paced), and a fanfare for the results. 🔊 mutes them on that device.
-4. **Report:** per player and per question, with CSV export.
+4. **Anti-cheat:** while a game runs, each player's device reports leaving the game (switching tab or app, swiping home, locking the phone), switching to another window, split screen, screenshot keys, developer tools, printing, copy/paste/right-click and answers given implausibly fast. The player sees a red warning each time. The host gets a red pop-up with a sound, an **Anti-cheat alerts** panel, and a ⚠ badge (warnings · seconds away) beside the player. Set **Auto-submit after N warnings** when creating the session (0 = never) to submit a player's answers automatically.
+5. **Report:** per player and per question, with warnings, seconds away and the full anti-cheat log; CSV export.
 
 ## 10. Analytics
 

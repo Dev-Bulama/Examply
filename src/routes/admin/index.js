@@ -127,6 +127,8 @@ router.post('/orders/:id(\\d+)/refund', can('orders.manage'), h(com.refund));
 
 // Attempts, grading and certificates
 router.get('/attempts', can('attempts.view'), h(att.index));
+router.get('/attempts/monitor', can('attempts.view'), h(att.monitor));
+router.get('/attempts/monitor.json', can('attempts.view'), h(att.monitorJson));
 router.get('/attempts/:id(\\d+)', can('attempts.view'), h(att.show));
 router.post('/attempts/:id(\\d+)/items/:itemId(\\d+)/grade', can('results.manage'), h(att.gradeItem));
 router.post('/attempts/:id(\\d+)/regrade', can('results.manage'), h(att.regrade));

@@ -171,6 +171,43 @@ describe('taking an exam', () => {
   });
 });
 
+describe('anti-cheat in exams', () => {
+  test('new signals lower the integrity score, alert the examiner once, and show on the live monitor', async () => {
+    const exam = await makeExam('Integrity', [qids.mcq, qids.multi], { timing: { duration_minutes: '20' } });
+    const { user, agent } = await candidate();
+    const uuid = (await startVia(agent, exam)).headers.location.split('/').pop();
+    const attempt = await db()('attempts').where({ uuid }).first();
+    const send = async (type, details) => {
+      const t = await csrf(agent, '/dashboard');
+      return agent.post(`/attempts/${uuid}/events`).set('Accept', 'application/json').set('X-CSRF-Token', t).send({ type, details });
+    };
+    // The live monitor lists the attempt.
+    let mon = await adminAgent.get('/admin/attempts/monitor.json');
+    expect(mon.body.attempts.some((a) => a.id === attempt.id)).toBe(true);
+    for (const t of ['window_blur', 'split_screen', 'screenshot_key', 'devtools']) expect((await send(t, { away_ms: 4000 })).body.recorded).toBe(true);
+    expect((await send('not_a_real_event')).body.recorded).toBe(false);
+    const after = await db()('attempts').where({ id: attempt.id }).first();
+    expect(after.integrity_score).toBe(100 - 3 - 5 - 8 - 8);
+    // 76/100: no alert yet. The next signal drops it below 70 → the exam's author is alerted exactly once.
+    const notesFor = () => db()('notifications').where({ user_id: admin.id, type: 'integrity' }).where('url', `/admin/attempts/${attempt.id}`);
+    expect(await notesFor()).toHaveLength(0);
+    await send('print');
+    const notes = await notesFor();
+    expect(notes).toHaveLength(1);
+    expect(notes[0].body).toContain('integrity score now 68');
+    await send('copy');
+    expect(await notesFor()).toHaveLength(1);
+    mon = await adminAgent.get('/admin/attempts/monitor.json');
+    const mine = mon.body.events.filter((e) => e.attemptId === attempt.id).map((e) => e.type);
+    expect(mine).toEqual(expect.arrayContaining(['window_blur', 'split_screen', 'screenshot_key', 'devtools', 'print']));
+    expect((await adminAgent.get('/admin/attempts/monitor')).text).toContain('Live monitor');
+    expect((await agent.get('/admin/attempts/monitor.json')).status).toBe(403); // candidates cannot watch
+    const page = await adminAgent.get(`/admin/attempts/${attempt.id}`);
+    expect(page.text).toContain('Switched to another window');
+    expect(user.id).toBeTruthy();
+  });
+});
+
 describe('attempt rules (server-side)', () => {
   test('attempt limit, cooldown, and per-user override', async () => {
     const exam = await makeExam('Limits', [qids.mcq], { attempts: { max_attempts: '1', cooldown_minutes: '60', score_policy: 'best', visibility: 'public' } });

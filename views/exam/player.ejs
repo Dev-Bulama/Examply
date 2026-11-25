@@ -186,6 +186,7 @@
 <script src="/vendor/katex/auto-render.min.js?v=<%= assetVersion %>" defer></script>
 <script src="/vendor/highlight/highlight.min.js?v=<%= assetVersion %>" defer></script>
 <script src="/js/question-render.js?v=<%= assetVersion %>"></script>
+<script src="/js/integrity.js?v=<%= assetVersion %>"></script>
 <script src="/js/exam-player.js?v=<%= assetVersion %>"></script>
 <% if (d.background_music !== false) { %><script src="/js/ambient.js?v=<%= assetVersion %>"></script><% } %>
 <% if (top.some(function (t) { return t.type === 'lab'; })) { %><link rel="stylesheet" href="/vendor/xterm/xterm.css?v=<%= assetVersion %>"><script src="/vendor/xterm/xterm.js?v=<%= assetVersion %>"></script><script src="/js/lab-terminal.js?v=<%= assetVersion %>"></script><% } %>

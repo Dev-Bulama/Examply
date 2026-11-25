@@ -168,4 +168,47 @@ async function queue(req, res) {
   res.render('admin/attempts/queue', { title: 'Grading queue', layout: 'layouts/app', pager, query: req.query, breadcrumbs: [{ label: 'Admin', href: '/admin' }, { label: 'Grading queue' }] });
 }
 
-module.exports = { index, show, gradeItem, regrade, release, releaseAll, forceSubmit, revokeCertificate, queue };
+// ---------------------------------------------------------------- Live monitor (anti-cheat)
+
+async function monitorData(req) {
+  const { EVENT_LABELS } = require('../../services/attempts');
+  const live = await db()('attempts as a')
+    .join('users as u', 'u.id', 'a.user_id')
+    .join('exams as e', 'e.id', 'a.exam_id')
+    .where(orgWhere(req, 'e.organisation_id'))
+    .where('a.status', 'in_progress')
+    .whereNot('a.mode', 'study')
+    .orderBy('a.integrity_score')
+    .limit(200)
+    .select('a.id', 'a.started_at', 'a.expires_at', 'a.integrity_score', 'a.tab_switches', 'a.fullscreen_exits', 'u.full_name', 'e.title', db().raw('(select count(*) from attempt_items ai where ai.attempt_id = a.id and ai.parent_item_id is null) as items'), db().raw('(select count(*) from attempt_items ai where ai.attempt_id = a.id and ai.answered_at is not null) as answered'));
+  const since = new Date(Date.now() - 2 * 3600e3);
+  const events = await db()('attempt_events as ev')
+    .join('attempts as a', 'a.id', 'ev.attempt_id')
+    .join('users as u', 'u.id', 'a.user_id')
+    .join('exams as e', 'e.id', 'a.exam_id')
+    .where(orgWhere(req, 'e.organisation_id'))
+    .where('ev.created_at', '>=', since)
+    .whereIn('ev.type', Object.keys(EVENT_LABELS))
+    .whereNot('ev.type', 'tab_return')
+    .orderBy('ev.id', 'desc')
+    .limit(60)
+    .select('ev.id', 'ev.type', 'ev.details', 'ev.created_at', 'a.id as attempt_id', 'u.full_name', 'e.title');
+  return {
+    serverTime: new Date().toISOString(),
+    attempts: live.map((a) => ({ id: a.id, name: a.full_name, exam: a.title, startedAt: a.started_at, expiresAt: a.expires_at, score: a.integrity_score, tabSwitches: a.tab_switches, fullscreenExits: a.fullscreen_exits, answered: Number(a.answered), items: Number(a.items) })),
+    events: events.map((e) => {
+      const d = parseJson(e.details, {}) || {};
+      return { id: Number(e.id), attemptId: e.attempt_id, name: e.full_name, exam: e.title, type: e.type, label: EVENT_LABELS[e.type] || e.type, away: d.away_ms ? Math.round(d.away_ms / 1000) : null, at: e.created_at };
+    }),
+  };
+}
+
+async function monitor(req, res) {
+  res.render('admin/attempts/monitor', { title: 'Live monitor', layout: 'layouts/app', breadcrumbs: [{ label: 'Admin', href: '/admin' }, { label: 'Attempts & results', href: '/admin/attempts' }, { label: 'Live monitor' }] });
+}
+
+async function monitorJson(req, res) {
+  res.set('Cache-Control', 'no-store').json(await monitorData(req));
+}
+
+module.exports = { monitor, monitorJson, monitorData, index, show, gradeItem, regrade, release, releaseAll, forceSubmit, revokeCertificate, queue };

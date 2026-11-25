@@ -670,6 +670,18 @@
               });
             });
           }
+          // Extra signals (window switches, split screen, screenshots, developer tools, printing, time away).
+          if ((ig.record_tab_switches || ig.tab_switch_limit) && window.ExamplyIntegrity && !this.cfg.preview) {
+            window.ExamplyIntegrity.watch({
+              skipTab: true, // tab_hidden is reported above (it drives the tab-switch limit)
+              blockCopy: false, // copy/paste follows the exam's own setting above
+              blockDevtools: true,
+              message: 'It is reported to your examiner.',
+              report: function (type, details) {
+                self.event(type, details);
+              },
+            });
+          }
           if (ig.fullscreen) {
             this.needFullscreen = !document.fullscreenElement;
             document.addEventListener('fullscreenchange', function () {

@@ -187,6 +187,22 @@ function registerLive(ns) {
           return out;
         });
       socket.on('goto', own((sess, player, p) => live.goTo(sess, player, p.index)));
+      // Anti-cheat: the player's browser reports leaving, switching windows, screenshots, devtools…
+      socket.on(
+        'integrity',
+        guard(async (p) => {
+          const sess = await live.getSession(sessionId);
+          const player = await db()('live_players').where({ id: playerId }).first();
+          if (!player || player.kicked) return {};
+          const out = await live.recordIntegrity(sess, player, String(p.type || ''), p.details);
+          if (out.ignored) return {};
+          const hosts = (await ns.in(`s:${sessionId}`).fetchSockets()).filter((x) => x.data.role === 'host');
+          const alert = { nickname: player.nickname, type: p.type, label: out.label, flags: out.flags, away: p.details && p.details.away_ms ? Math.round(Number(p.details.away_ms) / 1000) : null, autoSubmitted: out.autoSubmitted };
+          hosts.forEach((h) => h.emit('alert', alert));
+          await broadcast(sessionId);
+          return { flags: out.flags, autoSubmitted: out.autoSubmitted };
+        }),
+      );
       socket.on('submit', own((sess, player) => live.submitPlayer(sess, player)));
     }
 

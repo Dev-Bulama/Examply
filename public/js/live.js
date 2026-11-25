@@ -132,6 +132,39 @@
 
     var hostKey = null;
     var hostPlayers = 0;
+    // ---- Anti-cheat alerts (live, from players' devices)
+    var alertsPanel = $('[data-alerts-panel]');
+    var alertsHidden = false;
+    var toggle = $('[data-alerts-toggle]');
+    if (toggle)
+      toggle.addEventListener('click', function () {
+        alertsHidden = !alertsHidden;
+        $('[data-alerts-list]').hidden = alertsHidden;
+        toggle.textContent = alertsHidden ? 'Show' : 'Hide';
+      });
+    socket.on('alert', function (a) {
+      sfx.play('alert');
+      var box = $('[data-alert-toasts]');
+      if (!box) return;
+      var t = el('div', 'pointer-events-auto rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-pop', '⚠ ' + a.nickname + ' ' + a.label + (a.away ? ' (' + a.away + 's)' : '') + (a.autoSubmitted ? ' — answers submitted automatically' : a.type === 'tab_return' || a.type === 'offline' ? '' : ' · warning ' + a.flags));
+      box.appendChild(t);
+      setTimeout(function () {
+        t.remove();
+      }, 6000);
+    });
+    function renderAlerts(s) {
+      if (!alertsPanel) return;
+      var list = s.alerts || [];
+      alertsPanel.hidden = !list.length || s.status === 'lobby';
+      var ol = $('[data-alerts-list]');
+      ol.textContent = '';
+      list.forEach(function (a) {
+        var li = el('li', 'rounded-md bg-red-50 px-2.5 py-1.5 dark:bg-red-950/40');
+        li.appendChild(el('span', 'font-semibold', a.nickname + ' '));
+        li.appendChild(document.createTextNode(a.label + (a.away ? ' (' + a.away + 's)' : '')));
+        ol.appendChild(li);
+      });
+    }
     socket.on('host', function (s) {
       syncClock(s);
       // Game sounds follow the phase.
@@ -151,6 +184,7 @@
         } else if (s.phase === 'leaderboard') sfx.play('leaderboard');
         hostKey = key;
       }
+      renderAlerts(s);
       if (s.status === 'lobby' && s.players > hostPlayers) sfx.play('join');
       hostPlayers = s.players;
       text('[data-players]', String(s.players));
@@ -205,6 +239,7 @@
           var li = el('li', 'flex items-center gap-3 px-6 py-2.5 text-sm');
           li.appendChild(el('span', 'h-2 w-2 rounded-full ' + (p.connected ? 'bg-emerald-500' : 'bg-slate-300')));
           li.appendChild(el('span', 'min-w-0 flex-1 truncate font-medium', p.nickname));
+          if (p.flags) li.appendChild(el('span', 'rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-950 dark:text-red-300', '⚠ ' + p.flags + (p.awaySec ? ' · ' + p.awaySec + 's away' : '')));
           li.appendChild(el('span', 'tabular-nums muted', p.finished ? 'Submitted ✓' : p.answered + ' of ' + s.total + ' answered'));
           pl.appendChild(li);
         });
@@ -508,7 +543,28 @@
       });
     }
 
+    // ---- Anti-cheat: report leaving, window switches, split screen, screenshots, devtools, copy/paste
+    var guarding = false;
+    var watching = false;
+    function guard(s) {
+      var me = s.me || {};
+      guarding = (s.status === 'running' || s.status === 'paused') && !me.finished && !me.gameOver;
+      if (!guarding || watching || !window.ExamplyIntegrity) return;
+      watching = true;
+      window.ExamplyIntegrity.watch({
+        blockCopy: true,
+        message: 'Leaving the game is reported to the host.',
+        report: function (type, details) {
+          if (!guarding) return;
+          psocket.emit('integrity', { type: type, details: details }, function (res) {
+            if (res && res.ok && res.autoSubmitted) setError('Your answers were submitted automatically because you left the game too many times.');
+          });
+        },
+      });
+    }
+
     psocket.on('state', function (s) {
+      guard(s);
       mode = s.mode;
       syncClock(s);
       var me = s.me || {};

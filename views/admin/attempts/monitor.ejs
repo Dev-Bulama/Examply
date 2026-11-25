@@ -1,0 +1,28 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Live monitor</h1>
+    <p class="mt-1 muted">Everyone taking an exam right now, with anti-cheat alerts as they happen: leaving the exam, switching windows, split screen, screenshots, developer tools, copy/paste and leaving full screen. Updates every 5 seconds.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <button type="button" class="btn-secondary btn-sm" data-mon-sound aria-pressed="true">🔊 Alert sound on</button>
+    <span class="text-xs muted" data-mon-updated>Connecting…</span>
+  </div>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-3">
+  <section class="card lg:col-span-2">
+    <div class="card-body pb-0"><h2 class="h2">In progress <span class="badge-blue ml-1" data-mon-count>0</span></h2></div>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead><tr><th>Candidate</th><th>Exam</th><th class="text-right">Progress</th><th class="text-right">Time left</th><th class="text-right">Left the exam</th><th class="text-right">Integrity</th></tr></thead>
+        <tbody data-mon-rows><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-body pb-0"><h2 class="h2">⚠ Alerts</h2><p class="text-sm muted">Last 2 hours. Click one to open the attempt and its full timeline.</p></div>
+    <ol class="max-h-[32rem] space-y-1.5 overflow-y-auto p-4 text-sm" data-mon-events><li class="muted">No alerts yet.</li></ol>
+  </section>
+</div>
+<div class="pointer-events-none fixed inset-x-0 top-16 z-50 flex flex-col items-center gap-2 px-4" data-mon-toasts></div>
+<script src="/js/monitor.js?v=<%= assetVersion %>" defer></script>

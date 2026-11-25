@@ -1,6 +1,6 @@
 <%
-  const EV = { started: 'Started', resume: 'Opened / resumed', tab_hidden: 'Left the exam tab', tab_visible: 'Returned', fullscreen_exit: 'Left full screen', fullscreen_enter: 'Entered full screen', copy: 'Tried to copy', paste: 'Tried to paste', context_menu: 'Right-clicked', offline: 'Went offline', online: 'Back online', section_finished: 'Finished a section', session_moved: 'Moved to another browser', submitted: 'Submitted' };
-  const bad = ['tab_hidden', 'fullscreen_exit', 'copy', 'paste', 'context_menu', 'session_moved'];
+  const EV = { started: 'Started', resume: 'Opened / resumed', tab_hidden: 'Left the exam tab', tab_visible: 'Returned', tab_return: 'Came back', window_blur: 'Switched to another window', split_screen: 'Used split screen / small window', screenshot_key: 'Pressed a screenshot key', devtools: 'Tried to open developer tools', print: 'Tried to print', examiner_alerted: 'Examiner alerted (integrity below 70)', fullscreen_exit: 'Left full screen', fullscreen_enter: 'Entered full screen', copy: 'Tried to copy', paste: 'Tried to paste', context_menu: 'Right-clicked', offline: 'Went offline', online: 'Back online', section_finished: 'Finished a section', session_moved: 'Moved to another browser', submitted: 'Submitted' };
+  const bad = ['tab_hidden', 'window_blur', 'split_screen', 'screenshot_key', 'devtools', 'print', 'fullscreen_exit', 'copy', 'paste', 'context_menu', 'session_moved', 'examiner_alerted'];
   const tops = review.filter(function (x) { return !x.parentId; });
 %>
 <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -63,7 +63,7 @@
       <div class="flex items-center justify-between"><h2 class="h3">Integrity</h2><span class="text-2xl font-bold <%= a.integrity_score < 80 ? 'text-red-600' : 'text-emerald-600' %>"><%= a.integrity_score %></span></div>
       <p class="mt-1 muted"><%= a.tab_switches %> tab switch<%= a.tab_switches === 1 ? '' : 'es' %> · <%= a.fullscreen_exits %> full-screen exit<%= a.fullscreen_exits === 1 ? '' : 's' %></p>
       <ol class="mt-4 space-y-2 border-l border-slate-200 pl-4 dark:border-slate-700">
-        <% events.forEach(function (e) { %><li class="relative"><span class="absolute -left-[1.3rem] top-1.5 h-2 w-2 rounded-full <%= bad.includes(e.type) ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-600' %>"></span><p class="<%= bad.includes(e.type) ? 'font-medium text-red-700 dark:text-red-400' : '' %>"><%= EV[e.type] || e.type %><%= e.details && e.details.reason ? ' (' + e.details.reason + ')' : '' %></p><p class="text-xs muted"><%= fmt.dateTime(e.created_at) %><%= e.ip ? ' · ' + e.ip : '' %></p></li><% }) %>
+        <% events.forEach(function (e) { %><li class="relative"><span class="absolute -left-[1.3rem] top-1.5 h-2 w-2 rounded-full <%= bad.includes(e.type) ? 'bg-red-500' : 'bg-slate-300 dark:bg-slate-600' %>"></span><p class="<%= bad.includes(e.type) ? 'font-medium text-red-700 dark:text-red-400' : '' %>"><%= EV[e.type] || e.type %><%= e.details && e.details.reason ? ' (' + e.details.reason + ')' : '' %><%= e.details && e.details.away_ms ? ' — ' + Math.round(e.details.away_ms / 1000) + 's away' : '' %></p><p class="text-xs muted"><%= fmt.dateTime(e.created_at) %><%= e.ip ? ' · ' + e.ip : '' %></p></li><% }) %>
       </ol>
     </section>
     <% if (certificate) { %>

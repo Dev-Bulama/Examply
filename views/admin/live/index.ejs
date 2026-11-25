@@ -29,6 +29,7 @@
       <%- include('../../partials/field', { name: 'leaderboard_seconds', label: 'Show leaderboard for (s)', type: 'number', value: old.leaderboard_seconds || 6, min: 1, max: 30 }) %>
     </div>
     <%- include('../../partials/field', { name: 'deadline', label: 'Homework deadline', type: 'datetime-local', hint: 'Only for homework. Players can join until then.' }) %>
+    <%- include('../../partials/field', { name: 'max_flags', label: 'Anti-cheat: submit a player automatically after this many warnings', type: 'number', value: old.max_flags === undefined ? 5 : old.max_flags, min: 0, max: 50, hint: 'Leaving the game, switching windows, split screen, screenshots, developer tools and copy/paste are always reported to you live. 0 = report only, never auto-submit.' }) %>
     <%- include('../../partials/field', { name: 'allow_guests', label: 'Let people join without an account (nickname only)', type: 'checkbox', value: old.allow_guests }) %>
     <%- include('../../partials/field', { name: 'shuffle', label: 'Shuffle the question order', type: 'checkbox', value: old.shuffle }) %>
     <%- include('../../partials/field', { name: 'show_answers', label: 'Show the explanation after each question', type: 'checkbox', value: old.show_answers === undefined ? '1' : old.show_answers }) %>

@@ -339,23 +339,64 @@ async function takeOver(attempt, ip, knex = db()) {
 
 // ---------------------------------------------------------------- Integrity events
 
-const EVENT_TYPES = ['tab_hidden', 'tab_visible', 'fullscreen_exit', 'fullscreen_enter', 'copy', 'paste', 'context_menu', 'offline', 'online', 'resume', 'webcam_denied'];
-const PENALTY = { tab_hidden: 5, fullscreen_exit: 5, copy: 2, paste: 2, context_menu: 1 };
+const EVENT_TYPES = ['tab_hidden', 'tab_visible', 'tab_return', 'window_blur', 'split_screen', 'screenshot_key', 'devtools', 'print', 'fullscreen_exit', 'fullscreen_enter', 'copy', 'paste', 'context_menu', 'offline', 'online', 'resume', 'webcam_denied'];
+const PENALTY = { tab_hidden: 5, window_blur: 3, split_screen: 5, screenshot_key: 8, devtools: 8, print: 8, fullscreen_exit: 5, copy: 2, paste: 2, context_menu: 1 };
+const EVENT_LABELS = {
+  tab_hidden: 'left the exam (switched tab or app)',
+  tab_return: 'came back after leaving',
+  window_blur: 'switched to another window',
+  split_screen: 'used split screen or a small window',
+  screenshot_key: 'pressed a screenshot key',
+  devtools: 'tried to open developer tools',
+  print: 'tried to print',
+  fullscreen_exit: 'left full screen',
+  copy: 'tried to copy',
+  paste: 'tried to paste',
+  context_menu: 'right-clicked',
+  offline: 'went offline',
+};
+const ALERT_BELOW = 70; // integrity score that alerts the examiner (once per attempt)
+
+/** In-app alert to the people responsible for the exam: its author, and the managers of a company exam. */
+async function alertExaminers(attempt, title, body, knex) {
+  try {
+    const { notify } = require('../engagement');
+    const exam = await knex('exams').where({ id: attempt.exam_id }).first('title', 'created_by', 'organisation_id');
+    const ids = new Set();
+    if (exam && exam.created_by) ids.add(exam.created_by);
+    if (exam && exam.organisation_id) (await knex('organisation_users').where({ organisation_id: exam.organisation_id, role: 'manager' }).pluck('user_id')).forEach((x) => ids.add(x));
+    for (const id of ids) await notify(id, { type: 'integrity', title: `${title}: ${exam ? exam.title : 'exam'}`, body, url: `/admin/attempts/${attempt.id}` }, knex);
+  } catch {
+    /* alerts are best-effort */
+  }
+}
 
 async function recordEvent(attempt, type, details, ip, knex = db()) {
   if (!EVENT_TYPES.includes(type) || attempt.status !== 'in_progress') return { recorded: false };
-  await knex('attempt_events').insert({ attempt_id: attempt.id, type, details: toJson(details || null), ip });
+  const d = details && typeof details === 'object' ? { away_ms: Math.min(Math.max(0, Number(details.away_ms) || 0), 86400000) || undefined, width: Number(details.width) || undefined, screen: Number(details.screen) || undefined, key: typeof details.key === 'string' ? details.key.slice(0, 10) : undefined } : null;
+  await knex('attempt_events').insert({ attempt_id: attempt.id, type, details: toJson(d), ip });
   const patch = {};
   if (type === 'tab_hidden') patch.tab_switches = knex.raw('tab_switches + 1');
   if (type === 'fullscreen_exit') patch.fullscreen_exits = knex.raw('fullscreen_exits + 1');
   if (PENALTY[type]) patch.integrity_score = knex.raw('GREATEST(0, integrity_score - ?)', [PENALTY[type]]);
   if (Object.keys(patch).length) await knex('attempts').where({ id: attempt.id }).update(patch);
+  // Alert the examiner once when the integrity score falls below the threshold.
+  if (PENALTY[type]) {
+    const now = await knex('attempts').where({ id: attempt.id }).first('integrity_score');
+    if (now && now.integrity_score < ALERT_BELOW && !(await knex('attempt_events').where({ attempt_id: attempt.id, type: 'examiner_alerted' }).first('id'))) {
+      await knex('attempt_events').insert({ attempt_id: attempt.id, type: 'examiner_alerted', details: toJson({ score: now.integrity_score }) });
+      const who = await knex('users').where({ id: attempt.user_id }).first('full_name');
+      await alertExaminers(attempt, 'Possible cheating', `${who ? who.full_name : 'A candidate'} ${EVENT_LABELS[type] || type}; integrity score now ${now.integrity_score}/100.`, knex);
+    }
+  }
   if (type === 'tab_hidden') {
     const snap = parseJson((await knex('exam_versions').where({ exam_id: attempt.exam_id, version_no: attempt.exam_version }).first('snapshot')).snapshot, {});
     const ig = snap.settings.integrity;
     const fresh = await knex('attempts').where({ id: attempt.id }).first('tab_switches');
     if (ig.auto_submit_on_limit && ig.tab_switch_limit && fresh.tab_switches >= ig.tab_switch_limit) {
       await submitAttempt(attempt, 'integrity', {}, knex);
+      const who = await knex('users').where({ id: attempt.user_id }).first('full_name');
+      await alertExaminers(attempt, 'Submitted for leaving too often', `${who ? who.full_name : 'A candidate'} left the exam ${fresh.tab_switches} times and was submitted automatically.`, knex);
       return { recorded: true, submitted: true, tabSwitches: fresh.tab_switches };
     }
     return { recorded: true, tabSwitches: fresh.tab_switches, limit: ig.tab_switch_limit || null };
@@ -456,4 +497,5 @@ async function releaseClosedWindows({ knex = db(), now = new Date() } = {}) {
   return { released: ids.length };
 }
 
-module.exports = { startStudySet, startAttempt, playerView, getOwnedAttempt, saveAnswers, finishSection, takeOver, recordEvent, submitAttempt, sweepExpired, releaseClosedWindows, latestSnapshot, optionOrderFor, AttemptError, EVENT_TYPES, sha256 };
+module.exports = {
+  EVENT_LABELS, startStudySet, startAttempt, playerView, getOwnedAttempt, saveAnswers, finishSection, takeOver, recordEvent, submitAttempt, sweepExpired, releaseClosedWindows, latestSnapshot, optionOrderFor, AttemptError, EVENT_TYPES, sha256 };

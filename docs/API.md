@@ -13,7 +13,7 @@ These are the JSON endpoints and socket events used by EXAMPLY's own pages (the 
 | Method & path | Body | Returns |
 |---|---|---|
 | `PATCH /attempts/:uuid/answers` | `{ answers: [{ itemId, response, flagged?, timeSpent? }], pos? }` | `{ ok, saved, state, status, serverTime, expiresAt }`. Header `X-Attempt-Token` enforces single-session mode (`409` with `code: "other_session"` when the exam was reopened in another tab or device). |
-| `POST /attempts/:uuid/events` | `{ type, details? }`, where type is `tab_hidden`, `fullscreen_exit`, `copy`, `paste`, etc. | `{ ok, recorded, tabSwitches, limit?, submitted? }` (`submitted` when the tab-switch limit auto-submits) |
+| `POST /attempts/:uuid/events` | `{ type, details? }`, where type is `tab_hidden`, `tab_return`, `window_blur`, `split_screen`, `screenshot_key`, `devtools`, `print`, `fullscreen_exit`, `copy`, `paste` or `context_menu`; details may carry `away_ms`, `width`, `screen`, `key` | `{ ok, recorded, tabSwitches, limit?, submitted? }` (`submitted` when the tab-switch limit auto-submits) |
 | `POST /attempts/:uuid/section/finish` | none | `{ ok, state }` (locks the section; for timed sections) |
 | `POST /attempts/:uuid/submit` | form or JSON | Redirects to `/results/:uuid`, or `{ ok, redirect }` with `Accept: application/json` |
 | `POST /attempts/:uuid/items/:itemId/sql` | `{ sql }` or `{ describe: true }` | `{ ok, run: { columns, rows, truncated, ms } }` or `{ ok, schema }`. Never reveals the solution or the marking query. |
@@ -35,6 +35,8 @@ These are the JSON endpoints and socket events used by EXAMPLY's own pages (the 
 Labs are answered on the server, one command at a time. The final state of the machine is what gets marked.
 
 **Timer:** the server's `expiresAt` is authoritative. The client shows `expiresAt − serverTime` adjusted for clock drift, and the server rejects late writes (5-second grace) and submits expired attempts itself.
+
+**Exam live monitor (staff, `attempts.view`):** `GET /admin/attempts/monitor.json` returns `{ serverTime, attempts: [{ id, name, exam, startedAt, expiresAt, score, tabSwitches, fullscreenExits, answered, items }], events: [{ id, attemptId, name, exam, type, label, away, at }] }` (`score` is the integrity score) for in-progress attempts and the last two hours of events, scoped to the caller's organisation.
 
 ## Staff previews
 
@@ -65,14 +67,18 @@ The client connects to `io('/live', { auth: { session: <sessionId>, host?: <host
 
 | Event | Payload | Ack |
 |---|---|---|
-| `answer` | `{ index, response }` (shapes as in the exam engine) | `{ ok, correct, points, score, streak }`; one answer per question |
+| `answer` | `{ index, response }` (shapes as in the exam engine) | Presenter-paced: `{ ok, correct, points, score, streak }`. Own pace: `{ ok }`; answers can be changed until submit |
+| `goto` | `{ index }` | Own pace: move to a question |
+| `submit` | none | Own pace: submit; scores are computed now |
+| `integrity` | `{ type, details? }`: `tab_hidden`, `tab_return {away_ms}`, `window_blur {away_ms}`, `split_screen`, `screenshot_key`, `devtools`, `print`, `copy`, `paste`, `context_menu`, `offline` | `{ ok, flags, autoSubmitted }`. Hosts receive `alert`; at the session's `max_flags` the player's answers are submitted |
 
 **Server → clients:**
 
 | Event | To | Data |
 |---|---|---|
-| `host` | Host sockets | Public state plus `pin`, `allPlayers[]`, `live: { answered, counts }` |
+| `host` | Host sockets | Public state plus `pin`, `allPlayers[]` (with `flags`, `awaySec`), `alerts[]` (latest 15), `maxFlags`, `live: { answered, counts }` |
 | `state` | Each player | `{ status, phase, index, total, endsAt, serverNow, question, reveal, leaderboard, me: { score, rank, streak, last, question? } }` |
+| `alert` | Host sockets | `{ nickname, type, label, flags, away, autoSubmitted }` (anti-cheat) |
 | `kicked` | The removed player | none |
 
 Questions sent to players never include the answer key. `reveal` is only present after the question closes. Scoring: 500 for a correct answer, plus up to 500 for speed (linear over the timer), plus a streak bonus of 100 × (streak − 1), capped at 500.

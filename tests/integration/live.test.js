@@ -307,6 +307,39 @@ describe('own-pace live game (the default)', () => {
   });
 });
 
+describe('anti-cheat in live games', () => {
+  test('leaving or switching windows alerts the host live; too many warnings submit the player', async () => {
+    const sess = await live.createSession({ examId, hostId: admin.id, kind: 'self_paced', timer: 30, allowGuests: true, maxFlags: 2 });
+    const { player, token } = await live.join(sess, { nickname: 'Sneaky' });
+    const hostS = await connect({ session: sess.id, host: live.hostToken(sess.id, sess.host_id) });
+    const p = await connect({ session: sess.id }, `lp_${sess.id}=${token}`);
+    await emit(hostS, 'start');
+    const alerted = nextEvent(hostS, 'alert', () => true);
+    const r1 = await emit(p, 'integrity', { type: 'tab_hidden' });
+    expect(r1).toMatchObject({ ok: true, flags: 1, autoSubmitted: false });
+    const a = await alerted;
+    expect(a).toMatchObject({ nickname: 'Sneaky', type: 'tab_hidden', flags: 1 });
+    expect(a.label).toMatch(/left the game/);
+    // Coming back adds the time away but is not a second warning.
+    expect((await emit(p, 'integrity', { type: 'tab_return', details: { away_ms: 12000 } })).flags).toBe(1);
+    const hs = await live.hostState(await live.getSession(sess.id));
+    expect(hs.allPlayers[0]).toMatchObject({ flags: 1, awaySec: 12 });
+    expect(hs.alerts.length).toBeGreaterThanOrEqual(2);
+    expect((await emit(p, 'integrity', { type: 'nonsense' })).ok).toBe(false);
+    // Second warning reaches the limit of 2 → submitted automatically.
+    expect(await emit(p, 'integrity', { type: 'window_blur', details: { away_ms: 3000 } })).toMatchObject({ ok: true, flags: 2, autoSubmitted: true });
+    expect((await db()('live_players').where({ id: player.id }).first()).finished_at).not.toBeNull();
+    const rep = await live.report(sess.id);
+    expect(rep.players[0]).toMatchObject({ flags: 2, awaySec: 15 });
+    expect(rep.integrity.map((e) => e.type)).toContain('auto_submitted');
+    const page = await adminAgent.get(`/admin/live/${sess.id}/report`);
+    expect(page.text).toContain('Anti-cheat log');
+    expect(page.text).toContain('Sneaky');
+    hostS.close();
+    p.close();
+  });
+});
+
 describe('self-paced homework', () => {
   test('homework stays open until the deadline, then shows results', async () => {
     await expect(live.createSession({ examId, hostId: admin.id, kind: 'homework', timer: 30 })).rejects.toThrow(/deadline/);

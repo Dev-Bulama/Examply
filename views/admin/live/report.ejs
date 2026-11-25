@@ -22,12 +22,12 @@
     <div class="card-body pb-0"><h2 class="h2">Players</h2><p class="text-sm muted"><%= r.players.length %> joined</p></div>
     <div class="overflow-x-auto">
       <table class="table">
-        <thead><tr><th>#</th><th>Nickname</th><th class="text-right">Score</th><th class="text-right">Correct</th><th class="text-right">Avg time</th></tr></thead>
+        <thead><tr><th>#</th><th>Nickname</th><th class="text-right">Score</th><th class="text-right">Correct</th><th class="text-right">Avg time</th><th class="text-right">Warnings</th></tr></thead>
         <tbody>
           <% r.players.forEach(function (p) { %>
-          <tr class="<%= p.kicked ? 'opacity-50' : '' %>"><td class="tabular-nums"><%= p.rank %></td><td class="font-medium"><%= p.nickname %><%= p.kicked ? ' (removed)' : '' %></td><td class="text-right tabular-nums font-semibold"><%= p.score.toLocaleString('en') %></td><td class="text-right tabular-nums"><%= p.correct %>/<%= p.total %></td><td class="text-right tabular-nums"><%= p.avgSeconds === null ? '—' : p.avgSeconds + ' s' %></td></tr>
+          <tr class="<%= p.kicked ? 'opacity-50' : '' %>"><td class="tabular-nums"><%= p.rank %></td><td class="font-medium"><%= p.nickname %><%= p.kicked ? ' (removed)' : '' %></td><td class="text-right tabular-nums font-semibold"><%= p.score.toLocaleString('en') %></td><td class="text-right tabular-nums"><%= p.correct %>/<%= p.total %></td><td class="text-right tabular-nums"><%= p.avgSeconds === null ? '—' : p.avgSeconds + ' s' %></td><td class="text-right"><% if (p.flags) { %><span class="badge-red"><%= p.flags %><%= p.awaySec ? ' · ' + p.awaySec + 's away' : '' %></span><% } else { %><span class="badge-green">0</span><% } %></td></tr>
           <% }) %>
-          <% if (!r.players.length) { %><tr><td colspan="5" class="muted">Nobody has joined yet.</td></tr><% } %>
+          <% if (!r.players.length) { %><tr><td colspan="6" class="muted">Nobody has joined yet.</td></tr><% } %>
         </tbody>
       </table>
     </div>
@@ -48,3 +48,17 @@
     </ol>
   </section>
 </div>
+
+<section class="card mt-6">
+  <div class="card-body pb-0"><h2 class="h2">Anti-cheat log</h2><p class="text-sm muted">Everything players' browsers reported during the game: leaving, switching windows, split screen, screenshots, developer tools, copy/paste and answers faster than the question can be read.</p></div>
+  <% if (!r.integrity.length) { %><p class="card-body text-sm muted">Nothing suspicious was reported. 👍</p><% } else { %>
+  <div class="overflow-x-auto"><table class="table">
+    <thead><tr><th>Time</th><th>Player</th><th>What happened</th></tr></thead>
+    <tbody>
+      <% r.integrity.forEach(function (e) { %>
+      <tr><td class="whitespace-nowrap text-sm muted"><%= fmt.dateTime(e.created_at) %></td><td class="font-medium"><%= e.nickname %></td><td class="text-sm"><%= e.label %><%= e.details && e.details.away_ms ? ' — ' + Math.round(e.details.away_ms / 1000) + 's away' : '' %><%= e.type === 'fast_answer' && e.details ? ' (question ' + e.details.question + ', ' + e.details.ms + ' ms)' : '' %></td></tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</section>

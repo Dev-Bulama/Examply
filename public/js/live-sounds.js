@@ -116,6 +116,10 @@
         tone({ f: hz(m), at: 0.05 + i * 0.07, d: 0.22, type: 'triangle', v: 0.22 });
       });
     },
+    alert: function () {
+      tone({ f: 988, d: 0.12, type: 'square', v: 0.16 });
+      tone({ f: 740, at: 0.14, d: 0.18, type: 'square', v: 0.16 });
+    },
     tick: function () {
       tone({ f: 1250, d: 0.05, type: 'square', v: 0.08 });
     },

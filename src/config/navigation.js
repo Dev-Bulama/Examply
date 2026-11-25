@@ -13,7 +13,8 @@ const ADMIN_NAV = [
     heading: 'Content',
     items: [
       { label: 'Exams', href: '/admin/exams', icon: 'document', any: ['exams.view'] },
-      { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'] },
+      { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'], exclude: ['/admin/attempts/monitor'] },
+      { label: 'Live monitor', href: '/admin/attempts/monitor', icon: 'eye', any: ['attempts.view'] },
       { label: 'Grading queue', href: '/admin/grading', icon: 'clipboard', any: ['results.manage'] },
       { label: 'Live quiz', href: '/admin/live', icon: 'play', any: ['live.host', 'live.view_all'] },
       { label: 'Analytics', href: '/admin/analytics', icon: 'chart', any: ['analytics.view'] },
@@ -94,7 +95,8 @@ const WORKSPACE_NAV = [
     heading: 'Content',
     items: [
       { label: 'Exams', href: '/admin/exams', icon: 'document', any: ['exams.view'] },
-      { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'] },
+      { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'], exclude: ['/admin/attempts/monitor'] },
+      { label: 'Live monitor', href: '/admin/attempts/monitor', icon: 'eye', any: ['attempts.view'] },
       { label: 'Grading queue', href: '/admin/grading', icon: 'clipboard', any: ['results.manage'] },
       { label: 'Question bank', href: '/admin/questions', icon: 'clipboard', any: ['questions.view'] },
       { label: 'AI generator', href: '/admin/ai/new', icon: 'academic', any: ['ai.generate'] },
