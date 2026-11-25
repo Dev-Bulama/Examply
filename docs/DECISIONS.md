@@ -134,3 +134,14 @@ Decisions made where `PROMPT.md` leaves room, with the reason. Newest phase at t
 | 91 | **Scenario validation** rejects unknown check types and tasks that already pass on the starting machine. | A broken scenario must not give free marks. |
 | 92 | **Limits**: 3,000 commands and 4 MB of state per session, 200 KB transcript, output truncation, rate-limited endpoint, closed when the attempt ends or time is up. | Bounded memory/DB use on shared hosting. |
 | 93 | **Labs are a plan feature** (`limits.labs`) for workspaces; platform staff always have them. | Matches the published plans. |
+
+## Phases 8–10 — Live quiz, insights, engagement, hardening
+
+| # | Decision | Why |
+|---|---|---|
+| 94 | **Live quiz over Socket.IO with all scoring on the server**; hosts authenticate with an HMAC token bound to the session, players with an httpOnly cookie, so a dropped phone rejoins as the same player. Questions sent to players never carry answer keys. | Fair scoring and no answer leakage through the browser. |
+| 95 | **Players join at `/play`** (the workspace `/join` page forwards 6-digit PINs there). | `/join` already served company join codes; one memorable path per purpose. |
+| 96 | **Item analysis uses the rest-score point-biserial** (the item is removed from the total) and **alpha over the questions every candidate answered**; below 10 responses only a "low sample" note is shown. | Avoids inflated discrimination and misleading flags on tiny samples. |
+| 97 | **Support works for guests** through a private tokenised link (only its SHA-256 hash is stored). | Prospective buyers must be able to ask questions before they have an account. |
+| 98 | **Email templates use a separate sanitiser** that keeps a safe list of inline CSS properties and protects `{{variables}}`. | Email clients need inline styles; scripts, handlers and `javascript:` URLs must still go. |
+| 99 | **Dependencies:** zod 4, nodemailer 10, mysql2 forced to the patched release inside the session store, and sanitize-html's parser pinned to the CommonJS htmlparser2 10 (same API). Node 20+ is required; Node 22 recommended. | `npm audit` clean without breaking Hostinger's CommonJS runtime. |

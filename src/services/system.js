@@ -38,7 +38,7 @@ async function requirements() {
     dbVersion = rows[0].v;
   }
   return {
-    node: { ok: major >= 18, value: process.versions.node, need: '18, 20 or 22' },
+    node: { ok: major >= 20, value: process.versions.node, need: '20 or 22 (22 recommended)' },
     storage: { ok: storageProblems.length === 0, problems: storageProblems },
     database: { ok: !dbError, error: dbError, version: dbVersion },
   };

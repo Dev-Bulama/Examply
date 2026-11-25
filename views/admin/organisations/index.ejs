@@ -1,0 +1,25 @@
+<div class="mb-6"><h1 class="h1">Organisations</h1><p class="mt-1 muted">Company workspaces, their plans and size. Suspending one closes its workspace screens and join code; its data is kept.</p></div>
+<div class="card overflow-x-auto">
+  <table class="table">
+    <thead><tr><th>Organisation</th><th>Plan</th><th class="text-right">Members</th><th class="text-right">Staff</th><th class="text-right">Exams</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      <% rows.forEach(function (o) { %>
+      <tr>
+        <td class="font-medium"><%= o.name %><span class="block text-xs muted"><%= o.contact_email || '' %></span></td>
+        <td class="text-sm"><% if (o.plan) { %><%= o.plan.name %><span class="block text-xs muted"><%= o.plan.current_period_end ? 'until ' + fmt.date(o.plan.current_period_end) : 'no end date' %></span><% } else { %><span class="muted">No active plan</span><% } %></td>
+        <td class="text-right tabular-nums"><%= o.members %></td>
+        <td class="text-right tabular-nums"><%= o.staff %></td>
+        <td class="text-right tabular-nums"><%= o.exams %></td>
+        <td><span class="<%= o.status === 'active' ? 'badge-green' : 'badge-red' %>"><%= o.status %></span></td>
+        <td class="text-right">
+          <form method="post" action="/admin/organisations/<%= o.id %>/status" data-confirm="<%= o.status === 'active' ? 'Suspend ' + o.name + '? Its staff lose access to the workspace until you reactivate it.' : 'Reactivate ' + o.name + '?' %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="status" value="<%= o.status === 'active' ? 'suspended' : 'active' %>">
+            <button class="<%= o.status === 'active' ? 'btn-ghost text-red-600' : 'btn-secondary' %> btn-sm"><%= o.status === 'active' ? 'Suspend' : 'Reactivate' %></button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+      <% if (!rows.length) { %><tr><td colspan="7" class="muted">No organisations yet. They are created when a company buys a plan.</td></tr><% } %>
+    </tbody>
+  </table>
+</div>

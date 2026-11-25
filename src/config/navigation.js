@@ -46,6 +46,7 @@ const ADMIN_NAV = [
     heading: 'People',
     items: [
       { label: 'Users', href: '/admin/users', icon: 'users', any: ['users.view'] },
+      { label: 'Organisations', href: '/admin/organisations', icon: 'academic', any: ['organisations.manage'] },
       { label: 'Roles & permissions', href: '/admin/roles', icon: 'key', any: ['roles.manage'] },
     ],
   },

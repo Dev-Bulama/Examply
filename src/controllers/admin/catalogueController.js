@@ -171,7 +171,7 @@ async function certificationForm(req, res) {
 
 const certSchema = z.object({
   name: trimmed(180, 2),
-  category_id: z.coerce.number({ invalid_type_error: 'Choose a category.' }).int().positive('Choose a category.'),
+  category_id: z.coerce.number({ error: 'Choose a category.' }).int().positive('Choose a category.'),
   issuing_body: optionalTrimmed(150),
   exam_code: optionalTrimmed(60),
   official_passing_score: z
@@ -206,7 +206,7 @@ const domainSchema = z.object({
   id: intOrNull(1, 2 ** 31),
   code: optionalTrimmed(30),
   name: trimmed(200, 1, 'Each domain needs a name.'),
-  weight: z.coerce.number({ invalid_type_error: 'Weight must be a number.' }).min(0, 'Weight cannot be negative.').max(100, 'Weight cannot exceed 100%.'),
+  weight: z.coerce.number({ error: 'Weight must be a number.' }).min(0, 'Weight cannot be negative.').max(100, 'Weight cannot exceed 100%.'),
 });
 
 async function certificationSave(req, res) {

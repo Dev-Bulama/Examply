@@ -3,7 +3,7 @@
 const { db } = require('../config/db');
 const { parseJson } = require('../utils/json');
 const { notFound } = require('../utils/errors');
-const { sanitizeRich } = require('../utils/html');
+const { sanitizeRich, sanitizeEmail } = require('../utils/html');
 const audit = require('../services/audit');
 const mail = require('../services/mail');
 const E = require('../services/engagement');
@@ -251,7 +251,7 @@ async function adminTemplateSave(req, res) {
     return res.redirect(`/admin/email-templates/${t.key}`);
   }
   const subject = String(req.body.subject || '').trim().slice(0, 255);
-  const body = sanitizeRich(req.body.body_html || '');
+  const body = sanitizeEmail(req.body.body_html || '');
   if (subject.length < 3 || body.length < 10) {
     req.setFormState(req.body, { subject: subject.length < 3 ? 'Enter a subject.' : undefined, body_html: body.length < 10 ? 'Enter the email body.' : undefined });
     req.flash('danger', 'Please correct the highlighted fields.');
@@ -291,3 +291,28 @@ module.exports = {
   adminTemplateForm,
   adminTemplateSave,
 };
+
+// ================================================================ Admin: organisations (platform view)
+
+async function adminOrganisations(req, res) {
+  const commerce = require('../services/commerce');
+  const rows = await db()('organisations as o')
+    .whereNull('o.deleted_at')
+    .orderBy('o.name')
+    .select('o.*', db().raw("(select count(*) from organisation_users ou where ou.organisation_id = o.id and ou.role = 'member') as members"), db().raw("(select count(*) from organisation_users ou where ou.organisation_id = o.id and ou.role <> 'member') as staff"), db().raw('(select count(*) from exams e where e.organisation_id = o.id and e.deleted_at is null) as exams'));
+  for (const r of rows) r.plan = await commerce.activePlanFor(r.id);
+  res.render('admin/organisations/index', { title: 'Organisations', layout: 'layouts/app', rows, breadcrumbs: adminCrumbs('Organisations', '/admin/organisations') });
+}
+
+async function adminOrganisationStatus(req, res) {
+  const org = await db()('organisations').where({ id: Number(req.params.id) }).whereNull('deleted_at').first();
+  if (!org) throw notFound();
+  const status = req.body.status === 'suspended' ? 'suspended' : 'active';
+  await db()('organisations').where({ id: org.id }).update({ status, updated_at: new Date() });
+  await audit.record(req, 'organisation.status', { entityType: 'organisation', entityId: org.id, before: { status: org.status }, after: { status } });
+  req.flash('success', `${org.name} is now ${status}.`);
+  res.redirect('/admin/organisations');
+}
+
+module.exports.adminOrganisations = adminOrganisations;
+module.exports.adminOrganisationStatus = adminOrganisationStatus;

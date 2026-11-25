@@ -43,7 +43,7 @@ const schema = z.object({
     .default('http://localhost:3000')
     .transform((v) => v.replace(/\/+$/, '')),
   APP_KEY: z
-    .string({ required_error: 'APP_KEY is required. Run `npm run key:generate`.' })
+    .string({ error: 'APP_KEY is required. Run `npm run key:generate`.' })
     .refine((v) => {
       try {
         return Buffer.from(v, 'base64').length === 32;
@@ -52,10 +52,10 @@ const schema = z.object({
       }
     }, 'APP_KEY must be 32 bytes encoded as base64. Run `npm run key:generate`.'),
   SESSION_SECRET: z
-    .string({ required_error: 'SESSION_SECRET is required. Run `npm run key:generate`.' })
+    .string({ error: 'SESSION_SECRET is required. Run `npm run key:generate`.' })
     .min(32, 'SESSION_SECRET must be at least 32 characters.'),
   CRON_TOKEN: z
-    .string({ required_error: 'CRON_TOKEN is required. Run `npm run key:generate`.' })
+    .string({ error: 'CRON_TOKEN is required. Run `npm run key:generate`.' })
     .min(24, 'CRON_TOKEN must be at least 24 characters.'),
   DB_HOST: z.string().default('127.0.0.1'),
   DB_PORT: z.coerce.number().int().positive().default(3306),
@@ -97,7 +97,9 @@ function loadEnv(source = process.env) {
   env.isTest = env.NODE_ENV === 'test';
   env.dbConfigured = !!(env.DB_USER && env.DB_NAME);
   env.rootDir = path.join(__dirname, '..', '..');
-  env.storageDir = env.STORAGE_PATH ? path.resolve(env.STORAGE_PATH) : path.join(env.rootDir, 'storage');
+  // "~/examply-storage" keeps uploads, receipts and certificates outside the app folder, so redeploys never erase them.
+  const sp = env.STORAGE_PATH && env.STORAGE_PATH.startsWith('~/') ? path.join(require('os').homedir(), env.STORAGE_PATH.slice(2)) : env.STORAGE_PATH;
+  env.storageDir = sp ? path.resolve(sp) : path.join(env.rootDir, 'storage');
   return Object.freeze(env);
 }
 

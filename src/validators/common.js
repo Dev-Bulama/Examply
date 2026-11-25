@@ -5,7 +5,7 @@ const { isValidTimezone } = require('../utils/time');
 
 const trimmed = (max, min = 0, message) =>
   z
-    .string({ required_error: message || 'This field is required.' })
+    .string({ error: message || 'This field is required.' })
     .trim()
     .min(min, message || (min > 1 ? `Use at least ${min} characters.` : 'This field is required.'))
     .max(max, `Use at most ${max} characters.`);
@@ -19,7 +19,7 @@ const optionalTrimmed = (max) =>
     .transform((v) => (v ? v : null));
 
 const email = z
-  .string({ required_error: 'Enter your email address.' })
+  .string({ error: 'Enter your email address.' })
   .trim()
   .toLowerCase()
   .min(1, 'Enter your email address.')

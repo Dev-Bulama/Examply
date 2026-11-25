@@ -8,3 +8,6 @@ storage/**
 coverage/
 *.log
 .DS_Store
+
+# Private deployment env files (contain secrets)
+*-hpanel.env

@@ -4,6 +4,8 @@ A professional assessment and certification exam platform: pre-training diagnost
 
 It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for Hostinger hPanel Node.js hosting. There is no Docker, no Redis, no build step on deploy, and no native modules.
 
+> **Guides:** [deploy on Hostinger](docs/DEPLOY_HPANEL.md) · [admin guide](docs/ADMIN_GUIDE.md) · [internal API](docs/API.md) · [Wayground case study](docs/CASE_STUDY_WAYGROUND.md)
+>
 > The revised phase plan (adds AI generation, cyber security labs and company workspaces) is in [`docs/ROADMAP.md`](docs/ROADMAP.md). Import formats: [`docs/IMPORT_FORMATS.md`](docs/IMPORT_FORMATS.md).
 >
 > The full product brief is in [`PROMPT.md`](PROMPT.md). Decisions taken where the brief is open are in [`docs/DECISIONS.md`](docs/DECISIONS.md). The assessment of the earlier EXAMPRO prototype is in [`docs/00-exampro-assessment.md`](docs/00-exampro-assessment.md).
@@ -20,9 +22,9 @@ It runs as **one Node.js process** with **MySQL 8 / MariaDB 10.6+**, built for H
 | 6. Commerce (Paystack + bank transfer) | Paid exams, extra attempts, bundles and company plans; coupons; Paystack checkout with signed webhooks and idempotent fulfilment; bank transfer with receipt upload and admin approval; refunds; admin grants; PDF invoices/receipts and receipt emails; orders & library for candidates | ✅ Done |
 | 7. Company workspaces & cohorts | Companies on a plan build private questions and exams (with AI and SQL labs) in the same admin screens, isolated per tenant; people & invitations (bulk, join codes, roles), cohorts with assignments and due dates, progress grids, learning gain, reminders, CSV export; plan limits enforced | ✅ Done |
 | 5A. Cyber security labs | **Live terminal labs** in the browser (xterm.js) on a simulated Linux machine per candidate: investigate logs, lock accounts, kill processes, fix permissions, stop services, configure the firewall, submit flags; tasks auto-checked with partial credit; JSON scenario editor with validation and staff preview | ✅ Done |
-| 8. Live quiz | | |
-| 9. Analytics, notifications, CMS, support | | |
-| 10. Hardening & delivery | | |
+| 8. Live quiz | PIN/QR join at `/play`, host projector screen with lobby, timed questions, live answer distribution, reveal, leaderboard and podium; self-paced and homework (deadline) modes; speed + streak scoring on the server; kick/pause/resume; reports with CSV | ✅ Done |
+| 9. Analytics, notifications, CMS, support | Item analysis (p, point-biserial, 27% discrimination, distractors, flags), KR-20/alpha, score histograms and drop-off; notification bell; targeted announcements; CMS pages + help-centre FAQ; support tickets (guests and users); email template editor; platform organisations view | ✅ Done |
+| 10. Hardening & delivery | 300+ tests; axe-core WCAG 2 A/AA pass on 23 key pages; dependency audit clean; 67 sample questions + 2 labs + live quiz; zero-config first boot with `/install`; `docs/ADMIN_GUIDE.md`, `docs/API.md`, `docs/DEPLOY_HPANEL.md` | ✅ Done |
 
 ## What works today (Phase 1)
 

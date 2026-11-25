@@ -141,3 +141,15 @@ describe('email templates', () => {
     expect((await db()('email_templates').where({ key: 'result_available' }).first()).subject).not.toBe('Your {{exam_title}} result is in');
   });
 });
+
+describe('organisations (platform view)', () => {
+  test('admins see organisations and can suspend and reactivate one', async () => {
+    const [orgId] = await db()('organisations').insert({ name: `Acme ${stamp}`, slug: `acme-${stamp}`, status: 'active' });
+    expect((await adminAgent.get('/admin/organisations')).text).toContain(`Acme ${stamp}`);
+    const t = await csrf(adminAgent, '/admin/organisations');
+    await adminAgent.post(`/admin/organisations/${orgId}/status`).type('form').send({ _csrf: t, status: 'suspended' });
+    expect((await db()('organisations').where({ id: orgId }).first()).status).toBe('suspended');
+    await adminAgent.post(`/admin/organisations/${orgId}/status`).type('form').send({ _csrf: t, status: 'active' });
+    expect((await db()('organisations').where({ id: orgId }).first()).status).toBe('active');
+  });
+});

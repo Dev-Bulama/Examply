@@ -70,4 +70,21 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-module.exports = { sanitizeRich, toPlainText, escapeHtml, RICH_OPTIONS: RICH };
+/** Email bodies: rich text plus a safe subset of inline CSS (email clients ignore stylesheets). */
+const CSS_VALUE = [/^[#a-z0-9 .,%()\-{}_]+$/i];
+const EMAIL_STYLES = Object.fromEntries(['color', 'background', 'background-color', 'padding', 'margin', 'border', 'border-left', 'border-radius', 'text-decoration', 'font-weight', 'font-size', 'font-style', 'display', 'word-break', 'line-height', 'text-align', 'width'].map((k) => [k, CSS_VALUE]));
+const EMAIL = {
+  ...RICH,
+  allowedAttributes: Object.fromEntries([...new Set([...Object.keys(RICH.allowedAttributes), 'p', 'span', 'div', 'h2', 'h3', 'blockquote', 'table', 'td', 'th', 'strong'])].map((t) => [t, [...(RICH.allowedAttributes[t] || []), 'style']])),
+  allowedStyles: { '*': EMAIL_STYLES },
+};
+function sanitizeEmail(html) {
+  if (!html) return '';
+  // {{variables}} would break the CSS parser inside style="", so swap them for plain tokens and back.
+  const vars = [];
+  const masked = String(html).replace(/\{\{\s*([a-z0-9_]{1,40})\s*\}\}/gi, (m, name) => `xvarx${vars.push(name) - 1}xvarx`);
+  const clean = sanitizeHtml(masked, { ...EMAIL, transformTags: { ...EMAIL.transformTags, a: (tagName, attribs) => ({ tagName, attribs }) } }).trim();
+  return clean.replace(/xvarx(\d+)xvarx/g, (m, i) => `{{${vars[Number(i)]}}}`);
+}
+
+module.exports = { sanitizeEmail, sanitizeRich, toPlainText, escapeHtml, RICH_OPTIONS: RICH };

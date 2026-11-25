@@ -159,6 +159,8 @@ router.post('/faqs', can('cms.manage'), h(eng.adminFaqSave));
 router.get('/faqs/:id(\\d+)/edit', can('cms.manage'), h(eng.adminFaqForm));
 router.post('/faqs/:id(\\d+)', can('cms.manage'), h(eng.adminFaqSave));
 router.post('/faqs/:id(\\d+)/delete', can('cms.manage'), h(eng.adminFaqDelete));
+router.get('/organisations', can('organisations.manage'), h(eng.adminOrganisations));
+router.post('/organisations/:id(\\d+)/status', can('organisations.manage'), h(eng.adminOrganisationStatus));
 router.get('/email-templates', can('email_templates.manage'), h(eng.adminTemplates));
 router.get('/email-templates/:key([a-z0-9_.]{2,60})', can('email_templates.manage'), h(eng.adminTemplateForm));
 router.post('/email-templates/:key([a-z0-9_.]{2,60})', can('email_templates.manage'), h(eng.adminTemplateSave));

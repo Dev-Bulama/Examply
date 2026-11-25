@@ -5,7 +5,7 @@
   "description": "Professional assessment & certification exam platform",
   "main": "server.js",
   "engines": {
-    "node": ">=18.18"
+    "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node server.js",
@@ -44,7 +44,7 @@
     "multer": "^2.5.0",
     "mysql2": "^3.24.6",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.10.1",
+    "nodemailer": "^10.6.1",
     "otplib": "^12.0.1",
     "pdfjs-dist": "^4.10.38",
     "pdfkit": "^0.17.2",
@@ -55,7 +55,7 @@
     "sanitize-html": "^2.17.0",
     "socket.io": "^4.8.4",
     "sql.js": "^1.17.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@alpinejs/csp": "^3.17.5",
@@ -64,6 +64,7 @@
     "@tailwindcss/forms": "^0.5.11",
     "@xterm/xterm": "^5.5.0",
     "alpinejs": "^3.17.5",
+    "axe-core": "^4.10.3",
     "chart.js": "^4.6.2",
     "jest": "^30.5.2",
     "katex": "^0.19.1",
@@ -83,5 +84,14 @@
       "<rootDir>/tests"
     ],
     "maxWorkers": 1
+  },
+  "overrides": {
+    "express-mysql-session": {
+      "mysql2": "$mysql2"
+    },
+    "uuid": "^11.1.1",
+    "sanitize-html": {
+      "htmlparser2": "^10.1.0"
+    }
   }
 }

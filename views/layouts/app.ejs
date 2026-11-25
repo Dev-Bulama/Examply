@@ -20,7 +20,7 @@
     <nav class="flex-1 overflow-y-auto px-3 py-4">
       <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-wider muted"><%= areaLabel %></p>
       <% sections.forEach(function (section) { %>
-        <% if (section.heading) { %><p class="mt-5 px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400"><%= section.heading %></p><% } %>
+        <% if (section.heading) { %><p class="mt-5 px-3 pb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"><%= section.heading %></p><% } %>
         <ul class="space-y-0.5">
           <% section.items.forEach(function (item) { const active = isActive(item.href, item.exact) && !(item.exclude || []).some(function (p) { return isActive(p); }); %>
             <li><a href="<%= item.href %>" class="nav-link <%= active ? 'nav-link-active' : '' %>" <% if (active) { %>aria-current="page"<% } %>><%- include('../partials/icon', { name: item.icon }) %> <%= item.label %></a></li>

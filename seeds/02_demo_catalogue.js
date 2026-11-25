@@ -173,7 +173,7 @@ exports.seed = async function seed(knex) {
     return saved.id;
   };
 
-  for (const item of questions) await save(item);
+  for (const item of [...questions, ...require('./data/moreQuestions')]) await save(item);
   for (const cs of questions.caseStudies) {
     const parentId = await save(cs);
     for (const child of cs.children) await save({ ...child, cert: cs.cert, category: cs.category, tags: cs.tags }, { parent_id: parentId });

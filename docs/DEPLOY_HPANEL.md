@@ -10,11 +10,13 @@ Production defaults for `https://examply.ng` are committed in `deploy/defaults.e
 1. **Database** — hPanel → Databases → MySQL Databases: create a database and a user with all privileges. Note the
    names (Hostinger prefixes them, e.g. `u123456789_examply`).
 2. **Node.js app** — hPanel → Websites → examply.ng → **Node.js** (Business/Cloud plans):
-   - Node.js version **20** (or 22); framework/preset "Express" or "Other";
+   - Node.js version **22** (recommended; 20 also works); framework/preset "Express" or "Other";
    - deploy from GitHub (`dev-bulama/examply`, the branch you want) or upload a ZIP without `node_modules`;
    - **Entry / startup file:** `server.js`; **build command:** none (leave empty or `npm install`);
-   - **Environment variables:** paste the lines from the private `.env.examply` file you were given (at least
-     `SETUP_TOKEN`; adding `APP_KEY` here is the safest way to keep it forever).
+   - **Environment variables:** import the private `examply-hpanel.env` file you were given (plain `KEY=VALUE`
+     lines; `.env.examply` is the same with explanations). It sets the URL, secrets, `SETUP_TOKEN`, timezone and
+     `STORAGE_PATH=~/examply-storage`, which keeps uploads and certificates outside the app folder so redeploys never
+     erase them. Add `DB_NAME`, `DB_USER` and `DB_PASSWORD` there too, or type them on the install page.
 3. **Deploy / Restart.** Open `https://examply.ng` → it redirects to `/install`. Enter the setup token, the
    database details (host `localhost`), then the site name and Super Admin, keep **Load starter content** ticked
    and click **Install now**.
@@ -50,7 +52,7 @@ The app creates every table itself (`utf8mb4`, InnoDB).
 ## 2. Create the Node.js application
 
 1. hPanel → **Websites → your domain → Node.js** (or **Advanced → Node.js**).
-2. **Node.js version:** 20 (18 and 22 also work).
+2. **Node.js version:** 22 (recommended) or 20.
 3. **Application root:** the folder that will hold the code, for example `domains/example.com/assess`.
 4. **Application startup file:** `server.js`.
 5. Create the app. hPanel assigns the port through `PORT`, and the app reads it automatically.
