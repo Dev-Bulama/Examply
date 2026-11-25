@@ -1,0 +1,62 @@
+<div id="live-host" class="min-h-screen bg-slate-50 dark:bg-slate-950" data-session="<%= sess.id %>" data-token="<%= hostToken %>" data-mode="<%= sess.mode %>">
+  <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3">
+      <a href="/admin/live" class="btn-ghost px-2" aria-label="Back to live sessions"><%- include('../partials/icon', { name: 'arrowRight', cls: 'h-5 w-5 rotate-180' }) %></a>
+      <div class="min-w-0 flex-1">
+        <p class="truncate font-semibold"><%= sess.settings.title %></p>
+        <p class="text-xs muted">PIN <span class="font-mono font-semibold text-slate-900 dark:text-white"><%= sess.pin %></span> · <span data-players>0</span> players · <span data-progress></span></p>
+      </div>
+      <span class="rounded-lg bg-slate-100 px-3 py-1.5 font-mono text-lg font-semibold tabular-nums dark:bg-slate-800" data-countdown hidden>--</span>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-primary" data-act="start" hidden>Start game</button>
+        <button type="button" class="btn-primary" data-act="next" hidden>Next</button>
+        <button type="button" class="btn-secondary" data-act="pause" hidden>Pause</button>
+        <button type="button" class="btn-secondary" data-act="resume" hidden>Resume</button>
+        <button type="button" class="btn-ghost text-red-600" data-act="end" hidden>End game</button>
+        <a class="btn-secondary" href="/admin/live/<%= sess.id %>/report" data-report hidden>Full report</a>
+      </div>
+    </div>
+    <div class="h-1 bg-slate-100 dark:bg-slate-800"><div class="h-1 bg-secondary-500 transition-all duration-500" data-bar style="width:0%"></div></div>
+  </header>
+
+  <p class="mx-auto max-w-7xl px-4 pt-3 text-sm text-red-600" data-error role="alert"></p>
+
+  <!-- Lobby -->
+  <section class="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1fr_1.2fr]" data-view="lobby" hidden>
+    <div class="card card-body flex flex-col items-center text-center">
+      <p class="text-sm font-semibold uppercase tracking-widest muted">Join at <span class="text-primary-700 dark:text-primary-300"><%= joinHost %>/play</span></p>
+      <p class="mt-3 font-mono text-6xl font-black tracking-[0.2em] text-slate-900 dark:text-white sm:text-7xl"><%= sess.pin %></p>
+      <img src="<%= qr %>" alt="QR code to join the game" class="mt-6 h-56 w-56 rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700">
+      <p class="mt-3 text-xs muted break-all"><%= joinUrl %></p>
+    </div>
+    <div class="card card-body">
+      <div class="flex items-center justify-between"><h2 class="h2">Players</h2><span class="badge-blue" data-players>0</span></div>
+      <p class="mt-1 text-sm muted" data-lobby-empty>Waiting for players to join…</p>
+      <ul class="mt-4 flex flex-wrap gap-2" data-lobby></ul>
+    </div>
+  </section>
+
+  <!-- Question / reveal (host-paced) -->
+  <section class="mx-auto max-w-5xl px-4 py-8" data-view="question" hidden>
+    <p class="text-sm font-semibold muted" data-qnum></p>
+    <div class="question-body mt-3 text-2xl font-semibold leading-snug sm:text-3xl" data-stem></div>
+    <div class="mt-8 grid gap-3 sm:grid-cols-2" data-options></div>
+    <p class="mt-6 text-center text-sm muted" data-answered></p>
+    <div class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100" data-explain hidden></div>
+  </section>
+
+  <!-- Leaderboard / podium -->
+  <section class="mx-auto max-w-3xl px-4 py-8" data-view="leaderboard" hidden>
+    <h2 class="h1 text-center" data-lb-title>Leaderboard</h2>
+    <div class="mx-auto mt-8 grid max-w-2xl grid-cols-3 items-end gap-3" data-podium hidden></div>
+    <ol class="mt-8 space-y-2" data-lb></ol>
+  </section>
+
+  <!-- Player-paced progress -->
+  <section class="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-2" data-view="selfpaced" hidden>
+    <div class="card"><div class="card-body pb-0"><h2 class="h2">Progress</h2></div><ul class="divide-y divide-slate-100 dark:divide-slate-800" data-progress-list></ul></div>
+    <div class="card card-body"><h2 class="h2">Leaderboard</h2><ol class="mt-4 space-y-2" data-lb2></ol></div>
+  </section>
+</div>
+<script src="/socket.io/socket.io.min.js"></script>
+<script src="/js/live.js?v=<%= assetVersion %>"></script>

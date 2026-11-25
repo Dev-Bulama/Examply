@@ -1,0 +1,50 @@
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <p class="text-sm muted"><%= { live: 'Live game', self_paced: 'Self-paced game', homework: 'Homework' }[sess.settings.kind || 'live'] %> · PIN <span class="font-mono font-semibold"><%= sess.pin %></span> · <%= sess.status %></p>
+    <h1 class="h1"><%= sess.settings.title %></h1>
+    <% if (sess.settings.deadline) { %><p class="mt-1 text-sm muted">Deadline: <%= fmt.dateTime(sess.settings.deadline) %></p><% } %>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <a class="btn-secondary" href="/admin/live/<%= sess.id %>/report.csv"><%- include('../../partials/icon', { name: 'download', cls: 'h-4 w-4' }) %> Export CSV</a>
+    <% if (!closed) { %>
+      <% if (sess.host_id === user.id && sess.settings.kind !== 'homework') { %><a class="btn-primary" href="/admin/live/<%= sess.id %>">Open host screen</a><% } %>
+      <form method="post" action="/admin/live/<%= sess.id %>/close" data-confirm="Close this game? Players can no longer answer."><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn-danger">Close game</button></form>
+    <% } %>
+  </div>
+</div>
+
+<% if (!closed && sess.mode === 'player_paced') { %>
+<div class="alert-info mb-6"><%- include('../../partials/icon', { name: 'info', cls: 'h-5 w-5 shrink-0' }) %><p>Share this link with players: <a class="link break-all" href="<%= joinUrl %>"><%= joinUrl %></a> (PIN <span class="font-mono font-semibold"><%= sess.pin %></span>).</p></div>
+<% } %>
+
+<div class="grid gap-6 lg:grid-cols-2">
+  <section class="card">
+    <div class="card-body pb-0"><h2 class="h2">Players</h2><p class="text-sm muted"><%= r.players.length %> joined</p></div>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead><tr><th>#</th><th>Nickname</th><th class="text-right">Score</th><th class="text-right">Correct</th><th class="text-right">Avg time</th></tr></thead>
+        <tbody>
+          <% r.players.forEach(function (p) { %>
+          <tr class="<%= p.kicked ? 'opacity-50' : '' %>"><td class="tabular-nums"><%= p.rank %></td><td class="font-medium"><%= p.nickname %><%= p.kicked ? ' (removed)' : '' %></td><td class="text-right tabular-nums font-semibold"><%= p.score.toLocaleString('en') %></td><td class="text-right tabular-nums"><%= p.correct %>/<%= p.total %></td><td class="text-right tabular-nums"><%= p.avgSeconds === null ? '—' : p.avgSeconds + ' s' %></td></tr>
+          <% }) %>
+          <% if (!r.players.length) { %><tr><td colspan="5" class="muted">Nobody has joined yet.</td></tr><% } %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-body pb-0"><h2 class="h2">Questions</h2><p class="text-sm muted">Hardest questions are worth revisiting in class.</p></div>
+    <ol class="divide-y divide-slate-100 dark:divide-slate-800">
+      <% r.questions.forEach(function (q) { %>
+      <li class="flex items-start gap-4 px-6 py-3">
+        <span class="mt-0.5 text-xs font-semibold muted">Q<%= q.index + 1 %></span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm"><%= q.stem %></p>
+          <div class="mt-2 h-2 rounded bg-slate-100 dark:bg-slate-800"><div class="h-2 rounded <%= q.correctPct === null ? '' : q.correctPct >= 70 ? 'bg-emerald-500' : q.correctPct >= 40 ? 'bg-secondary-500' : 'bg-red-500' %>" style="width: <%= q.correctPct || 0 %>%"></div></div>
+        </div>
+        <span class="shrink-0 text-right text-sm tabular-nums"><%= q.correctPct === null ? '—' : q.correctPct + '%' %><span class="block text-xs muted"><%= q.answered %> answers</span></span>
+      </li>
+      <% }) %>
+    </ol>
+  </section>
+</div>

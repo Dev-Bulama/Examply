@@ -15,6 +15,8 @@ const ADMIN_NAV = [
       { label: 'Exams', href: '/admin/exams', icon: 'document', any: ['exams.view'] },
       { label: 'Attempts & results', href: '/admin/attempts', icon: 'chart', any: ['attempts.view'] },
       { label: 'Grading queue', href: '/admin/grading', icon: 'clipboard', any: ['results.manage'] },
+      { label: 'Live quiz', href: '/admin/live', icon: 'play', any: ['live.host', 'live.view_all'] },
+      { label: 'Analytics', href: '/admin/analytics', icon: 'chart', any: ['analytics.view'] },
       { label: 'Question bank', href: '/admin/questions', icon: 'clipboard', any: ['questions.view'], exclude: ['/admin/questions/reports'] },
       { label: 'AI generator', href: '/admin/ai/new', icon: 'academic', any: ['ai.generate'] },
       { label: 'Import questions', href: '/admin/imports', icon: 'download', any: ['questions.import'] },
@@ -30,6 +32,14 @@ const ADMIN_NAV = [
       { label: 'Orders', href: '/admin/orders', icon: 'banknotes', any: ['orders.view'] },
       { label: 'Products & plans', href: '/admin/products', icon: 'list', any: ['products.manage'] },
       { label: 'Coupons', href: '/admin/coupons', icon: 'key', any: ['coupons.manage'] },
+    ],
+  },
+  {
+    heading: 'Engagement',
+    items: [
+      { label: 'Support tickets', href: '/admin/support', icon: 'mail', any: ['support.manage'] },
+      { label: 'Announcements', href: '/admin/announcements', icon: 'info', any: ['announcements.manage'] },
+      { label: 'Pages & FAQ', href: '/admin/pages', icon: 'document', any: ['cms.manage'] },
     ],
   },
   {
@@ -58,6 +68,9 @@ const CANDIDATE_NAV = [
       { label: 'My results', href: '/my/results', icon: 'chart' },
       { label: 'Certificates', href: '/my/certificates', icon: 'academic' },
       { label: 'Orders & library', href: '/my/orders', icon: 'banknotes' },
+      { label: 'Join a live quiz', href: '/play', icon: 'play' },
+      { label: 'Notifications', href: '/notifications', icon: 'info' },
+      { label: 'Help & support', href: '/support', icon: 'mail' },
       { label: 'Profile', href: '/account', icon: 'user', exact: true },
       { label: 'Security', href: '/account/security', icon: 'lock' },
     ],

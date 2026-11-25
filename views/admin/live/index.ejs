@@ -1,0 +1,63 @@
+<div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+  <div>
+    <h1 class="h1">Live quiz</h1>
+    <p class="mt-1 muted">Run a game on the projector with a PIN, let people play at their own pace, or set it as homework with a deadline.</p>
+  </div>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-3">
+  <% if (can('live.host')) { %>
+  <form method="post" action="/admin/live" class="card card-body space-y-5 lg:col-span-1" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h2 class="h2">New session</h2>
+    <% if (!exams.length) { %>
+      <p class="text-sm muted">No exam has questions a live quiz can use yet. Add single or multiple choice, true/false, numeric or fill-in-the-blank questions to an exam's fixed question list.</p>
+    <% } else { %>
+    <%- include('../../partials/field', { name: 'exam_id', label: 'Quiz', type: 'select', required: true, options: exams.map(function (e) { return { value: e.id, label: e.title + (e.type === 'live_quiz' ? ' ★' : '') }; }), hint: '★ = built as a live quiz. Any exam with a fixed question list works.' }) %>
+    <fieldset>
+      <legend class="label">How will people play?</legend>
+      <div class="mt-2 space-y-2">
+        <% Object.entries(KINDS).forEach(function (k, i) { %>
+        <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700"><input type="radio" name="kind" value="<%= k[0] %>" class="mt-0.5 text-primary-600" <%= ((old.kind || 'live') === k[0]) ? 'checked' : '' %>> <span><%= k[1] %></span></label>
+        <% }) %>
+      </div>
+    </fieldset>
+    <%- include('../../partials/field', { name: 'timer', label: 'Seconds per question', type: 'number', value: old.timer || 20, min: 5, max: 240, hint: 'Faster correct answers earn more points.' }) %>
+    <%- include('../../partials/field', { name: 'deadline', label: 'Homework deadline', type: 'datetime-local', hint: 'Only for homework. Players can join until then.' }) %>
+    <%- include('../../partials/field', { name: 'allow_guests', label: 'Let people join without an account (nickname only)', type: 'checkbox', value: old.allow_guests }) %>
+    <%- include('../../partials/field', { name: 'shuffle', label: 'Shuffle the question order', type: 'checkbox', value: old.shuffle }) %>
+    <%- include('../../partials/field', { name: 'show_answers', label: 'Show the explanation after each question', type: 'checkbox', value: old.show_answers === undefined ? '1' : old.show_answers }) %>
+    <button class="btn-primary w-full"><%- include('../../partials/icon', { name: 'play', cls: 'h-4 w-4' }) %> Create session</button>
+    <% } %>
+  </form>
+  <% } %>
+
+  <section class="card <%= can('live.host') ? 'lg:col-span-2' : 'lg:col-span-3' %>">
+    <div class="card-body pb-0"><h2 class="h2">Sessions</h2></div>
+    <% if (!sessions.length) { %>
+      <p class="card-body text-sm muted">No sessions yet.</p>
+    <% } else { %>
+    <div class="overflow-x-auto">
+      <table class="table">
+        <thead><tr><th>Quiz</th><th>PIN</th><th>Type</th><th>Status</th><th class="text-right">Players</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+          <% sessions.forEach(function (s) { const kind = (s.settings && s.settings.kind) || (s.mode === 'host_paced' ? 'live' : 'self_paced'); %>
+          <tr>
+            <td class="font-medium"><%= s.exam_title %><% if (s.host_id !== user.id) { %><span class="block text-xs muted">Host: <%= s.host_name %></span><% } %></td>
+            <td class="font-mono"><%= s.pin %></td>
+            <td class="text-sm"><%= { live: 'Live', self_paced: 'Self-paced', homework: 'Homework' }[kind] %></td>
+            <td><span class="<%= { lobby: 'badge-amber', running: 'badge-green', paused: 'badge-amber', finished: 'badge-gray', cancelled: 'badge-gray' }[s.status] %>"><%= s.status %></span></td>
+            <td class="text-right tabular-nums"><%= s.players %></td>
+            <td class="whitespace-nowrap text-sm muted"><%= fmt.dateTime(s.created_at) %></td>
+            <td class="whitespace-nowrap text-right">
+              <% if (s.host_id === user.id && ['lobby', 'running', 'paused'].includes(s.status) && kind !== 'homework') { %><a class="btn-primary btn-sm" href="/admin/live/<%= s.id %>">Open host screen</a><% } %>
+              <a class="btn-secondary btn-sm" href="/admin/live/<%= s.id %>/report">Report</a>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+  </section>
+</div>

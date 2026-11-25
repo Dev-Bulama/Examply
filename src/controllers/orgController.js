@@ -270,6 +270,8 @@ async function joinForm(req, res) {
 }
 
 async function joinWithCode(req, res) {
+  // A 6-digit number is a live quiz PIN, not a workspace code.
+  if (/^\s*\d{6}\s*$/.test(String(req.body.code || ''))) return res.redirect(`/play?pin=${String(req.body.code).trim()}`);
   try {
     const org = await ws.joinWithCode(req.body.code, req.user);
     await audit.record(req, 'org.join', { entityType: 'organisation', entityId: org.id, after: { via: 'code' } });

@@ -1,0 +1,47 @@
+<div id="live-play" class="flex min-h-screen flex-col bg-gradient-to-b from-primary-900 to-primary-950 text-white" data-session="<%= sess.id %>">
+  <header class="flex items-center gap-3 px-4 py-3">
+    <p class="min-w-0 flex-1 truncate text-sm font-semibold"><%= sess.settings.title %></p>
+    <span class="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold" data-me-name><%= player.nickname %></span>
+    <span class="rounded-full bg-secondary-500 px-3 py-1 text-sm font-bold tabular-nums text-primary-950" data-me-score>0</span>
+  </header>
+  <div class="h-1.5 bg-white/10"><div class="h-1.5 bg-secondary-400 transition-all duration-300" data-bar style="width:0%"></div></div>
+
+  <main class="flex flex-1 flex-col px-4 py-6">
+    <p class="text-center text-sm text-red-200" data-error role="alert"></p>
+
+    <section class="m-auto max-w-md text-center" data-view="wait">
+      <p class="text-5xl" aria-hidden="true">🎮</p>
+      <h1 class="mt-4 text-2xl font-bold">You're in, <span data-me-name><%= player.nickname %></span>!</h1>
+      <p class="mt-2 text-primary-100" data-wait-text>Waiting for the host to start…</p>
+    </section>
+
+    <section class="mx-auto flex w-full max-w-3xl flex-1 flex-col" data-view="question" hidden>
+      <div class="flex items-center justify-between text-sm text-primary-100"><span data-qnum></span><span class="rounded-full bg-white/10 px-3 py-1 font-mono font-semibold tabular-nums" data-countdown>--</span></div>
+      <div class="question-body mt-4 rounded-2xl bg-white p-5 text-lg font-semibold text-slate-900 shadow-pop sm:text-xl" data-stem></div>
+      <form class="mt-5 grid flex-1 content-start gap-3 sm:grid-cols-2" data-answer-form></form>
+    </section>
+
+    <section class="m-auto max-w-md text-center" data-view="locked" hidden>
+      <p class="text-5xl" aria-hidden="true">⏳</p>
+      <h2 class="mt-4 text-2xl font-bold">Answer locked in</h2>
+      <p class="mt-2 text-primary-100">Waiting for everyone else…</p>
+    </section>
+
+    <section class="m-auto max-w-md text-center" data-view="result" hidden>
+      <p class="text-6xl" aria-hidden="true" data-result-emoji></p>
+      <h2 class="mt-4 text-3xl font-black" data-result-title></h2>
+      <p class="mt-2 text-lg text-secondary-200" data-result-points></p>
+      <p class="mt-6 text-primary-100" data-result-rank></p>
+    </section>
+
+    <section class="m-auto w-full max-w-md text-center" data-view="final" hidden>
+      <p class="text-6xl" aria-hidden="true" data-final-emoji>🏁</p>
+      <h2 class="mt-4 text-3xl font-black" data-final-title>Game over</h2>
+      <p class="mt-2 text-lg text-secondary-200" data-final-score></p>
+      <ol class="mt-8 space-y-2 text-left" data-final-lb></ol>
+      <a href="/play" class="mt-8 inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold hover:bg-white/20">Join another game</a>
+    </section>
+  </main>
+</div>
+<script src="/socket.io/socket.io.min.js"></script>
+<script src="/js/live.js?v=<%= assetVersion %>"></script>

@@ -1,0 +1,18 @@
+<section class="container-page flex min-h-[70vh] items-center justify-center py-12">
+  <form method="post" action="/play" class="card w-full max-w-sm" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="card-body space-y-5 text-center">
+      <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-700 text-white"><%- include('../partials/icon', { name: 'play', cls: 'h-7 w-7' }) %></span>
+      <div>
+        <h1 class="h2">Join a live quiz</h1>
+        <p class="mt-1 text-sm muted">Enter the 6-digit game PIN on the host's screen.</p>
+      </div>
+      <div class="text-left space-y-4">
+        <%- include('../partials/field', { name: 'pin', label: 'Game PIN', value: pin, required: true, inputmode: 'numeric', autocomplete: 'off', maxlength: 6, placeholder: '123456' }) %>
+        <%- include('../partials/field', { name: 'nickname', label: 'Your nickname', value: suggested, required: true, maxlength: 24, autocomplete: 'nickname', hint: 'Shown on the leaderboard. Keep it friendly.' }) %>
+      </div>
+      <button class="btn-primary w-full py-3 text-base">Enter the game</button>
+      <% if (!user) { %><p class="text-xs muted">Some games need an account: <a class="link" href="/login">sign in</a> first.</p><% } %>
+    </div>
+  </form>
+</section>

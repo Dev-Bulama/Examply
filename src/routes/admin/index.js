@@ -137,6 +137,15 @@ router.post('/certificates/:certId(\\d+)/revoke', can('certificates.manage'), h(
 router.get('/grading', can('results.manage'), h(att.queue));
 
 // Exams
+// Live quiz
+const liveC = require('../../controllers/liveController');
+router.get('/live', canAny('live.host', 'live.view_all'), h(liveC.index));
+router.post('/live', can('live.host'), h(liveC.create));
+router.get('/live/:id(\\d+)', canAny('live.host', 'live.view_all'), h(liveC.host));
+router.get('/live/:id(\\d+)/report', canAny('live.host', 'live.view_all'), h(liveC.report));
+router.get('/live/:id(\\d+)/report.csv', canAny('live.host', 'live.view_all'), h(liveC.reportCsv));
+router.post('/live/:id(\\d+)/close', canAny('live.host', 'live.view_all'), h(liveC.close));
+
 router.get('/exams', can('exams.view'), h(exams.index));
 router.post('/exams', can('exams.manage'), h(exams.create));
 router.get('/exams/:id(\\d+)', can('exams.view'), (req, res) => res.redirect(`/admin/exams/${req.params.id}/basics`));
